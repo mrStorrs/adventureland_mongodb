@@ -8,6 +8,8 @@ const { planEquipmentTransaction, planUnequipTransaction } = require("../game/eq
 const { authorizeAbility } = require("../game/ability_access");
 const { STYLE_BOUND_ABILITY_IDS, tagStyleEffect, invalidateStyleEffects } = require("../game/style_effects");
 const { calculateStats } = require("../game/stats");
+const { loadBenchmarkData } = require("../tools/progression-benchmark");
+const { RANKING_FIXTURE_PATH, loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
 
 const skills = createCharacterState().skills;
 
@@ -239,6 +241,39 @@ test("equipment validates all requirements and atomically displaces incompatible
 		unequipped.items.filter(Boolean).map((entry) => entry.name),
 		["blade"],
 	);
+});
+
+test("acquisition retune grandfathers an equipped weapon but rejects a below-level re-equip atomically", () => {
+	const data = loadBenchmarkData();
+	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
+	const target = ranking.weapons.find((weapon) => weapon.weapon_id === "broom");
+	assert.deepEqual({ skill: target.skill, before: target.baseline_requirement, after: target.assigned_requirement }, { skill: "mage", before: 1, after: 60 });
+	assert.deepEqual(data.itemRequirements.broom, [{ skill: "mage", level: 60 }]);
+
+	const player = { slots: { mainhand: { name: "broom", level: 0 } }, items: [null] };
+	const equippedStats = calculateStats({ slots: player.slots, items: data.items });
+	assert.ok(equippedStats.attack > 0 && equippedStats.damage_type === "magical");
+	assert.equal(player.slots.mainhand.name, "broom");
+
+	const unequipped = planUnequipTransaction({ player, slot: "mainhand", items: data.items, profiles: WEAPON_PROFILES });
+	assert.equal(unequipped.slots.mainhand, null);
+	assert.equal(unequipped.items[0].name, "broom");
+	const beforeAttempt = structuredClone(unequipped);
+	const belowLevel = createCharacterState().skills;
+	belowLevel.mage.level = 59;
+	assert.throws(
+		() => planEquipmentTransaction({
+			player: unequipped,
+			item: unequipped.items[0],
+			itemIndex: 0,
+			slot: "mainhand",
+			items: data.items,
+			itemRequirements: data.itemRequirements,
+			skills: belowLevel,
+		}),
+		(error) => error.code === "skill_level_required" && error.item === "broom" && error.skill === "mage" && error.required === 60 && error.actual === 59,
+	);
+	assert.deepEqual(unequipped, beforeAttempt);
 });
 
 test("ability access is active-style aware, preserves cooldown state, and permits Merchant utilities", () => {

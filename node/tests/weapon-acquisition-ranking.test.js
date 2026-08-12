@@ -6,6 +6,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
+const vm = require("node:vm");
+const { calculateStats } = require("../game/stats");
 
 const {
 	EXCLUDED_WEAPON_IDS,
@@ -29,6 +31,7 @@ const {
 	validateRankingFixture,
 	validateRequiredDynamicMonsterOverrides,
 } = require("../tools/weapon-acquisition-ranking");
+const { loadPropertyCalculators } = require("../tools/weapon-progression-parity");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const ROUTE_IDENTITY_SHA256 = "6c85b30226a776769bf9ef3df0cb0cf55690628cbaf22bc3c9b9a3d2956ea4c3";
@@ -36,6 +39,10 @@ let cachedBuild;
 
 function clone(value) {
 	return JSON.parse(JSON.stringify(value));
+}
+
+function roundEvidence(value) {
+	return Number(value.toPrecision(12));
 }
 
 function builtFixture() {
@@ -77,6 +84,20 @@ function findItemRouteResult(fixture, itemId, routeId) {
 
 function sha256File(filename) {
 	return crypto.createHash("sha256").update(fs.readFileSync(filename)).digest("hex");
+}
+
+function loadPublishedItems({ beforeAcquisitionOverride = false } = {}) {
+	const filename = path.join(REPOSITORY_ROOT, "design/items.js");
+	let source = fs.readFileSync(filename, "utf8");
+	if (beforeAcquisitionOverride) {
+		const marker = source.indexOf("var acquisition_ranked_weapon_attacks=");
+		assert.ok(marker > 0, "acquisition attack map exists");
+		source = source.slice(0, marker);
+	}
+	const context = { Math, console: { log() {}, error() {} }, multipliers: { shells_to_gold: 1 } };
+	vm.createContext(context);
+	vm.runInContext(source, context, { filename });
+	return clone(context.items);
 }
 
 function sourcePopulation(data, { mapId, normalOnly = true } = {}) {
@@ -704,14 +725,15 @@ test("AC-6 creates stable 5 percent ranks independent of the injected requiremen
 	const { evidence, generated } = builtFixture();
 	const changedData = loadSourceData();
 	changedData.itemRequirements = clone(changedData.itemRequirements);
-	for (const requirements of Object.values(changedData.itemRequirements))
-		for (const requirement of requirements) requirement.level += 1000;
+	for (const weapon of evidence.weapons)
+		for (const requirement of changedData.itemRequirements[weapon.weapon_id]) requirement.level += 1000;
 	const reranked = buildAcquisitionRanking({ evidence, data: changedData });
 	assert.deepEqual(
 		reranked.weapons.map((weapon) => [weapon.weapon_id, weapon.selected_effort, weapon.rank]),
 		generated.weapons.map((weapon) => [weapon.weapon_id, weapon.selected_effort, weapon.rank]),
 	);
-	assert.notDeepEqual(reranked.weapons.map((weapon) => weapon.baseline_requirement), generated.weapons.map((weapon) => weapon.baseline_requirement));
+	assert.deepEqual(reranked.weapons.map((weapon) => weapon.baseline_requirement), generated.weapons.map((weapon) => weapon.baseline_requirement));
+	assert.deepEqual(reranked.weapons.map((weapon) => weapon.assigned_requirement), generated.weapons.map((weapon) => weapon.assigned_requirement));
 	assert.equal(stableJson(generated), stableJson(buildAcquisitionRanking({ evidence })));
 });
 
@@ -790,6 +812,91 @@ test("AC-7 jointly allocates each skill budget with group-wide monotonicity and 
 	assert.throws(() => solveRankedDpsCandidates(syntheticRows, { easy: syntheticCandidates.easy }), /missing DPS candidates for hard/i);
 });
 
+test("Plan 02 AC-1 through AC-5 apply the pinned requirements and attacks without protected-field drift", () => {
+	const fixture = loadRankingFixture(RANKING_FIXTURE_PATH);
+	const generated = buildAcquisitionRanking({ evidence: fixture });
+	assert.deepEqual(generated.application, {
+		status: "applied",
+		applied_weapon_count: 75,
+		requirement_mismatches: [],
+		attack_mismatches: [],
+	});
+	const data = loadSourceData();
+	const calculators = loadPropertyCalculators(data);
+	const assigned = new Map(fixture.weapons.map((weapon) => [weapon.weapon_id, weapon]));
+	const beforeItems = loadPublishedItems({ beforeAcquisitionOverride: true });
+	const publishedItems = loadPublishedItems();
+	const source = fs.readFileSync(path.join(REPOSITORY_ROOT, "design/items.js"), "utf8");
+	const mapMatch = source.match(/var acquisition_ranked_weapon_attacks=(\{[^;]+\});/);
+	assert.ok(mapMatch, "exhaustive acquisition attack map is published after historical calibration");
+	const attackMap = JSON.parse(mapMatch[1]);
+	assert.deepEqual(Object.keys(attackMap).sort(), [...assigned.keys()].sort());
+
+	const nonWeaponRequirements = Object.fromEntries(
+		Object.keys(data.itemRequirements)
+			.filter((itemId) => data.items[itemId]?.type !== "weapon")
+			.sort()
+			.map((itemId) => [itemId, data.itemRequirements[itemId]]),
+	);
+	assert.equal(crypto.createHash("sha256").update(stableJson(nonWeaponRequirements)).digest("hex"), "6ab865c4db56b4df8a4e15c0fe18b5c3a69988deceeb1a9f6f9392096dee8691");
+
+	for (const [weaponId, target] of assigned) {
+		assert.deepEqual(data.itemRequirements[weaponId], [{ skill: target.skill, level: target.assigned_requirement }], `${weaponId} requirement`);
+		assert.equal(publishedItems[weaponId].attack, target.solved_attack, `${weaponId} top-level attack`);
+		assert.equal(attackMap[weaponId], target.solved_attack, `${weaponId} attack map`);
+		const before = clone(beforeItems[weaponId]);
+		const after = clone(publishedItems[weaponId]);
+		assert.deepEqual(after.upgrade, before.upgrade, `${weaponId} upgrade input`);
+		assert.deepEqual(after.compound, before.compound, `${weaponId} compound input`);
+		delete before.attack;
+		delete after.attack;
+		assert.deepEqual(after, before, `${weaponId} protected fields`);
+		for (let level = 0; level <= 4; level += 1) {
+			const properties = calculators.current.calculate_item_properties({ name: weaponId, level });
+			for (const [field, value] of Object.entries(properties))
+				if (typeof value === "number") assert.ok(Number.isFinite(value), `${weaponId}+${level} ${field}`);
+		}
+	}
+
+	for (const excluded of fixture.exclusions) {
+		assert.equal(data.itemRequirements[excluded.weapon_id][0].level, excluded.unchanged_requirement, `${excluded.weapon_id} requirement`);
+		const stats = calculateStats({
+			slots: { mainhand: { name: excluded.weapon_id, level: 0 } },
+			items: data.items,
+			getItemProperties: calculators.current.calculate_item_properties,
+		});
+		assert.equal(roundEvidence(stats.attack * stats.frequency), excluded.unchanged_dps, `${excluded.weapon_id} DPS`);
+		assert.deepEqual(publishedItems[excluded.weapon_id], beforeItems[excluded.weapon_id], `${excluded.weapon_id} definition`);
+	}
+
+	for (const skill of fixture.policy.combat_skills) {
+		const rows = fixture.weapons.filter((weapon) => weapon.skill === skill);
+		assert.deepEqual(
+			rows.map((weapon) => data.itemRequirements[weapon.weapon_id][0].level).sort((left, right) => left - right),
+			rows.map((weapon) => weapon.baseline_requirement).sort((left, right) => left - right),
+			`${skill} requirement budget`,
+		);
+		let previousRequirement = -Infinity;
+		let previousDps = -Infinity;
+		for (const rank of [...new Set(rows.map((weapon) => weapon.rank))].sort((left, right) => left - right)) {
+			const group = rows.filter((weapon) => weapon.rank === rank);
+			const requirements = group.map((weapon) => data.itemRequirements[weapon.weapon_id][0].level);
+			const dpsValues = group.map((weapon) => {
+				const stats = calculateStats({
+					slots: { mainhand: { name: weapon.weapon_id, level: 0 } },
+					items: data.items,
+					getItemProperties: calculators.current.calculate_item_properties,
+				});
+				return roundEvidence(stats.attack * stats.frequency);
+			});
+			assert.ok(Math.min(...requirements) >= previousRequirement, `${skill} rank ${rank} requirement inversion`);
+			assert.ok(Math.min(...dpsValues) >= previousDps, `${skill} rank ${rank} DPS inversion`);
+			previousRequirement = Math.max(...requirements);
+			previousDps = Math.max(...dpsValues);
+		}
+	}
+});
+
 test("AC-8 normal execution is read-only across production inputs and fixture writes are guarded", () => {
 	const observedFiles = [
 		path.join(REPOSITORY_ROOT, "design/items.js"),
@@ -802,7 +909,7 @@ test("AC-8 normal execution is read-only across production inputs and fixture wr
 	const tool = path.resolve(__dirname, "../tools/weapon-acquisition-ranking.js");
 	const source = fs.readFileSync(tool, "utf8");
 	assert.equal((source.match(/fs\.writeFileSync\(/g) || []).length, 1);
-	assert.match(source, /fs\.writeFileSync\(RANKING_FIXTURE_PATH, stableJson\(generated\)\)/);
+	assert.match(source, /fs\.writeFileSync\(RANKING_FIXTURE_PATH, stableJson\(pinned\)\)/);
 	assert.doesNotMatch(source, /(?:unlinkSync|renameSync|rmSync|deleteMany|dropDatabase|mongoose|mongodb)/);
 
 	const result = spawnSync(process.execPath, [tool, "--json"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
@@ -844,4 +951,7 @@ test("AC-8 normal execution is read-only across production inputs and fixture wr
 	const rejected = spawnSync(process.execPath, [tool, "--write-fixture=elsewhere.json"], { encoding: "utf8" });
 	assert.notEqual(rejected.status, 0);
 	assert.match(rejected.stderr, /only the checked-in ranking fixture/i);
+	const rejectedRebaseline = spawnSync(process.execPath, [tool, "--write-fixture"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+	assert.notEqual(rejectedRebaseline.status, 0);
+	assert.match(rejectedRebaseline.stderr, /pinned pre-retune baseline/i);
 });

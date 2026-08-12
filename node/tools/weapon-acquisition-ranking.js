@@ -1988,6 +1988,26 @@ function exclusionRows(data, catalog, calculators) {
 	});
 }
 
+function applicationStatus(evidence, data) {
+	const requirementMismatches = [];
+	const attackMismatches = [];
+	for (const target of evidence.weapons || []) {
+		const requirements = data.itemRequirements[target.weapon_id] || [];
+		const currentRequirement = requirements.length === 1 && requirements[0].skill === target.skill ? requirements[0].level : null;
+		if (currentRequirement !== target.assigned_requirement)
+			requirementMismatches.push({ weapon_id: target.weapon_id, expected: target.assigned_requirement, current: currentRequirement });
+		const currentAttack = Number(data.items[target.weapon_id]?.attack);
+		if (currentAttack !== target.solved_attack)
+			attackMismatches.push({ weapon_id: target.weapon_id, expected: target.solved_attack, current: currentAttack });
+	}
+	return {
+		status: requirementMismatches.length || attackMismatches.length ? "pending" : "applied",
+		applied_weapon_count: (evidence.weapons || []).length - new Set([...requirementMismatches, ...attackMismatches].map((row) => row.weapon_id)).size,
+		requirement_mismatches: requirementMismatches,
+		attack_mismatches: attackMismatches,
+	};
+}
+
 function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE_PATH), data = loadSourceData() } = {}) {
 	if (stableJson(evidence.policy.combat_skills) !== stableJson(COMBAT_SKILLS)) throw new Error("Ranking policy combat skills drifted");
 	if (stableJson(evidence.policy.forbidden_drop_tables) !== stableJson(FORBIDDEN_DROP_TABLES))
@@ -2005,6 +2025,16 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 	if (eligibleCatalog.length !== 75) throw new Error(`Expected 75 visible combat weapons, found ${eligibleCatalog.length}`);
 	const ignoredIds = catalog.filter((row) => row.ignored).map((row) => row.weapon_id).sort();
 	if (stableJson(ignoredIds) !== stableJson(EXCLUDED_WEAPON_IDS)) throw new Error("Ignored combat weapon exclusions drifted");
+	if (!Array.isArray(evidence.weapons) || evidence.weapons.length !== 75 || !Array.isArray(evidence.catalog_manifest) || evidence.catalog_manifest.length !== 80)
+		throw new Error("Ranking fixture pinned baseline is incomplete");
+	const pinnedWeapons = new Map(evidence.weapons.map((weapon) => [weapon.weapon_id, weapon]));
+	const pinnedCatalog = new Map(evidence.catalog_manifest.map((row) => [row.weapon_id, row]));
+	for (const current of catalog) {
+		const pinned = pinnedCatalog.get(current.weapon_id);
+		if (!pinned) throw new Error(`Ranking fixture pinned catalog omits ${current.weapon_id}`);
+		for (const field of ["skill", "weapon_type", "damage_type", "ignored"])
+			if (stableJson(current[field]) !== stableJson(pinned[field])) throw new Error(`Ranking fixture pinned catalog ${current.weapon_id} changed ${field}`);
+	}
 
 	const medians = normalizationMedians(data);
 	const runtimeSnapshot = loadRuntimeSnapshot(data);
@@ -2035,7 +2065,8 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 			for (const overrideId of route.availability_override_ids || []) allUsedRouteIds.add(overrideId);
 		}
 		const selected = routes[0];
-		const baseline = baselineWeaponDps(data, calculators, catalogRow.weapon_id);
+		const pinned = pinnedWeapons.get(catalogRow.weapon_id);
+		if (!pinned) throw new Error(`Ranking fixture pinned weapon baseline omits ${catalogRow.weapon_id}`);
 		unallocated.push({
 			weapon_id: catalogRow.weapon_id,
 			skill: catalogRow.skill,
@@ -2044,8 +2075,8 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 			routes,
 			selected_route_id: selected.route_id,
 			selected_effort: selected.effort,
-			baseline_requirement: catalogRow.requirement_level,
-			baseline_dps: roundEvidence(baseline.dps),
+			baseline_requirement: pinned.baseline_requirement,
+			baseline_dps: pinned.baseline_dps,
 		});
 	}
 	if (unclassifiedWeaponIds.length)
@@ -2068,7 +2099,14 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 	}
 	allocated.sort((left, right) => left.skill.localeCompare(right.skill) || left.rank - right.rank || left.weapon_id.localeCompare(right.weapon_id));
 
-	const exclusions = exclusionRows(data, catalog, calculators);
+	const exclusions = clone(evidence.exclusions);
+	for (const excluded of exclusions) {
+		const current = catalog.find((row) => row.weapon_id === excluded.weapon_id);
+		if (!current || current.requirement_level !== excluded.unchanged_requirement)
+			throw new Error(`Excluded weapon ${excluded.weapon_id} requirement drifted`);
+		const currentDps = roundEvidence(baselineWeaponDps(data, calculators, excluded.weapon_id).dps);
+		if (currentDps !== excluded.unchanged_dps) throw new Error(`Excluded weapon ${excluded.weapon_id} DPS drifted`);
+	}
 	const requirementMultisets = Object.fromEntries(
 		COMBAT_SKILLS.map((skill) => [skill, allocated.filter((row) => row.skill === skill).map((row) => row.baseline_requirement).sort((left, right) => left - right)]),
 	);
@@ -2113,7 +2151,7 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 		),
 		...dependencyRouteResults.map((route) => ({ item_id: route.item_id, route_id: route.route_id, kind: route.kind, role: "dependency" })),
 	];
-	return {
+	const generated = {
 		schema_version: 1,
 		policy: {
 			combat_skills: [...COMBAT_SKILLS],
@@ -2127,24 +2165,28 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 		source_artifact_hashes: clone(evidence.source_artifact_hashes),
 		availability_overrides: orderedAvailabilityOverrides,
 		hashes: {
-			catalog_manifest_sha256: sha256(catalog),
+			catalog_manifest_sha256: sha256(evidence.catalog_manifest),
 			eligible_requirement_multisets_sha256: sha256(requirementMultisets),
 			eligible_base_dps_multisets_sha256: sha256(dpsMultisets),
 			acquisition_inputs_sha256: sha256(acquisitionInputs),
 			availability_overrides_sha256: sha256(orderedAvailabilityOverrides),
 			route_identity_manifest_sha256: sha256(routeIdentityManifest),
 		},
-		catalog_manifest: catalog,
+		catalog_manifest: clone(evidence.catalog_manifest),
 		exclusions,
 		dependency_route_results: dependencyRouteResults,
 		route_sources: routeSources,
 		weapons: compactWeapons,
 	};
+	for (const field of ["catalog_manifest_sha256", "eligible_requirement_multisets_sha256", "eligible_base_dps_multisets_sha256", "acquisition_inputs_sha256", "availability_overrides_sha256", "route_identity_manifest_sha256"])
+		if (generated.hashes[field] !== evidence.hashes[field]) throw new Error(`Ranking fixture pinned ${field} drifted`);
+	return { ...generated, application: applicationStatus(evidence, data) };
 }
 
 function validateRankingFixture(fixture, generated = buildAcquisitionRanking({ evidence: fixture })) {
 	if (fixture.schema_version !== 1) throw new Error("Ranking fixture schema version must be 1");
-	if (stableJson(fixture) !== stableJson(generated)) throw new Error("Weapon acquisition ranking fixture drifted from deterministic generation");
+	const { application, ...pinned } = generated;
+	if (!application || stableJson(fixture) !== stableJson(pinned)) throw new Error("Weapon acquisition ranking fixture drifted from deterministic generation");
 	return true;
 }
 
@@ -2186,7 +2228,9 @@ function main(argv = process.argv.slice(2)) {
 	const evidence = loadRankingFixture(RANKING_FIXTURE_PATH);
 	const generated = buildAcquisitionRanking({ evidence });
 	if (argv.includes("--write-fixture")) {
-		fs.writeFileSync(RANKING_FIXTURE_PATH, stableJson(generated));
+		if (generated.application.status !== "pending") throw new Error("The applied ranking fixture is a pinned pre-retune baseline and cannot be regenerated");
+		const { application, ...pinned } = generated;
+		fs.writeFileSync(RANKING_FIXTURE_PATH, stableJson(pinned));
 		process.stdout.write(`Wrote ${RANKING_FIXTURE_PATH}\n`);
 		return;
 	}

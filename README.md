@@ -139,12 +139,14 @@ reset or manual respec.
 
 ## Weapon progression
 
-Legal combat weapons for Warrior, Paladin, Mage, Priest, Ranger, and Rogue now
-follow normalized family curves at their owning-skill unlocks. Each unlock is
-checked at mainhand upgrade levels +0 through +4; the previous unlock's +4 is
-kept 5–10% longer in expected basic-attack TTK than the next unlock's +0 across
-physical, magical, and physical-evasion target archetypes. Merchant has no
-combat weapon family.
+Legal visible combat weapons for Warrior, Paladin, Mage, Priest, Ranger, and
+Rogue now use their easiest intended acquisition route to assign a semantic
+rank. Within each skill, harder ranks receive no lower requirement and no lower
+unenhanced Guide Base DPS; the existing per-skill requirement and DPS slots are
+redistributed rather than expanded. Weapon ownership, cadence, attributes,
+enhancement inputs, and +1 through +4 behavior remain unchanged, and the five
+ignored combat weapons stay unchanged. Deliberate TTK and broader weapon
+balancing are separate work.
 
 In the in-game Guide → Items view, visible weapons are grouped under Warrior,
 Paladin, Mage, Priest, Ranger, and Rogue in combat-profile order. Each group is
@@ -152,12 +154,12 @@ sorted by the existing level-0 Base DPS calculation, with item ID as the
 deterministic tie-breaker; ignored items remain hidden and the other item
 categories keep their existing layout and detail actions.
 
-The parity runner and checked-in fixtures expose expected DPS/TTK, current
-versus pinned-legacy deltas, and target-aware handoff checks. The legacy table is
-a diagnostic reference; normalized family and handoff checks define the
-release curve. Existing item instances continue through the normal equipment
-refresh path, with no migration or respec step. To inspect the deterministic
-chart locally:
+The parity runner and checked-in fixtures expose current assigned requirements
+alongside immutable historical DPS/TTK comparisons. Historical family and
+handoff checks are retained as diagnostics, not release gates. Existing item
+instances remain equipped through the normal equipment-refresh path; a future
+equip or re-equip enforces the assigned requirement, with no migration or
+respec step. To inspect the deterministic diagnostic chart locally:
 
 ```sh
 node tools/weapon-progression-parity.js --format=markdown

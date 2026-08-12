@@ -6,6 +6,7 @@ const test = require("node:test");
 const { authorizeAbility } = require("../game/ability_access");
 const { COMBAT_SKILL_IDS } = require("../game/skill_domain");
 const { calculateStats } = require("../game/stats");
+const { RANKING_FIXTURE_PATH, loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
 const {
 	PARITY_FIXTURE_PATH,
 	LEGACY_BASELINE_PATH,
@@ -34,16 +35,6 @@ function abilityResourceCost(ability, stats) {
 	return Number(ability.ratio) > 0 ? stats.max_mp : Number(ability.mp || 0);
 }
 
-function sustainedAbilityOutput(ability, semantics, stats) {
-	const resourceCost = abilityResourceCost(ability, stats);
-	const basicOutput = stats.attack * stats.frequency;
-	if (resourceCost > stats.max_mp) return basicOutput;
-	const resourceCycleMs = resourceCost ? (resourceCost / semantics.mp_regen_per_second) * 1000 : 0;
-	const cycleMs = Math.max(semantics.cooldown, stats.attack_ms, resourceCycleMs);
-	if (semantics.effect === "damage_taken_multiplier") return basicOutput * (1 + (semantics.damage_multiplier - 1) * Math.min(1, semantics.duration / cycleMs));
-	return basicOutput + (abilityEffect(ability, semantics, stats) * 1000) / cycleMs;
-}
-
 function weaponStats(report, calculators, weaponId, upgradeLevel) {
 	return calculateStats({
 		slots: { mainhand: { name: weaponId, level: upgradeLevel } },
@@ -52,15 +43,17 @@ function weaponStats(report, calculators, weaponId, upgradeLevel) {
 	});
 }
 
-function median(values) {
-	return [...values].sort((left, right) => left - right)[Math.floor(values.length / 2)];
-}
-
-test("combat abilities are selected or explicitly excluded and selected abilities retain effects, cooldowns, resources, and handoffs", () => {
+test("combat abilities are selected or explicitly excluded and retain access, effects, cooldowns, and resources", () => {
 	const fixture = loadParityFixture(PARITY_FIXTURE_PATH);
 	const validation = fixture.ability_validation;
 	assert.ok(validation && Array.isArray(validation.selected) && validation.exceptions && validation.semantics);
 	const report = buildParityReport({ fixturePath: PARITY_FIXTURE_PATH, legacyBaselinePath: LEGACY_BASELINE_PATH });
+	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
+	for (const target of ranking.weapons) {
+		const row = report.rows.find((candidate) => candidate.weapon_id === target.weapon_id);
+		assert.ok(row, target.weapon_id);
+		assert.equal(row.current_requirement_level, target.assigned_requirement, target.weapon_id);
+	}
 	const calculators = loadPropertyCalculators(report.data);
 	const abilities = report.data.abilities;
 	const combatAbilities = Object.entries(abilities)
@@ -114,22 +107,5 @@ test("combat abilities are selected or explicitly excluded and selected abilitie
 			(error) => error.code === "wrong_active_skill",
 			abilityId,
 		);
-	}
-
-	for (const abilityId of validation.selected) {
-		const ability = abilities[abilityId];
-		const semantics = validation.semantics[abilityId];
-		for (const handoff of report.curve.handoffs.filter((entry) => entry.family.startsWith(`${ability.skill}:`))) {
-			const [, weaponType] = handoff.family.split(":");
-			const previousRows = report.rows.filter((row) => row.skill === ability.skill && row.weapon_type === weaponType && row.requirement_level === handoff.from_level);
-			const nextRows = report.rows.filter((row) => row.skill === ability.skill && row.weapon_type === weaponType && row.requirement_level === handoff.to_level);
-			const allowed = ability.wtype ? (Array.isArray(ability.wtype) ? ability.wtype : [ability.wtype]) : null;
-			const previous = previousRows.filter((row) => !allowed || allowed.includes(row.weapon_type));
-			const next = nextRows.filter((row) => !allowed || allowed.includes(row.weapon_type));
-			if (!previous.length || !next.length) continue;
-			const previousOutput = median(previous.map((row) => sustainedAbilityOutput(ability, semantics, weaponStats(report, calculators, row.weapon_id, 4))));
-			const nextOutput = median(next.map((row) => sustainedAbilityOutput(ability, semantics, weaponStats(report, calculators, row.weapon_id, 0))));
-			assert.ok(previousOutput <= nextOutput, `${abilityId} reverses ${handoff.family} ${handoff.from_level}->${handoff.to_level}`);
-		}
 	}
 });

@@ -8727,4 +8727,13 @@ for(var handoff_weapon_id in weapon_handoff_attack_adjustments){
 	if(handoff_weapon.upgrade) handoff_weapon.upgrade.attack=(handoff_weapon.upgrade.attack||0)*handoff_attack_multiplier;
 }
 
+var acquisition_ranked_weapon_attacks={"basher":233,"bataxe":326,"blade":150,"bow":550,"bowofthedead":174,"broom":1276,"candycanesword":111,"carrotsword":157,"cclaw":144,"claw":303,"crossbow":807,"cupid":282,"dagger":271,"daggerofthedead":64,"dartgun":342,"dragondagger":395,"fclaw":85,"fireblade":110,"firebow":127,"firestaff":86,"firestars":120,"frostbow":127,"froststaff":117,"fsword":108,"gbow":486,"glolipop":117,"gstaff":863,"hammer":94,"harbringer":136,"harpybow":123,"hbow":376,"hdagger":210,"heartwood":220,"lmace":123,"mace":117,"maceofthedead":40,"merry":642,"mushroomstaff":432,"ololipop":162,"oozingterror":216,"ornamentstaff":166,"pclaw":84,"pinkie":810,"pmace":95,"pmaceofthedead":69,"pouchbow":1257,"rapier":163,"scythe":263,"slimestaff":208,"snowflakes":133,"sparkstaff":475,"spear":167,"spearofthedead":82,"staff":125,"staffofthedead":160,"stinger":133,"swifty":181,"sword":131,"swordofthedead":186,"t2bow":89,"t3bow":208,"throwingstars":638,"vdagger":181,"vhammer":377,"vstaff":400,"vsword":460,"wand":49,"wbasher":117,"wblade":265,"wbook0":62,"wbook1":34,"wbookhs":10,"weaver":724,"woodensword":141,"xmace":584};
+for(var acquisition_attack_weapon_id in acquisition_ranked_weapon_attacks){
+	var acquisition_attack_weapon=items[acquisition_attack_weapon_id];
+	// Priest books are authored as sources and become weapons in skill_domain publication.
+	if(!acquisition_attack_weapon || (acquisition_attack_weapon.type!="weapon" && acquisition_attack_weapon.type!="source"))
+		throw new Error("Missing acquisition-ranked weapon attack: "+acquisition_attack_weapon_id);
+	acquisition_attack_weapon.attack=acquisition_ranked_weapon_attacks[acquisition_attack_weapon_id];
+}
+
 if(typeof module!=="undefined") module.exports={items:items,sets:sets};

@@ -16,6 +16,7 @@ const {
 	validateProgressionData,
 	validateRequirements,
 } = require("../game/skill_domain");
+const { RANKING_FIXTURE_PATH, loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
 
 const designRoot = path.resolve(__dirname, "../../design");
 
@@ -206,14 +207,13 @@ test("item normalization is independent, non-mutating, and precedence-safe", () 
 	assert.deepEqual(plain(normalized.stealthcape.requirements), requirements.stealthcape);
 });
 
-test("raw tier, owner, override, and hybrid sources independently produce final requirements", () => {
+test("raw non-weapon sources and reviewed acquisition assignments independently produce final requirements", () => {
 	const raw = loadRaw();
 	const data = loadAll();
+	const rankedRequirements = new Map(loadRankingFixture(RANKING_FIXTURE_PATH).weapons.map((weapon) => [weapon.weapon_id, [{ skill: weapon.skill, level: weapon.assigned_requirement }]]));
 	const cases = {
 		helmetsource: ["helmet", 1, [{ skill: "warrior", level: 1 }]],
-		tierboundary10: ["spear", 1.25, [{ skill: "warrior", level: 10 }]],
 		tierboundary20: ["xmashat", 1.5, [{ skill: "merchant", level: 20 }]],
-		tierboundary30: ["weaver", 1.75, [{ skill: "ranger", level: 30 }]],
 		tierboundary40: ["mageshood", 2, [{ skill: "mage", level: 40 }]],
 		tierboundary50: ["mrnhat", 2.25, [{ skill: "ranger", level: 50 }]],
 		tierboundary60: ["sweaterhs", 2.5, [{ skill: "merchant", level: 60 }]],
@@ -221,7 +221,7 @@ test("raw tier, owner, override, and hybrid sources independently produce final 
 		tierboundary80: ["hhelmet", 3, [{ skill: "warrior", level: 80 }]],
 		tierboundary90: ["handofmidas", 3.5, [{ skill: "merchant", level: 90 }]],
 		tierboundary95: ["xhelmet", 4, [{ skill: "warrior", level: 95 }]],
-		weaponowner: ["spear", 1.25, [{ skill: "warrior", level: 10 }]],
+		weaponowner: ["weaver", 1.75, rankedRequirements.get("weaver")],
 		offhandowner: ["shield", 2, [{ skill: "paladin", level: 40 }]],
 		toolowner: ["rod", 1, [{ skill: "merchant", level: 16 }]],
 		hybrid: [
@@ -247,6 +247,10 @@ test("raw tier, owner, override, and hybrid sources independently produce final 
 		assert.equal(raw.items[itemId].tier, tier, itemId);
 		assert.deepEqual(plain(data.item_requirements[itemId]), expected, itemId);
 		assert.deepEqual(plain(data.items[itemId].requirements), expected, itemId);
+	}
+	for (const [weaponId, expected] of rankedRequirements) {
+		assert.deepEqual(plain(data.item_requirements[weaponId]), expected, weaponId);
+		assert.deepEqual(plain(data.items[weaponId].requirements), expected, weaponId);
 	}
 	assert.equal(raw.items.mageshood.class[0], "mage");
 	assert.equal(raw.items.fury.class.length, 4);
@@ -425,7 +429,7 @@ test("every equippable item has the explicit all-of requirement snapshot", () =>
 	);
 	assert.equal(
 		crypto.createHash("sha256").update(JSON.stringify(snapshot)).digest("hex"),
-		"05fb878a42c85b20e0e87f10c658636e67d9e6f44a77c319f172c4f9a9efb665",
+		"057faf81a7b270d3f9ac445995bbf7b89fcd6631efc6bf45e24c4557b31be56e",
 	);
 	assert.deepEqual(
 		Object.keys(data.item_requirements)
@@ -488,7 +492,7 @@ test("every equippable item has the explicit all-of requirement snapshot", () =>
 		helmet: [{ skill: "warrior", level: 1 }],
 		spear: [{ skill: "warrior", level: 10 }],
 		xmashat: [{ skill: "merchant", level: 20 }],
-		weaver: [{ skill: "ranger", level: 30 }],
+		weaver: [{ skill: "ranger", level: 60 }],
 		mageshood: [{ skill: "mage", level: 40 }],
 		mrnhat: [{ skill: "ranger", level: 50 }],
 		sweaterhs: [{ skill: "merchant", level: 60 }],
@@ -858,7 +862,7 @@ test("the closed progression consumer inventory has no legacy skill lookups", ()
 		"docs/EXAMPLES.html",
 		"docs/directory.js",
 	];
-	const expectedProgressionRefs = { "htmls/index.html": 1, "js/html.js": 12, "js/game.js": 1 };
+	const expectedProgressionRefs = { "htmls/index.html": 1, "js/html.js": 13, "js/game.js": 1 };
 	const expectedAbilityRefs = {
 		"node/server.js": 43,
 		"node/server_functions.js": 20,
