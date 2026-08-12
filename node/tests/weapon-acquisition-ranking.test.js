@@ -16,6 +16,7 @@ const {
 	assertAcyclicSourceGraph,
 	assignSemanticRanks,
 	buildAcquisitionRanking,
+	compactRankingFixture,
 	dropOutcomeProbability,
 	expectedEnhancedCopies,
 	keyedInstanceAccessEvidence,
@@ -339,6 +340,31 @@ test("AC-1 classifies the complete combat catalog as 75 ranked and five named ex
 	assert.deepEqual(generated.exclusions.map((row) => row.weapon_id).sort(), EXCLUDED_WEAPON_IDS);
 	assert.equal(new Set(generated.catalog_manifest.map((row) => row.weapon_id)).size, 80);
 	assert.doesNotThrow(() => validateRankingFixture(evidence, generated));
+});
+
+test("the checked-in fixture stays compact while the exhaustive route graph is regenerated", () => {
+	const { evidence, generated } = builtFixture();
+	const fixtureText = fs.readFileSync(RANKING_FIXTURE_PATH, "utf8");
+
+	assert.equal(evidence.schema_version, 2);
+	assert.ok(Buffer.byteLength(fixtureText) < 512 * 1024, "fixture must remain below 512 KiB");
+	assert.ok(fixtureText.split("\n").length < 10000, "fixture must remain below 10,000 lines");
+	assert.equal(evidence.counts.weapon_routes, 5309);
+	assert.equal(evidence.counts.dependency_routes, 1042);
+	assert.equal(evidence.counts.route_sources, 612);
+	assert.equal(evidence.selected_dependency_routes.length, 37);
+	assert.equal(typeof evidence.hashes.route_graph_sha256, "string");
+	assert.equal(Object.hasOwn(evidence, "route_sources"), false);
+	assert.equal(Object.hasOwn(evidence, "dependency_route_results"), false);
+	assert.ok(evidence.weapons.every((weapon) => !Object.hasOwn(weapon, "routes") && weapon.selected_route?.route_id === weapon.selected_route_id));
+	assert.equal(stableJson(evidence), stableJson(compactRankingFixture(generated)));
+	assert.equal(generated.weapons.reduce((sum, weapon) => sum + weapon.routes.length, 0), evidence.counts.weapon_routes);
+	assert.equal(generated.dependency_route_results.length, evidence.counts.dependency_routes);
+	assert.equal(Object.keys(generated.route_sources).length, evidence.counts.route_sources);
+
+	const tampered = clone(evidence);
+	tampered.hashes.route_graph_sha256 = "0".repeat(64);
+	assert.throws(() => buildAcquisitionRanking({ evidence: tampered }), /pinned route_graph_sha256 drifted/);
 });
 
 test("AC-2 snapshots the intended route inventory and selects the easiest allowed route", () => {

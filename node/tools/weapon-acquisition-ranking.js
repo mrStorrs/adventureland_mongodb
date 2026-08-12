@@ -94,7 +94,14 @@ function loadSourceData() {
 
 function loadRankingFixture(filename = RANKING_FIXTURE_PATH) {
 	const fixture = JSON.parse(fs.readFileSync(filename, "utf8"));
-	if (!fixture || fixture.schema_version !== 1 || !fixture.policy || !Array.isArray(fixture.availability_overrides))
+	if (
+		!fixture ||
+		fixture.schema_version !== 2 ||
+		!fixture.policy ||
+		!Array.isArray(fixture.availability_overrides) ||
+		!fixture.counts ||
+		!Array.isArray(fixture.selected_dependency_routes)
+	)
 		throw new Error("Weapon acquisition ranking fixture is invalid");
 	return fixture;
 }
@@ -2160,6 +2167,11 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 		left.route_id.localeCompare(right.route_id) ||
 		left.kind.localeCompare(right.kind),
 	);
+	const routeGraphSha256 = sha256({
+		weapons: compactWeapons.map((weapon) => ({ weapon_id: weapon.weapon_id, routes: weapon.routes })),
+		dependency_route_results: dependencyRouteResults,
+		route_sources: routeSources,
+	});
 	const generated = {
 		schema_version: 1,
 		policy: {
@@ -2180,6 +2192,7 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 			acquisition_inputs_sha256: sha256(acquisitionInputs),
 			availability_overrides_sha256: sha256(orderedAvailabilityOverrides),
 			route_identity_manifest_sha256: sha256(routeIdentityManifest),
+			route_graph_sha256: routeGraphSha256,
 		},
 		catalog_manifest: clone(evidence.catalog_manifest),
 		exclusions,
@@ -2187,15 +2200,70 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 		route_sources: routeSources,
 		weapons: compactWeapons,
 	};
-	for (const field of ["catalog_manifest_sha256", "eligible_requirement_multisets_sha256", "eligible_base_dps_multisets_sha256", "acquisition_inputs_sha256", "availability_overrides_sha256", "route_identity_manifest_sha256"])
+	for (const field of ["catalog_manifest_sha256", "eligible_requirement_multisets_sha256", "eligible_base_dps_multisets_sha256", "acquisition_inputs_sha256", "availability_overrides_sha256", "route_identity_manifest_sha256", "route_graph_sha256"])
 		if (generated.hashes[field] !== evidence.hashes[field]) throw new Error(`Ranking fixture pinned ${field} drifted`);
 	return { ...generated, application: applicationStatus(evidence, data) };
 }
 
+function compactRankingFixture(generated) {
+	const routeResults = new Map();
+	for (const weapon of generated.weapons || [])
+		for (const route of weapon.routes || []) routeResults.set(`${weapon.weapon_id}|${route.route_id}`, { item_id: weapon.weapon_id, ...clone(route) });
+	for (const route of generated.dependency_route_results || []) routeResults.set(`${route.item_id}|${route.route_id}`, clone(route));
+
+	function expandedRoute(route) {
+		return { ...clone(generated.route_sources?.[route.route_id] || {}), ...clone(route) };
+	}
+
+	const selectedDependencies = new Map();
+	function collectSelectedDependency(itemId, routeId) {
+		const key = `${itemId}|${routeId}`;
+		if (selectedDependencies.has(key)) return;
+		const result = routeResults.get(key);
+		if (!result) throw new Error(`Selected dependency route ${key} is missing from the generated graph`);
+		const { item_id: resultItemId, ...route } = result;
+		const selected = { item_id: resultItemId, ...expandedRoute(route) };
+		selectedDependencies.set(key, selected);
+		for (const input of selected.recursive_inputs || []) collectSelectedDependency(input.item_id, input.selected_route_id);
+	}
+
+	const weapons = (generated.weapons || []).map((sourceWeapon) => {
+		const weapon = clone(sourceWeapon);
+		const selected = weapon.routes.find((route) => route.route_id === weapon.selected_route_id);
+		if (!selected) throw new Error(`Selected weapon route ${weapon.weapon_id}|${weapon.selected_route_id} is missing from the generated graph`);
+		for (const input of selected.recursive_inputs || []) collectSelectedDependency(input.item_id, input.selected_route_id);
+		delete weapon.routes;
+		weapon.selected_route = expandedRoute(selected);
+		return weapon;
+	});
+
+	return {
+		schema_version: 2,
+		policy: clone(generated.policy),
+		source_artifact_hashes: clone(generated.source_artifact_hashes),
+		availability_overrides: clone(generated.availability_overrides),
+		hashes: clone(generated.hashes),
+		counts: {
+			catalog_entries: generated.catalog_manifest.length,
+			weapons: generated.weapons.length,
+			weapon_routes: generated.weapons.reduce((sum, weapon) => sum + weapon.routes.length, 0),
+			dependency_routes: generated.dependency_route_results.length,
+			route_sources: Object.keys(generated.route_sources).length,
+		},
+		catalog_manifest: clone(generated.catalog_manifest),
+		exclusions: clone(generated.exclusions),
+		selected_dependency_routes: [...selectedDependencies.values()].sort(
+			(left, right) => left.item_id.localeCompare(right.item_id) || left.route_id.localeCompare(right.route_id),
+		),
+		weapons,
+	};
+}
+
 function validateRankingFixture(fixture, generated = buildAcquisitionRanking({ evidence: fixture })) {
-	if (fixture.schema_version !== 1) throw new Error("Ranking fixture schema version must be 1");
-	const { application, ...pinned } = generated;
-	if (!application || stableJson(fixture) !== stableJson(pinned)) throw new Error("Weapon acquisition ranking fixture drifted from deterministic generation");
+	const { application } = generated;
+	if (!application) throw new Error("Generated ranking is missing application status");
+	if (fixture.schema_version !== 2 || stableJson(fixture) !== stableJson(compactRankingFixture(generated)))
+		throw new Error("Weapon acquisition ranking fixture drifted from deterministic generation");
 	return true;
 }
 
@@ -2238,7 +2306,7 @@ function main(argv = process.argv.slice(2)) {
 	const generated = buildAcquisitionRanking({ evidence });
 	if (argv.includes("--write-fixture")) {
 		if (generated.application.status !== "pending") throw new Error("The applied ranking fixture is a pinned pre-retune baseline and cannot be regenerated");
-		const { application, ...pinned } = generated;
+		const pinned = compactRankingFixture(generated);
 		fs.writeFileSync(RANKING_FIXTURE_PATH, stableJson(pinned));
 		process.stdout.write(`Wrote ${RANKING_FIXTURE_PATH}\n`);
 		return;
@@ -2264,6 +2332,7 @@ module.exports = {
 	assertAcyclicSourceGraph,
 	assignSemanticRanks,
 	buildAcquisitionRanking,
+	compactRankingFixture,
 	dropOutcomeProbability,
 	expectedEnhancedCopies,
 	keyedInstanceAccessEvidence,
