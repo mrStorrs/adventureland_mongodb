@@ -1918,4 +1918,12 @@ var item_requirements = {
 		},
 	],
 };
+
+var acquisition_ranked_weapon_requirements={"basher":80,"bataxe":60,"blade":1,"bow":1,"bowofthedead":40,"broom":60,"candycanesword":40,"carrotsword":40,"cclaw":1,"claw":1,"crossbow":40,"cupid":60,"dagger":40,"daggerofthedead":40,"dartgun":80,"dragondagger":90,"fclaw":20,"fireblade":30,"firebow":20,"firestaff":10,"firestars":60,"frostbow":40,"froststaff":40,"fsword":40,"gbow":80,"glolipop":40,"gstaff":90,"hammer":50,"harbringer":30,"harpybow":60,"hbow":20,"hdagger":80,"heartwood":90,"lmace":80,"mace":1,"maceofthedead":40,"merry":40,"mushroomstaff":20,"ololipop":1,"oozingterror":60,"ornamentstaff":40,"pclaw":60,"pinkie":95,"pmace":1,"pmaceofthedead":60,"pouchbow":30,"rapier":60,"scythe":80,"slimestaff":1,"snowflakes":40,"sparkstaff":70,"spear":10,"spearofthedead":40,"staff":1,"staffofthedead":40,"stinger":20,"swifty":40,"sword":50,"swordofthedead":60,"t2bow":1,"t3bow":60,"throwingstars":40,"vdagger":80,"vhammer":80,"vstaff":70,"vsword":90,"wand":1,"wbasher":1,"wblade":80,"wbook0":1,"wbook1":40,"wbookhs":40,"weaver":80,"woodensword":60,"xmace":80};
+for(var acquisition_weapon_id in acquisition_ranked_weapon_requirements){
+	if(!item_requirements[acquisition_weapon_id] || item_requirements[acquisition_weapon_id].length!=1)
+		throw new Error("Missing acquisition-ranked weapon requirement: "+acquisition_weapon_id);
+	item_requirements[acquisition_weapon_id][0].level=acquisition_ranked_weapon_requirements[acquisition_weapon_id];
+}
+
 if (typeof module !== "undefined") module.exports = { item_requirements: item_requirements };

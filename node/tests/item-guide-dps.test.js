@@ -7,6 +7,7 @@ const test = require("node:test");
 const vm = require("node:vm");
 const { calculateStats } = require("../game/stats");
 const { loadBenchmarkData } = require("../tools/progression-benchmark");
+const { RANKING_FIXTURE_PATH, loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
 const { loadPropertyCalculators } = require("../tools/weapon-progression-parity");
 
 function loadGuideHelpers(skills) {
@@ -82,6 +83,7 @@ test("item guide labels its player-facing hit damage, attack speed, and base DPS
 
 test("item guide groups visible weapons by combat profile and base DPS", () => {
 	const data = loadBenchmarkData();
+	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
 	const calculators = loadPropertyCalculators(data);
 	const guide = loadGuideHelpers(data.skills);
 	const groups = JSON.parse(
@@ -108,10 +110,20 @@ test("item guide groups visible weapons by combat profile and base DPS", () => {
 		.sort();
 	const displayed = [];
 	for (const group of groups) {
+		const ranked = ranking.weapons.filter((weapon) => weapon.skill === group.id);
+		assert.equal(group.weapons.length, ranked.length, `${group.id} acquisition inventory`);
+		const positions = new Map(group.weapons.map((weapon, index) => [weapon.id, index]));
 		for (const weapon of group.weapons) {
 			displayed.push(weapon.id);
 			assert.equal(guide.guide_weapon_owner(data.items[weapon.id]), group.id, weapon.id);
+			const target = ranked.find((row) => row.weapon_id === weapon.id);
+			assert.ok(target, `${weapon.id} acquisition row`);
+			assert.equal(Number(weapon.dps.toPrecision(12)), target.solved_dps, `${weapon.id} displayed solved DPS`);
 		}
+		for (const easier of ranked)
+			for (const harder of ranked)
+				if (easier.rank < harder.rank)
+					assert.ok(positions.get(easier.weapon_id) < positions.get(harder.weapon_id), `${group.id} rank ${easier.rank}->${harder.rank}`);
 		const expectedOrder = visibleWeapons
 			.filter((id) => data.skills[group.id].weapon_types.includes(data.items[id].wtype))
 			.map((id) => ({

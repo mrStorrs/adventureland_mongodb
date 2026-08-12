@@ -90,7 +90,14 @@ function currentWeaponRows(data, fixture) {
 		const owner = owners.get(definition.wtype);
 		if (exceptions[weaponId]) continue;
 		if (requirements.length !== 1 || requirements[0].skill !== owner || !Number.isSafeInteger(requirements[0].level)) continue;
-		rows.push({ weapon_id: weaponId, weapon_type: definition.wtype, damage_type: definition.damage_type, skill: owner, requirement_level: requirements[0].level });
+		rows.push({
+			weapon_id: weaponId,
+			weapon_type: definition.wtype,
+			damage_type: definition.damage_type,
+			skill: owner,
+			requirement_level: requirements[0].level,
+			current_requirement_level: requirements[0].level,
+		});
 	}
 	return rows.sort((left, right) =>
 		left.skill.localeCompare(right.skill) ||
@@ -151,7 +158,7 @@ function validateParityFixture(fixture, data) {
 	return { missingWeapons: missingWeapons.sort(), unclassifiedWeapons: unclassifiedWeapons.sort() };
 }
 
-function buildHandoffs(rows) {
+function buildHandoffs(rows, requirementField = "requirement_level") {
 	const grouped = new Map();
 	for (const row of rows) {
 		const key = `${row.skill}:${row.weapon_type}:${row.damage_type}`;
@@ -159,7 +166,7 @@ function buildHandoffs(rows) {
 		grouped.get(key).push(row);
 	}
 	return [...grouped.entries()].flatMap(([family, familyRows]) => {
-		const levels = [...new Set(familyRows.map((row) => row.requirement_level))].sort((a, b) => a - b);
+		const levels = [...new Set(familyRows.map((row) => row[requirementField]))].sort((a, b) => a - b);
 		return levels.slice(0, -1).map((level, index) => ({ family, from_level: level, to_level: levels[index + 1] }));
 	});
 }
@@ -177,8 +184,8 @@ function buildNormalizedCurve(rows, rawHandoffs) {
 	const grouped = new Map();
 	for (const row of rows) {
 		const family = `${row.skill}:${row.weapon_type}:${row.damage_type}`;
-		const key = `${family}:${row.requirement_level}`;
-		if (!grouped.has(key)) grouped.set(key, { family, level: row.requirement_level, rows: [] });
+		const key = `${family}:${row.historical_requirement_level}`;
+		if (!grouped.has(key)) grouped.set(key, { family, level: row.historical_requirement_level, rows: [] });
 		grouped.get(key).rows.push(row);
 	}
 	const families = new Map();
@@ -334,11 +341,17 @@ function buildParityReport({ fixturePath = PARITY_FIXTURE_PATH, legacyBaselinePa
 	if (baseline.snapshot_sha256 !== legacy_snapshot_sha256) throw new Error("Weapon parity legacy snapshot is not an exact fixture replay");
 	const rows = [];
 	for (const weapon of currentWeaponRows(data, fixture)) {
+		const historical = baseline.rows.find((candidate) => candidate.weapon_id === weapon.weapon_id);
+		if (!historical) throw new Error(`Weapon parity legacy baseline is missing ${weapon.weapon_id}`);
 		const archetypes = ["physical", "magical", "physical_evasion"];
 		const measurements = archetypes.map((archetype) => {
-			const target = targetForLevel(fixture, weapon.requirement_level, archetype);
-			const monster = data.monsters[target.id];
-			if (!monster) throw new Error(`Weapon parity target ${target.id} does not exist`);
+			const historicalMeasurement = historical.measurements.find((candidate) => candidate.archetype === archetype);
+			if (!historicalMeasurement) throw new Error(`Weapon parity legacy baseline is missing ${weapon.weapon_id} ${archetype}`);
+			const target = targetForLevel(fixture, historical.requirement_level, archetype);
+			if (target.id !== historicalMeasurement.monster)
+				throw new Error(`Weapon parity historical target drifted for ${weapon.weapon_id} ${archetype}`);
+			const monster = data.monsters[historicalMeasurement.monster];
+			if (!monster) throw new Error(`Weapon parity target ${historicalMeasurement.monster} does not exist`);
 			const upgrades = fixture.upgrade_levels.map((upgradeLevel) => {
 				const instance = { name: weapon.weapon_id, level: upgradeLevel };
 				const current = calculateStats({ slots: { mainhand: instance }, items: data.items, getItemProperties: calculators.current.calculate_item_properties });
@@ -353,14 +366,19 @@ function buildParityReport({ fixturePath = PARITY_FIXTURE_PATH, legacyBaselinePa
 					parity_pass: Math.abs(ttk_delta) <= 0.1,
 				};
 			});
-			return { archetype, monster: target.id, mob_band: target.band, upgrades };
+			return { archetype, monster: historicalMeasurement.monster, mob_band: target.band, upgrades };
 		});
-		rows.push({ ...weapon, upgrade_levels: fixture.upgrade_levels, measurements });
+		rows.push({
+			...weapon,
+			historical_requirement_level: historical.requirement_level,
+			upgrade_levels: fixture.upgrade_levels,
+			measurements,
+		});
 	}
-	const handoffs = buildHandoffs(rows).map((handoff) => {
+	const handoffs = buildHandoffs(rows, "historical_requirement_level").map((handoff) => {
 		const familyRows = rows.filter((row) => `${row.skill}:${row.weapon_type}:${row.damage_type}` === handoff.family);
-		const from = familyRows.filter((row) => row.requirement_level === handoff.from_level);
-		const to = familyRows.filter((row) => row.requirement_level === handoff.to_level);
+		const from = familyRows.filter((row) => row.historical_requirement_level === handoff.from_level);
+		const to = familyRows.filter((row) => row.historical_requirement_level === handoff.to_level);
 		const comparisons = [];
 		for (const archetype of ["physical", "magical", "physical_evasion"]) {
 			const target = targetForLevel(fixture, handoff.to_level, archetype);
@@ -387,7 +405,22 @@ function buildParityReport({ fixturePath = PARITY_FIXTURE_PATH, legacyBaselinePa
 		}
 		return { ...handoff, from_weapon_ids: from.map((row) => row.weapon_id), to_weapon_ids: to.map((row) => row.weapon_id), comparisons };
 	});
-	return { schema_version: 1, source_revision: baseline.source_revision, legacy_snapshot_sha256, data, rows, handoffs, curve: buildNormalizedCurve(rows, handoffs) };
+	return {
+		schema_version: 1,
+		source_revision: baseline.source_revision,
+		legacy_snapshot_sha256,
+		contracts: {
+			acquisition_rank_application: { status: "release_gate" },
+			raw_legacy_parity: { status: "diagnostic" },
+			family_handoffs: { status: "superseded" },
+			normalized_family_curve: { status: "superseded" },
+			enhanced_family_handoffs: { status: "superseded" },
+		},
+		data,
+		rows,
+		handoffs,
+		curve: buildNormalizedCurve(rows, handoffs),
+	};
 }
 
 function main(argv = process.argv.slice(2)) {
@@ -399,6 +432,7 @@ function main(argv = process.argv.slice(2)) {
 	const output = {
 		schema_version: report.schema_version,
 		source_revision: report.source_revision,
+		contracts: report.contracts,
 		summary: {
 			parity: { checks: checks.length, passing: checks.filter((check) => check.parity_pass).length },
 			handoffs: { checks: handoffChecks.length, passing: handoffChecks.filter((check) => check.progression_pass).length },
@@ -411,13 +445,13 @@ function main(argv = process.argv.slice(2)) {
 	};
 	if (argv.includes("--format=markdown")) {
 		process.stdout.write(
-			`# Weapon parity chart\n\nRows: ${report.rows.length}\n\n| Skill | Weapon | Level | Target | Upgrade | TTK delta | Pass |\n|---|---|---:|---|---:|---:|---|\n` +
-				report.rows.flatMap((row) => row.measurements.flatMap((measurement) => measurement.upgrades.map((upgrade) => `| ${row.skill} | ${row.weapon_id} | ${row.requirement_level} | ${measurement.monster} | +${upgrade.upgrade_level} | ${(upgrade.ttk_delta * 100).toFixed(2)}% | ${upgrade.parity_pass ? "PASS" : "FAIL"} |`))).join("\n") +
-				`\n\n## Adjacent unlock handoffs\n\n| Family | Prior +4 | Next +0 | Target | TTK delta | Pass |\n|---|---|---|---|---:|---|\n` +
+			`# Weapon parity diagnostics\n\nAcquisition-rank application is the release gate. Historical comparisons below are diagnostics and superseded family checks, not release gates.\n\nRows: ${report.rows.length}\n\n| Skill | Weapon | Current level | Historical level | Historical target | Upgrade | TTK delta | Diagnostic result |\n|---|---|---:|---:|---|---:|---:|---|\n` +
+				report.rows.flatMap((row) => row.measurements.flatMap((measurement) => measurement.upgrades.map((upgrade) => `| ${row.skill} | ${row.weapon_id} | ${row.current_requirement_level} | ${row.historical_requirement_level} | ${measurement.monster} | +${upgrade.upgrade_level} | ${(upgrade.ttk_delta * 100).toFixed(2)}% | ${upgrade.parity_pass ? "PASS" : "FAIL"} |`))).join("\n") +
+				`\n\n## Historical adjacent unlock handoffs (superseded)\n\n| Family | Prior +4 | Next +0 | Target | TTK delta | Diagnostic result |\n|---|---|---|---|---:|---|\n` +
 				report.handoffs.flatMap((handoff) => handoff.comparisons.map((comparison) => `| ${handoff.family} | ${comparison.from_weapon_id} | ${comparison.to_weapon_id} | ${comparison.monster} | ${(comparison.ttk_delta * 100).toFixed(2)}% | ${comparison.progression_pass ? "PASS" : "FAIL"} |`)).join("\n") +
-				`\n\n## Normalized class curve\n\n| Family | Weapon | Unlock | Upgrade | Power delta | Pass |\n|---|---|---:|---:|---:|---|\n` +
+				`\n\n## Historical normalized class curve (superseded)\n\n| Family | Weapon | Unlock | Upgrade | Power delta | Diagnostic result |\n|---|---|---:|---:|---:|---|\n` +
 				report.curve.checks.map((check) => `| ${check.family} | ${check.weapon_id} | ${check.level} | +${check.upgrade_level} | ${(check.power_delta * 100).toFixed(2)}% | ${check.curve_pass ? "PASS" : "FAIL"} |`).join("\n") +
-				`\n\n## Normalized unlock handoffs\n\n| Family | Prior unlock | Next unlock | Target archetype | Expected TTK delta | Power delta | Pass |\n|---|---:|---:|---|---:|---:|---|\n` +
+				`\n\n## Historical normalized unlock handoffs (superseded)\n\n| Family | Prior unlock | Next unlock | Target archetype | Expected TTK delta | Power delta | Diagnostic result |\n|---|---:|---:|---|---:|---:|---|\n` +
 				report.curve.handoffs.flatMap((handoff) => handoff.comparisons.map((comparison) => `| ${handoff.family} | ${handoff.from_level} | ${handoff.to_level} | ${comparison.archetype} | ${(comparison.ttk_delta * 100).toFixed(2)}% | ${(handoff.power_delta * 100).toFixed(2)}% | ${comparison.progression_pass ? "PASS" : "FAIL"} |`)).join("\n") +
 				"\n",
 		);

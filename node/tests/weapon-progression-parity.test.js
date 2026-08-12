@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
+const { RANKING_FIXTURE_PATH, loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
 
 const {
 	PARITY_FIXTURE_PATH,
@@ -17,12 +18,17 @@ const {
 
 test("parity fixture covers every current combat weapon or names an explicit exception", () => {
 	const fixture = loadParityFixture(PARITY_FIXTURE_PATH);
+	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
 	const report = buildParityReport({ fixturePath: PARITY_FIXTURE_PATH, legacyBaselinePath: LEGACY_BASELINE_PATH });
 
 	assert.equal(validateParityFixture(fixture, report.data).missingWeapons.length, 0);
 	assert.equal(validateParityFixture(fixture, report.data).unclassifiedWeapons.length, 0);
 	assert.ok(report.rows.length > 0);
 	assert.equal(report.rows.length, 80);
+	const assigned = new Map(ranking.weapons.map((weapon) => [weapon.weapon_id, weapon.assigned_requirement]));
+	const exclusions = new Map(ranking.exclusions.map((weapon) => [weapon.weapon_id, weapon.unchanged_requirement]));
+	for (const weapon of fixture.weapons)
+		assert.equal(weapon.requirement_level, assigned.get(weapon.weapon_id) ?? exclusions.get(weapon.weapon_id), weapon.weapon_id);
 	assert.ok(report.handoffs.length > 0);
 	for (const handoff of report.handoffs) {
 		assert.ok(handoff.comparisons.length > 0, handoff.family);
@@ -53,6 +59,7 @@ test("legacy baseline is pinned to the selected pre-skill/class revision", () =>
 	assert.equal(baseline.source_revision, "99d1a8672438227948caf5a5f8c9d595466d8019");
 	assert.equal(baseline.snapshot_sha256, "c3135f7c4e5b10f6143db357d5f0b688d5bcb407ebca7f3f8615644993582102");
 	assert.deepEqual(baseline.legacy_levels, [1, 40, 41, 55, 56, 65, 66, 80, 81, 99]);
+	assert.equal(require("node:crypto").createHash("sha256").update(fs.readFileSync(LEGACY_BASELINE_PATH)).digest("hex"), "8c679bd2c450171c4f4bd328b0a00bcd3e64791366bb72c8b47dde026b22378f");
 });
 
 test("parity output is deterministic and reports per-row current-versus-legacy deltas", () => {
@@ -62,8 +69,23 @@ test("parity output is deterministic and reports per-row current-versus-legacy d
 	assert.equal(JSON.stringify(first.rows), JSON.stringify(second.rows));
 	assert.equal(first.source_revision, second.source_revision);
 	assert.deepEqual(first.handoffs, second.handoffs);
+	assert.deepEqual(first.contracts, {
+		acquisition_rank_application: { status: "release_gate" },
+		raw_legacy_parity: { status: "diagnostic" },
+		family_handoffs: { status: "superseded" },
+		normalized_family_curve: { status: "superseded" },
+		enhanced_family_handoffs: { status: "superseded" },
+	});
+	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
+	const assigned = new Map(ranking.weapons.map((weapon) => [weapon.weapon_id, weapon.assigned_requirement]));
+	const baseline = loadLegacyBaseline(LEGACY_BASELINE_PATH);
 	for (const row of first.rows) {
+		const historical = baseline.rows.find((candidate) => candidate.weapon_id === row.weapon_id);
+		assert.equal(row.requirement_level, row.current_requirement_level, row.weapon_id);
+		assert.equal(row.current_requirement_level, assigned.get(row.weapon_id) ?? historical.requirement_level, row.weapon_id);
+		assert.equal(row.historical_requirement_level, historical.requirement_level, row.weapon_id);
 		for (const measurement of row.measurements) {
+			assert.equal(measurement.monster, historical.measurements.find((candidate) => candidate.archetype === measurement.archetype).monster, `${row.weapon_id} ${measurement.archetype}`);
 			for (const upgrade of measurement.upgrades) {
 				assert.ok(Number.isFinite(upgrade.current.attack));
 				assert.ok(Number.isFinite(upgrade.current.frequency));
@@ -112,16 +134,17 @@ test("weapon normalization retains specialized hit and piercing mechanics", () =
 	}
 });
 
-test("normalized class curve keeps every +0 through +4 band and adjacent unlock handoff in range", () => {
+test("historical family curves remain visible diagnostics without acting as release gates", () => {
 	const report = buildParityReport({ fixturePath: PARITY_FIXTURE_PATH, legacyBaselinePath: LEGACY_BASELINE_PATH });
 	assert.equal(report.curve.checks.length, 400);
-	assert.equal(report.curve.checks.filter((check) => check.curve_pass).length, report.curve.checks.length);
 	assert.equal(report.curve.handoffs.length, 36);
+	assert.equal(report.contracts.normalized_family_curve.status, "superseded");
+	assert.equal(report.contracts.enhanced_family_handoffs.status, "superseded");
 	for (const handoff of report.curve.handoffs) {
 		assert.equal(handoff.comparisons.length, 3, handoff.family);
 		for (const comparison of handoff.comparisons) {
-			assert.ok(comparison.ttk_delta >= 0.05 && comparison.ttk_delta <= 0.1, `${handoff.family} ${comparison.archetype}`);
-			assert.equal(comparison.progression_pass, true, `${handoff.family} ${comparison.archetype}`);
+			assert.ok(Number.isFinite(comparison.ttk_delta), `${handoff.family} ${comparison.archetype}`);
+			assert.equal(typeof comparison.progression_pass, "boolean", `${handoff.family} ${comparison.archetype}`);
 		}
 	}
 });

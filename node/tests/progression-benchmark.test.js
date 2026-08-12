@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
+const crypto = require("node:crypto");
 
 const {
 	FIXTURE_PATH,
@@ -22,6 +23,12 @@ const {
 	runBenchmark,
 	stableJson,
 } = require("../tools/progression-benchmark");
+
+test("acquisition retune keeps the independent progression route fixture and target oracle byte-pinned", () => {
+	assert.equal(crypto.createHash("sha256").update(fs.readFileSync(FIXTURE_PATH)).digest("hex"), "5db7702af2dcb84d5691be4c7334271e65bc646dbb93112b3a9fbf9692bc15df");
+	const targetPath = path.resolve(__dirname, "fixtures/progression-benchmark-targets.json");
+	assert.equal(crypto.createHash("sha256").update(fs.readFileSync(targetPath)).digest("hex"), "05b3a8ea3020c6141bce6257bfe00a042b28348640eda97d8b22bd280d0aa26e");
+});
 
 test("benchmark loads production progression, stat, and merchant data", () => {
 	const data = loadBenchmarkData();
