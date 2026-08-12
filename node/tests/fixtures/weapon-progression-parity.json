@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "catalog_manifest_sha256": "8aa0450adb162274a4facb6d858de4bfa0cc70bd619d11120c67d0ae6cb89c31",
-  "catalog_identity_sha256": "d0931d5f36b77c4f78e4105790511d2a32c2f693738a04345b8127a2a1ccfdcf",
+  "catalog_manifest_sha256": "97be272cb0a40c789e098c7b2f33a51a76668c7308eb2b1ded81679f21b33606",
+  "catalog_identity_sha256": "bdfccce046c3e59746f07581bf40adf218e7d5bc1eb119ae55eae448fd83d9b3",
   "upgrade_levels": [
     0,
     1,
@@ -202,7 +202,7 @@
       "weapon_type": "great_staff",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 95
+      "requirement_level": 90
     },
     {
       "weapon_id": "broom",
@@ -223,35 +223,35 @@
       "weapon_type": "staff",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 40
+      "requirement_level": 20
     },
     {
       "weapon_id": "slimestaff",
       "weapon_type": "staff",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 20
+      "requirement_level": 1
     },
     {
       "weapon_id": "firestaff",
       "weapon_type": "staff",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 1
+      "requirement_level": 10
     },
     {
       "weapon_id": "froststaff",
       "weapon_type": "staff",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 10
+      "requirement_level": 40
     },
     {
       "weapon_id": "ornamentstaff",
       "weapon_type": "staff",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 30
+      "requirement_level": 40
     },
     {
       "weapon_id": "staff2",
@@ -272,7 +272,7 @@
       "weapon_type": "staff",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 40
+      "requirement_level": 30
     },
     {
       "weapon_id": "oozingterror",
@@ -293,7 +293,7 @@
       "weapon_type": "staff",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 80
+      "requirement_level": 70
     },
     {
       "weapon_id": "staff4",
@@ -314,14 +314,14 @@
       "weapon_type": "wand",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 90
+      "requirement_level": 95
     },
     {
       "weapon_id": "wblade",
       "weapon_type": "wblade",
       "damage_type": "magical",
       "skill": "mage",
-      "requirement_level": 70
+      "requirement_level": 80
     },
     {
       "weapon_id": "wbasher",
@@ -342,7 +342,7 @@
       "weapon_type": "mace",
       "damage_type": "physical",
       "skill": "paladin",
-      "requirement_level": 1
+      "requirement_level": 40
     },
     {
       "weapon_id": "mace",
@@ -356,7 +356,7 @@
       "weapon_type": "mace",
       "damage_type": "physical",
       "skill": "paladin",
-      "requirement_level": 40
+      "requirement_level": 1
     },
     {
       "weapon_id": "xmace",
@@ -370,14 +370,14 @@
       "weapon_type": "mace",
       "damage_type": "physical",
       "skill": "paladin",
-      "requirement_level": 1
+      "requirement_level": 40
     },
     {
       "weapon_id": "hammer",
       "weapon_type": "mace",
       "damage_type": "physical",
       "skill": "paladin",
-      "requirement_level": 60
+      "requirement_level": 50
     },
     {
       "weapon_id": "vhammer",
@@ -391,7 +391,7 @@
       "weapon_type": "pmace",
       "damage_type": "physical",
       "skill": "paladin",
-      "requirement_level": 40
+      "requirement_level": 1
     },
     {
       "weapon_id": "lmace",
@@ -405,7 +405,7 @@
       "weapon_type": "pmace",
       "damage_type": "magical",
       "skill": "paladin",
-      "requirement_level": 50
+      "requirement_level": 60
     },
     {
       "weapon_id": "wbook0",
@@ -440,14 +440,14 @@
       "weapon_type": "bow",
       "damage_type": "physical",
       "skill": "ranger",
-      "requirement_level": 40
+      "requirement_level": 30
     },
     {
       "weapon_id": "hbow",
       "weapon_type": "bow",
       "damage_type": "physical",
       "skill": "ranger",
-      "requirement_level": 30
+      "requirement_level": 20
     },
     {
       "weapon_id": "merry",
@@ -461,7 +461,7 @@
       "weapon_type": "bow",
       "damage_type": "physical",
       "skill": "ranger",
-      "requirement_level": 60
+      "requirement_level": 80
     },
     {
       "weapon_id": "firebow",
@@ -475,7 +475,7 @@
       "weapon_type": "bow",
       "damage_type": "physical",
       "skill": "ranger",
-      "requirement_level": 20
+      "requirement_level": 40
     },
     {
       "weapon_id": "t2bow",
@@ -510,14 +510,14 @@
       "weapon_type": "bow",
       "damage_type": "physical",
       "skill": "ranger",
-      "requirement_level": 40
+      "requirement_level": 60
     },
     {
       "weapon_id": "t3bow",
       "weapon_type": "bow",
       "damage_type": "physical",
       "skill": "ranger",
-      "requirement_level": 80
+      "requirement_level": 60
     },
     {
       "weapon_id": "bow4",
@@ -531,7 +531,7 @@
       "weapon_type": "crossbow",
       "damage_type": "physical",
       "skill": "ranger",
-      "requirement_level": 60
+      "requirement_level": 40
     },
     {
       "weapon_id": "dartgun",
@@ -552,7 +552,7 @@
       "weapon_type": "dagger",
       "damage_type": "physical",
       "skill": "rogue",
-      "requirement_level": 60
+      "requirement_level": 40
     },
     {
       "weapon_id": "daggerofthedead",
@@ -608,7 +608,7 @@
       "weapon_type": "fist",
       "damage_type": "physical",
       "skill": "rogue",
-      "requirement_level": 40
+      "requirement_level": 60
     },
     {
       "weapon_id": "rapier",
@@ -678,7 +678,7 @@
       "weapon_type": "short_sword",
       "damage_type": "physical",
       "skill": "warrior",
-      "requirement_level": 50
+      "requirement_level": 40
     },
     {
       "weapon_id": "fireblade",
@@ -699,7 +699,7 @@
       "weapon_type": "short_sword",
       "damage_type": "physical",
       "skill": "warrior",
-      "requirement_level": 60
+      "requirement_level": 50
     },
     {
       "weapon_id": "swordofthedead",
@@ -734,7 +734,7 @@
       "weapon_type": "sword",
       "damage_type": "physical",
       "skill": "warrior",
-      "requirement_level": 40
+      "requirement_level": 60
     },
     {
       "weapon_id": "heartwood",

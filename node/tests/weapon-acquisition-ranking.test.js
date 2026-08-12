@@ -34,7 +34,7 @@ const {
 const { loadPropertyCalculators } = require("../tools/weapon-progression-parity");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
-const ROUTE_IDENTITY_SHA256 = "6c85b30226a776769bf9ef3df0cb0cf55690628cbaf22bc3c9b9a3d2956ea4c3";
+const ROUTE_IDENTITY_SHA256 = "b8920b1a324e2cbef4373ce8e13e7c3096f7a0990a1a55b2ae3a741fdc31aed6";
 let cachedBuild;
 
 function clone(value) {
@@ -460,7 +460,11 @@ test("AC-3 models independent drops, exclusive nested branches, and representati
 	assert.equal(normal.mean_respawn_ms, 2450);
 	assert.equal(normal.wait_units, 0.6125);
 	assert.ok(Math.abs(normal.encounter_units - Math.sqrt(0.5)) < 1e-12);
+	assert.equal(normal.progression_access_multiplier, 1);
 	assert.ok(Math.abs(normal.effort - ((Math.sqrt(0.5) + 0.6125) / 0.25) * 3) < 1e-10);
+	const gated = monsterRouteFactors({ ...monster, hp: 1600 }, 0.25, common);
+	assert.ok(Math.abs(gated.progression_access_multiplier - Math.sqrt(8)) < 1e-11);
+	assert.ok(Math.abs(gated.effort - ((Math.sqrt(8) + 0.6125) / 0.25) * 3 * Math.sqrt(8)) < 2e-10);
 	assert.equal(monsterRouteFactors({ ...monster, respawn: 300 }, 1, common).mean_respawn_ms, 288000);
 	assert.throws(() => monsterRouteFactors(monster, 0, common), /invalid effective probability/i);
 	assert.throws(() => monsterRouteFactors(monster, 1, { ...common, activePopulation: 0 }), /active population/i);
@@ -541,6 +545,7 @@ test("AC-3 models independent drops, exclusive nested branches, and representati
 		population: huntSource.active_population,
 		respawn: huntSource.mean_respawn_ms,
 		encounter: huntSource.encounter_units,
+		access: huntSource.progression_access_multiplier,
 		wait: huntSource.wait_units,
 	}, {
 		profile: "permanent_normal_monster_medians",
@@ -549,10 +554,26 @@ test("AC-3 models independent drops, exclusive nested branches, and representati
 		population: 1,
 		respawn: generated.policy.normalization_medians.wait,
 		encounter: 1,
+		access: 1,
 		wait: 1,
 	});
 	const huntOverride = generated.availability_overrides.find((override) => override.route_id === "runtime:monstertoken");
 	assert.deepEqual({ probability: huntOverride.effective_probability, attempts: huntOverride.expected_attempts, multiplier: huntOverride.multiplier }, { probability: 0.002, attempts: 500, multiplier: 1 });
+});
+
+test("source progression access prevents starter-farm rarity from outranking a hard monster recipe", () => {
+	const { generated } = builtFixture();
+	const goo = generated.route_sources["monster:goo"];
+	const fireroamer = generated.route_sources["monster:fireroamer"];
+	assert.equal(goo.progression_access_multiplier, 1);
+	assert.ok(fireroamer.progression_access_multiplier > 1);
+
+	const slimeStaff = generated.weapons.find((weapon) => weapon.weapon_id === "slimestaff");
+	const fieryStaff = generated.weapons.find((weapon) => weapon.weapon_id === "firestaff");
+	assert.equal(slimeStaff.selected_route_id, "monster:goo");
+	assert.equal(fieryStaff.selected_route_id, "craft:firestaff");
+	assert.ok(fieryStaff.selected_effort > slimeStaff.selected_effort);
+	assert.ok(fieryStaff.rank > slimeStaff.rank);
 });
 
 test("AC-4 includes recursive economics, graded enhancement consumables, and definition failures", () => {
@@ -573,7 +594,7 @@ test("AC-4 includes recursive economics, graded enhancement consumables, and def
 	const shop = findRoute(generated, "blade", "shop:basics");
 	assert.deepEqual({ npc_id: shop.npc_id, gold_cost: shop.gold_cost, gold_units: shop.gold_units, effort: shop.effort }, { npc_id: "basics", gold_cost: 8400, gold_units: 70, effort: 70 });
 	const craft = findRoute(generated, "firestaff", "craft:firestaff");
-	assert.ok(Math.abs(craft.effort - (craft.gold_units + craft.recursive_inputs.reduce((sum, input) => sum + input.total_effort, 0))) < 1e-9);
+	assert.ok(Math.abs(craft.effort - (craft.gold_units + craft.recursive_inputs.reduce((sum, input) => sum + input.total_effort, 0))) < 1e-8);
 	const quest = findRoute(generated, "hbow", "quest:hbow");
 	assert.equal(quest.quest_id, "mcollector");
 	assert.deepEqual(quest.recursive_inputs.map((input) => input.item_id), ["dstones", "pleather", "feather0"]);
@@ -587,7 +608,7 @@ test("AC-4 includes recursive economics, graded enhancement consumables, and def
 	const keyInput = instanceDrop.recursive_inputs.find((input) => input.purpose === "instance_access");
 	assert.deepEqual({ item: keyInput.item_id, quantity: keyInput.quantity, attempts: instanceDrop.expected_attempts }, { item: "cryptkey", quantity: 100, attempts: 100 });
 	assert.ok(Math.abs(keyInput.total_effort - keyInput.unit_effort * keyInput.quantity) < 1e-6);
-	assert.equal(instanceDrop.effort, 4666316.13284);
+	assert.equal(instanceDrop.effort, 6659755.80498);
 	const multiMonsterInstance = findRoute(generated, "ornamentstaff", "event:holidayseason:monster:vbat");
 	const multiMonsterKey = multiMonsterInstance.recursive_inputs.find((input) => input.purpose === "instance_access");
 	const expectedInstanceProbability = 1 - (1 - multiMonsterInstance.effective_probability) ** 7;
@@ -600,7 +621,7 @@ test("AC-4 includes recursive economics, graded enhancement consumables, and def
 	const nestedScroll = nestedExchange.recursive_inputs.find((input) => input.purpose === "nested_exchange_scroll");
 	assert.deepEqual({ item: nestedScroll.item_id, quantity: nestedScroll.quantity, total: nestedScroll.total_effort }, { item: "cscroll1", quantity: 7.73809523814, total: 15476.1904763 });
 	const nestedSource = generated.route_sources[nestedExchange.route_id];
-	const nestedEncounterEffort = ((nestedSource.encounter_units + nestedSource.wait_units) / nestedExchange.effective_probability) * nestedSource.availability_multiplier;
+	const nestedEncounterEffort = ((nestedSource.encounter_units + nestedSource.wait_units) / nestedExchange.effective_probability) * nestedSource.availability_multiplier * nestedSource.progression_access_multiplier;
 	assert.ok(Math.abs(nestedExchange.effort - (nestedEncounterEffort + nestedScroll.total_effort)) < 1e-6);
 	assert.equal(nestedExchange.effort, 54896.7249634);
 	assert.throws(() => assertAcyclicSourceGraph({ blade: ["staff"], staff: ["wand"], wand: ["blade"] }), /blade -> staff -> wand -> blade/i);
@@ -938,7 +959,7 @@ test("AC-8 normal execution is read-only across production inputs and fixture wr
 		generated.dependency_route_results.map((route) => `${route.item_id}|${route.route_id}`),
 	);
 	const reportedMonster = reportEvidence.weapons.flatMap((weapon) => weapon.routes).find((route) => route.route_id === "monster:goo");
-	for (const field of ["effective_probability", "active_population", "mean_respawn_ms", "encounter_units", "wait_units", "effort"])
+	for (const field of ["effective_probability", "active_population", "mean_respawn_ms", "encounter_units", "progression_access_multiplier", "wait_units", "effort"])
 		assert.ok(Number.isFinite(reportedMonster[field]), `Markdown monster ${field}`);
 	const reportedCraft = reportEvidence.weapons.flatMap((weapon) => weapon.routes).find((route) => route.route_id === "craft:firestaff");
 	assert.ok(reportedCraft.recursive_inputs.length > 0 && Number.isFinite(reportedCraft.gold_cost));

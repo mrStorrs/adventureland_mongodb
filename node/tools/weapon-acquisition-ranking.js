@@ -26,8 +26,9 @@ const FORMULAS = Object.freeze({
 	magical_survival: "hp / damageMultiplier(resistance) / max(1-avoidance/100, 0.01)",
 	effective_durability: "min(physical_survival, magical_survival)",
 	offensive_pressure: "max(1, attack*frequency) * max(1, difficulty||1) * (1 + max(apiercing||0, rpiercing||0)/1000)",
+	progression_access_multiplier: "max(1, encounter_units)",
 	mean_respawn_ms: "respawn>200 ? respawn*960 : respawn*1000+450",
-	monster_route_effort: "((encounter_units + wait_units) / effective_probability) * availability_multiplier",
+	monster_route_effort: "((encounter_units + wait_units) / effective_probability) * availability_multiplier * progression_access_multiplier",
 	economic_route_effort: "gold_units + sum(quantity * recursively_selected_input_effort)",
 });
 
@@ -238,6 +239,7 @@ function monsterRouteFactors(monster, effectiveProbability, options) {
 	const effectiveDurability = rawMonsterDurability(monster, options.damageMultiplier);
 	const offensivePressure = rawMonsterOffense(monster);
 	const encounterUnits = Math.sqrt((effectiveDurability / medians.durability) * (offensivePressure / medians.offense));
+	const progressionAccessMultiplier = Math.max(1, encounterUnits);
 	const respawnMs = options.meanRespawnMs === undefined ? meanRespawnMs(monster.respawn) : Number(options.meanRespawnMs);
 	if (!(respawnMs > 0)) throw new Error("Monster route requires positive respawn evidence");
 	const waitUnits = respawnMs / activePopulation / medians.wait;
@@ -251,9 +253,10 @@ function monsterRouteFactors(monster, effectiveProbability, options) {
 		active_population: roundEvidence(activePopulation),
 		mean_respawn_ms: roundEvidence(respawnMs),
 		encounter_units: roundEvidence(encounterUnits),
+		progression_access_multiplier: roundEvidence(progressionAccessMultiplier),
 		wait_units: roundEvidence(waitUnits),
 		availability_multiplier: roundEvidence(availabilityMultiplier),
-		effort: roundEvidence(((encounterUnits + waitUnits) / effectiveProbability) * availabilityMultiplier),
+		effort: roundEvidence(((encounterUnits + waitUnits) / effectiveProbability) * availabilityMultiplier * progressionAccessMultiplier),
 	};
 }
 
@@ -1418,6 +1421,7 @@ function sourceRouteIndex(data, medians, evidence, runtimeSnapshot) {
 				active_population: 1,
 				mean_respawn_ms: medians.wait,
 				encounter_units: encounterUnits,
+				progression_access_multiplier: 1,
 				wait_units: waitUnits,
 				availability_multiplier: multiplier,
 				availability_override_id: override ? root.route_id : undefined,
@@ -2150,7 +2154,12 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 			weapon.routes.map((route) => ({ item_id: weapon.weapon_id, route_id: route.route_id, kind: route.kind, role: "weapon" })),
 		),
 		...dependencyRouteResults.map((route) => ({ item_id: route.item_id, route_id: route.route_id, kind: route.kind, role: "dependency" })),
-	];
+	].sort((left, right) =>
+		left.role.localeCompare(right.role) ||
+		left.item_id.localeCompare(right.item_id) ||
+		left.route_id.localeCompare(right.route_id) ||
+		left.kind.localeCompare(right.kind),
+	);
 	const generated = {
 		schema_version: 1,
 		policy: {

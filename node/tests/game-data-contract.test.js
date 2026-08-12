@@ -429,7 +429,7 @@ test("every equippable item has the explicit all-of requirement snapshot", () =>
 	);
 	assert.equal(
 		crypto.createHash("sha256").update(JSON.stringify(snapshot)).digest("hex"),
-		"057faf81a7b270d3f9ac445995bbf7b89fcd6631efc6bf45e24c4557b31be56e",
+		"cd07f41ece3dca3da415bf786b5f915597df8fe8589e3cc843f3fb003aa43e1b",
 	);
 	assert.deepEqual(
 		Object.keys(data.item_requirements)
@@ -492,7 +492,7 @@ test("every equippable item has the explicit all-of requirement snapshot", () =>
 		helmet: [{ skill: "warrior", level: 1 }],
 		spear: [{ skill: "warrior", level: 10 }],
 		xmashat: [{ skill: "merchant", level: 20 }],
-		weaver: [{ skill: "ranger", level: 60 }],
+		weaver: [{ skill: "ranger", level: 80 }],
 		mageshood: [{ skill: "mage", level: 40 }],
 		mrnhat: [{ skill: "ranger", level: 50 }],
 		sweaterhs: [{ skill: "merchant", level: 60 }],

@@ -141,9 +141,12 @@ reset or manual respec.
 
 Legal visible combat weapons for Warrior, Paladin, Mage, Priest, Ranger, and
 Rogue now use their easiest intended acquisition route to assign a semantic
-rank. Within each skill, harder ranks receive no lower requirement and no lower
-unenhanced Guide Base DPS; the existing per-skill requirement and DPS slots are
-redistributed rather than expanded. Weapon ownership, cadence, attributes,
+rank. Monster routes above the permanent-monster median carry an additional
+progression-access cost, so a difficult source is not treated as easy merely
+because its drop chance is better. Within each skill, harder ranks receive no
+lower requirement and no lower unenhanced Guide Base DPS; the existing
+per-skill requirement and DPS slots are redistributed rather than expanded.
+Weapon ownership, cadence, attributes,
 enhancement inputs, and +1 through +4 behavior remain unchanged, and the five
 ignored combat weapons stay unchanged. Deliberate TTK and broader weapon
 balancing are separate work.
