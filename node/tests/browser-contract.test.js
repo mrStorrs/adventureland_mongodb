@@ -125,3 +125,33 @@ test("browser character and appearance surfaces use skill progression", () => {
 	assert.doesNotMatch(code, /calculate_item_properties\([^\n]+class:/);
 	assert.match(fs.readFileSync(path.join(root, "main.js"), "utf8"), /character_view\(character\)/);
 });
+
+test("skills tab filters combat skills to the equipped weapon", () => {
+	const code = source();
+	assert.match(functionSource(code, "render_skills", "show_condition"), /if \(!ability_matches_equipped_weapon\(skill\)\) return;/);
+	const context = {
+		G: {
+			skills: {
+				warrior: { kind: "combat" },
+				mage: { kind: "combat" },
+				merchant: { kind: "noncombat" },
+			},
+		},
+		character: { active_skill: "warrior" },
+	};
+	vm.createContext(context);
+	const abilityMatchesEquippedWeapon = vm.runInContext(
+		`(${functionSource(code, "ability_matches_equipped_weapon", "render_skills")})`,
+		context,
+	);
+
+	assert.equal(abilityMatchesEquippedWeapon({ applicability: "skill", skill: "warrior" }), true);
+	assert.equal(abilityMatchesEquippedWeapon({ applicability: "skill", skill: "mage" }), false);
+	assert.equal(abilityMatchesEquippedWeapon({ applicability: "active_combat" }), true);
+	assert.equal(abilityMatchesEquippedWeapon({ applicability: "item" }), true);
+	assert.equal(abilityMatchesEquippedWeapon({ applicability: "skill", skill: "merchant" }), true);
+
+	context.character.active_skill = null;
+	assert.equal(abilityMatchesEquippedWeapon({ applicability: "skill", skill: "warrior" }), false);
+	assert.equal(abilityMatchesEquippedWeapon({ applicability: "active_combat" }), false);
+});

@@ -4756,6 +4756,12 @@ function ability_click(slot) {
 }
 
 var skills_page = "I";
+function ability_matches_equipped_weapon(skill) {
+	if (skill.applicability == "active_combat") return !!character.active_skill;
+	if (skill.applicability != "skill" || !skill.skill || !G.skills[skill.skill] || G.skills[skill.skill].kind != "combat") return true;
+	return character.active_skill == skill.skill;
+}
+
 function render_skills() {
 	if (skillsui) {
 		$(".skillsui").hide();
@@ -4840,6 +4846,7 @@ function render_skills() {
 	object_sort(G.abilities).forEach(function (io) {
 		var name = io[0],
 			skill = io[1];
+		if (!ability_matches_equipped_weapon(skill)) return;
 		var disabled_reason = ability_gate_reason(skill);
 		var entry = { name: name };
 		if (disabled_reason) entry.disabled_reason = disabled_reason;
