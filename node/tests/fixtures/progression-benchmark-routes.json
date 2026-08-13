@@ -48,7 +48,7 @@
           }
         ],
         "expected": {
-          "duration_hours": 1981.268056,
+          "duration_hours": 12295,
           "rate_x": 1,
           "selected_candidate_ids": [
             "goo-starter"
@@ -86,7 +86,7 @@
           }
         ],
         "expected": {
-          "duration_hours": 1899.135489,
+          "duration_hours": 14515,
           "rate_x": 1,
           "selected_candidate_ids": [
             "goo-starter"
@@ -124,7 +124,7 @@
           }
         ],
         "expected": {
-          "duration_hours": 2099.423678,
+          "duration_hours": 16095,
           "rate_x": 1,
           "selected_candidate_ids": [
             "goo-starter"
@@ -162,7 +162,7 @@
           }
         ],
         "expected": {
-          "duration_hours": 2118.876128,
+          "duration_hours": 15955,
           "rate_x": 1,
           "selected_candidate_ids": [
             "goo-starter"
@@ -200,7 +200,7 @@
           }
         ],
         "expected": {
-          "duration_hours": 2133.465465,
+          "duration_hours": 14170,
           "rate_x": 1,
           "selected_candidate_ids": [
             "goo-starter"
@@ -238,7 +238,7 @@
           }
         ],
         "expected": {
-          "duration_hours": 1992.975549,
+          "duration_hours": 13020,
           "rate_x": 1,
           "selected_candidate_ids": [
             "goo-starter"
@@ -253,7 +253,7 @@
     },
     "competent": {
       "warrior": {
-        "strategy": "fixture-reviewed permanent solo bee route",
+        "strategy": "fixture-reviewed permanent solo Squigtoad route",
         "selection_mode": "closest_target",
         "bands": [
           {
@@ -261,15 +261,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "bee-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Bee route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "blade",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "bee",
+                "monster": "squigtoad",
                 "uptime": 0.8,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -278,10 +278,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 710.229167,
-          "rate_x": 2.789618,
+          "duration_hours": 3391.054688,
+          "rate_x": 3.625716,
           "selected_candidate_ids": [
-            "bee-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -295,7 +295,7 @@
         ]
       },
       "paladin": {
-        "strategy": "fixture-reviewed permanent solo bee route",
+        "strategy": "fixture-reviewed permanent solo Squigtoad route",
         "selection_mode": "closest_target",
         "bands": [
           {
@@ -303,15 +303,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "bee-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Bee route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "mace",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "bee",
+                "monster": "squigtoad",
                 "uptime": 0.8,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -320,10 +320,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 725.191328,
-          "rate_x": 2.618806,
+          "duration_hours": 3518.554688,
+          "rate_x": 4.125273,
           "selected_candidate_ids": [
-            "bee-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -337,7 +337,7 @@
         ]
       },
       "mage": {
-        "strategy": "fixture-reviewed permanent solo bee route",
+        "strategy": "fixture-reviewed permanent solo Squigtoad route",
         "selection_mode": "closest_target",
         "bands": [
           {
@@ -345,15 +345,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "bee-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Bee route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "staff",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "bee",
+                "monster": "squigtoad",
                 "uptime": 0.8,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -362,10 +362,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 678.032111,
-          "rate_x": 3.096348,
+          "duration_hours": 4862.703125,
+          "rate_x": 3.309887,
           "selected_candidate_ids": [
-            "bee-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -379,7 +379,7 @@
         ]
       },
       "priest": {
-        "strategy": "fixture-reviewed permanent solo bee route",
+        "strategy": "fixture-reviewed permanent solo Squigtoad route",
         "selection_mode": "closest_target",
         "bands": [
           {
@@ -387,15 +387,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "bee-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Bee route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "wbook0",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "bee",
+                "monster": "squigtoad",
                 "uptime": 0.8,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -404,10 +404,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 684.433643,
-          "rate_x": 3.095809,
+          "duration_hours": 5770.75,
+          "rate_x": 2.764805,
           "selected_candidate_ids": [
-            "bee-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -421,7 +421,7 @@
         ]
       },
       "ranger": {
-        "strategy": "fixture-reviewed permanent solo bee route",
+        "strategy": "fixture-reviewed permanent solo Squigtoad route",
         "selection_mode": "closest_target",
         "bands": [
           {
@@ -429,15 +429,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "bee-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Bee route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "bow",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "bee",
+                "monster": "squigtoad",
                 "uptime": 0.8,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -446,10 +446,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 714.88827,
-          "rate_x": 2.984334,
+          "duration_hours": 3815.859375,
+          "rate_x": 3.713449,
           "selected_candidate_ids": [
-            "bee-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -463,7 +463,7 @@
         ]
       },
       "rogue": {
-        "strategy": "fixture-reviewed permanent solo bee route",
+        "strategy": "fixture-reviewed permanent solo Squigtoad route",
         "selection_mode": "closest_target",
         "bands": [
           {
@@ -471,15 +471,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "bee-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Bee route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "claw",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "bee",
+                "monster": "squigtoad",
                 "uptime": 0.8,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -488,10 +488,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 666.876778,
-          "rate_x": 2.988521,
+          "duration_hours": 3021.09375,
+          "rate_x": 4.309697,
           "selected_candidate_ids": [
-            "bee-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -507,7 +507,7 @@
     },
     "optimized": {
       "warrior": {
-        "strategy": "fixture-reviewed permanent solo chicken route",
+        "strategy": "fixture-reviewed maximum-uptime solo Squigtoad route",
         "selection_mode": "max_rate",
         "bands": [
           {
@@ -515,15 +515,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "hen-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Chicken route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "blade",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "hen",
+                "monster": "squigtoad",
                 "uptime": 1,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -532,10 +532,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 335.608333,
-          "rate_x": 5.903513,
+          "duration_hours": 2712.84375,
+          "rate_x": 4.532145,
           "selected_candidate_ids": [
-            "hen-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -550,7 +550,7 @@
         ]
       },
       "paladin": {
-        "strategy": "fixture-reviewed permanent solo chicken route",
+        "strategy": "fixture-reviewed maximum-uptime solo Squigtoad route",
         "selection_mode": "max_rate",
         "bands": [
           {
@@ -558,15 +558,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "hen-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Chicken route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "mace",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "hen",
+                "monster": "squigtoad",
                 "uptime": 1,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -575,10 +575,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 337.494908,
-          "rate_x": 5.627153,
+          "duration_hours": 2796.070313,
+          "rate_x": 5.191214,
           "selected_candidate_ids": [
-            "hen-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -593,7 +593,7 @@
         ]
       },
       "mage": {
-        "strategy": "fixture-reviewed permanent solo chicken route",
+        "strategy": "fixture-reviewed maximum-uptime solo Squigtoad route",
         "selection_mode": "max_rate",
         "bands": [
           {
@@ -601,15 +601,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "hen-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Chicken route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "staff",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "hen",
+                "monster": "squigtoad",
                 "uptime": 1,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -618,10 +618,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 334.513533,
-          "rate_x": 6.27605,
+          "duration_hours": 3890.164063,
+          "rate_x": 4.137358,
           "selected_candidate_ids": [
-            "hen-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -636,7 +636,7 @@
         ]
       },
       "priest": {
-        "strategy": "fixture-reviewed permanent solo chicken route",
+        "strategy": "fixture-reviewed maximum-uptime solo Squigtoad route",
         "selection_mode": "max_rate",
         "bands": [
           {
@@ -644,15 +644,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "hen-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Chicken route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "wbook0",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "hen",
+                "monster": "squigtoad",
                 "uptime": 1,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -661,10 +661,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 338.985596,
-          "rate_x": 6.250638,
+          "duration_hours": 4595.578125,
+          "rate_x": 3.471816,
           "selected_candidate_ids": [
-            "hen-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -679,7 +679,7 @@
         ]
       },
       "ranger": {
-        "strategy": "fixture-reviewed permanent solo chicken route",
+        "strategy": "fixture-reviewed maximum-uptime solo Squigtoad route",
         "selection_mode": "max_rate",
         "bands": [
           {
@@ -687,15 +687,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "hen-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Chicken route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "bow",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "hen",
+                "monster": "squigtoad",
                 "uptime": 1,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -704,10 +704,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 336.434321,
-          "rate_x": 6.341402,
+          "duration_hours": 3052.6875,
+          "rate_x": 4.641812,
           "selected_candidate_ids": [
-            "hen-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",
@@ -722,7 +722,7 @@
         ]
       },
       "rogue": {
-        "strategy": "fixture-reviewed permanent solo chicken route",
+        "strategy": "fixture-reviewed maximum-uptime solo Squigtoad route",
         "selection_mode": "max_rate",
         "bands": [
           {
@@ -730,15 +730,15 @@
             "to_level": 99,
             "candidates": [
               {
-                "id": "hen-route",
+                "id": "squigtoad-route",
                 "reviewed": true,
-                "legal_basis": "permanent non-special Chicken route using canonical starter armor and no timed/admin content",
+                "legal_basis": "permanent non-special Squigtoad route using canonical starter armor and no timed/admin content",
                 "slots": {
                   "mainhand": "claw",
                   "helmet": "helmet",
                   "shoes": "shoes"
                 },
-                "monster": "hen",
+                "monster": "squigtoad",
                 "uptime": 1,
                 "consumables": "normal_sustainable",
                 "external_party_characters": 0
@@ -747,10 +747,10 @@
           }
         ],
         "expected": {
-          "duration_hours": 338.951383,
-          "rate_x": 5.879827,
+          "duration_hours": 2416.875,
+          "rate_x": 5.387122,
           "selected_candidate_ids": [
-            "hen-route"
+            "squigtoad-route"
           ]
         },
         "enumeration": "fixture",

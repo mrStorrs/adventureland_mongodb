@@ -117,8 +117,8 @@
   "source_artifact_hashes": {
     "design/events.js": "cf6afdae71c6dd1e00d221e114667ed8015fd3a817e370a6ba059a10d92796f3",
     "design/maps.js": "413da60002afb21cee6d8a8f69031fb46313eda794ddac561014a643507420a1",
-    "design/monsters.js": "d34a41cfd4ea831a1f851d64fb2e8a5de86357f79bfcf009aeb5cf3051cb65ef",
-    "node/server.js": "e262a9f270c20e985eaee74825b950717d45db2d94736c3bf965371ac650ec8e",
+    "design/monsters.js": "5f938a25f33cb189e5fc07c032b7ba979af3c0142955cd2d55f7640aed1bafb3",
+    "node/server.js": "4b2ae3af06b218bb711684989efab4afcda440a5332bea7607a23d1af5346437",
     "node/server_functions.js": "1ef01e62c4ca0e387fc392599e88ecbc3f0e9bc536e3421ab164478948f1c5bb"
   },
   "availability_overrides": [
@@ -473,7 +473,7 @@
     "catalog_manifest_sha256": "4ebfc45ec4964d23a7e34291d071356cf5fd9778f449a36170265e8f7f72f972",
     "eligible_requirement_multisets_sha256": "28c0876f9837e84773a5379be159e56d1e0a092c45014f5c7a2017c4cebc379f",
     "eligible_base_dps_multisets_sha256": "db1111595b2fbad04314837a2af0c91a8afe7b3dab585a91c66c473580e37e63",
-    "acquisition_inputs_sha256": "8ec29516bbbfd79bba0d922e9ebe083262b2e9ac6c6231f2fc61508553f0ee75",
+    "acquisition_inputs_sha256": "5f2d17bf70765c4b953029679b60d199311759e97297a26940b8d0b233676b44",
     "availability_overrides_sha256": "d46bfb21547485a287ba5acafa0bac8f16ee9773a77b7cb9bc8e23a5451429ac",
     "route_identity_manifest_sha256": "b8920b1a324e2cbef4373ce8e13e7c3096f7a0990a1a55b2ae3a741fdc31aed6",
     "route_graph_sha256": "33fbacb914245a59037f439c012afee61cc59d761c8291346999fc23409127e3"

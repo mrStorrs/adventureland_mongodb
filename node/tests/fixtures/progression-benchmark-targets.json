@@ -10,34 +10,154 @@
   "reviewed_outputs": {
     "combat": {
       "starter": {
-        "warrior": { "duration_hours": 1981.268056, "rate_x": 1, "selected_candidate_ids": ["goo-starter"] },
-        "paladin": { "duration_hours": 1899.135489, "rate_x": 1, "selected_candidate_ids": ["goo-starter"] },
-        "mage": { "duration_hours": 2099.423678, "rate_x": 1, "selected_candidate_ids": ["goo-starter"] },
-        "priest": { "duration_hours": 2118.876128, "rate_x": 1, "selected_candidate_ids": ["goo-starter"] },
-        "ranger": { "duration_hours": 2133.465465, "rate_x": 1, "selected_candidate_ids": ["goo-starter"] },
-        "rogue": { "duration_hours": 1992.975549, "rate_x": 1, "selected_candidate_ids": ["goo-starter"] }
+        "warrior": {
+          "duration_hours": 12295,
+          "rate_x": 1,
+          "selected_candidate_ids": [
+            "goo-starter"
+          ]
+        },
+        "paladin": {
+          "duration_hours": 14515,
+          "rate_x": 1,
+          "selected_candidate_ids": [
+            "goo-starter"
+          ]
+        },
+        "mage": {
+          "duration_hours": 16095,
+          "rate_x": 1,
+          "selected_candidate_ids": [
+            "goo-starter"
+          ]
+        },
+        "priest": {
+          "duration_hours": 15955,
+          "rate_x": 1,
+          "selected_candidate_ids": [
+            "goo-starter"
+          ]
+        },
+        "ranger": {
+          "duration_hours": 14170,
+          "rate_x": 1,
+          "selected_candidate_ids": [
+            "goo-starter"
+          ]
+        },
+        "rogue": {
+          "duration_hours": 13020,
+          "rate_x": 1,
+          "selected_candidate_ids": [
+            "goo-starter"
+          ]
+        }
       },
       "competent": {
-        "warrior": { "duration_hours": 710.229167, "rate_x": 2.789618, "selected_candidate_ids": ["bee-route"] },
-        "paladin": { "duration_hours": 725.191328, "rate_x": 2.618806, "selected_candidate_ids": ["bee-route"] },
-        "mage": { "duration_hours": 678.032111, "rate_x": 3.096348, "selected_candidate_ids": ["bee-route"] },
-        "priest": { "duration_hours": 684.433643, "rate_x": 3.095809, "selected_candidate_ids": ["bee-route"] },
-        "ranger": { "duration_hours": 714.88827, "rate_x": 2.984334, "selected_candidate_ids": ["bee-route"] },
-        "rogue": { "duration_hours": 666.876778, "rate_x": 2.988521, "selected_candidate_ids": ["bee-route"] }
+        "warrior": {
+          "duration_hours": 3391.054688,
+          "rate_x": 3.625716,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "paladin": {
+          "duration_hours": 3518.554688,
+          "rate_x": 4.125273,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "mage": {
+          "duration_hours": 4862.703125,
+          "rate_x": 3.309887,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "priest": {
+          "duration_hours": 5770.75,
+          "rate_x": 2.764805,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "ranger": {
+          "duration_hours": 3815.859375,
+          "rate_x": 3.713449,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "rogue": {
+          "duration_hours": 3021.09375,
+          "rate_x": 4.309697,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        }
       },
       "optimized": {
-        "warrior": { "duration_hours": 335.608333, "rate_x": 5.903513, "selected_candidate_ids": ["hen-route"] },
-        "paladin": { "duration_hours": 337.494908, "rate_x": 5.627153, "selected_candidate_ids": ["hen-route"] },
-        "mage": { "duration_hours": 334.513533, "rate_x": 6.27605, "selected_candidate_ids": ["hen-route"] },
-        "priest": { "duration_hours": 338.985596, "rate_x": 6.250638, "selected_candidate_ids": ["hen-route"] },
-        "ranger": { "duration_hours": 336.434321, "rate_x": 6.341402, "selected_candidate_ids": ["hen-route"] },
-        "rogue": { "duration_hours": 338.951383, "rate_x": 5.879827, "selected_candidate_ids": ["hen-route"] }
+        "warrior": {
+          "duration_hours": 2712.84375,
+          "rate_x": 4.532145,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "paladin": {
+          "duration_hours": 2796.070313,
+          "rate_x": 5.191214,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "mage": {
+          "duration_hours": 3890.164063,
+          "rate_x": 4.137358,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "priest": {
+          "duration_hours": 4595.578125,
+          "rate_x": 3.471816,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "ranger": {
+          "duration_hours": 3052.6875,
+          "rate_x": 4.641812,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        },
+        "rogue": {
+          "duration_hours": 2416.875,
+          "rate_x": 5.387122,
+          "selected_candidate_ids": [
+            "squigtoad-route"
+          ]
+        }
       }
     },
     "merchant": {
-      "starter": { "duration_hours": 2016, "xp": 900000000, "level_40_reached_at_hour": null },
-      "competent": { "duration_hours": 672, "xp": 900000000, "level_40_reached_at_hour": 160 },
-      "optimized": { "duration_hours": 336, "xp": 900000000, "level_40_reached_at_hour": 54 }
+      "starter": {
+        "duration_hours": 2016,
+        "xp": 900000000,
+        "level_40_reached_at_hour": null
+      },
+      "competent": {
+        "duration_hours": 672,
+        "xp": 900000000,
+        "level_40_reached_at_hour": 160
+      },
+      "optimized": {
+        "duration_hours": 336,
+        "xp": 900000000,
+        "level_40_reached_at_hour": 54
+      }
     }
   }
 }
