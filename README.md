@@ -168,6 +168,14 @@ respec step. To inspect the deterministic diagnostic chart locally:
 node tools/weapon-progression-parity.js --format=markdown
 ```
 
+## Merchant enhancement progression
+
+Every completed upgrade awards 200 Merchant skill XP, and every completed
+compound awards 600 Merchant skill XP. Rewards apply to every character class
+and to both successful and failed outcomes; rejected or unresolved requests do
+not award XP. Enhancement rewards have no hourly action-rate cap and follow the
+shared skill progression cap at Merchant level 99.
+
 ## Seeding Game Data
 
 The database needs map data and game entities to function. You have two options:
