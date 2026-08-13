@@ -10,6 +10,7 @@ const {
 	initializePlayerProgression,
 	awardPlayerSkillXp,
 	awardPlayerSkillXpSplit,
+	awardMerchantEnhancementXp,
 	flushPlayerProgressionEvents,
 	clientSkillState,
 	validateMerchantLuck,
@@ -275,6 +276,97 @@ test("runtime rejects unclassified XP sources without mutating the character", (
 		},
 		before,
 	);
+});
+
+test("runtime awards Merchant enhancement XP to any class at the configured rates", () => {
+	const character = player();
+	initializePlayerProgression(character, 0);
+	character.ctype = "warrior";
+
+	const upgrade = awardMerchantEnhancementXp(character, "upgrade");
+	assert.equal(upgrade.accepted_xp, 200);
+	assert.equal(upgrade.skill, "merchant");
+	assert.equal(character.skills.merchant.xp, 200);
+	assert.equal(character.skills.warrior.xp, 0);
+
+	const compound = awardMerchantEnhancementXp(character, "compound");
+	assert.equal(compound.accepted_xp, 600);
+	assert.equal(compound.skill, "merchant");
+	assert.equal(character.skills.merchant.xp, 800);
+	assert.equal(character.skills.warrior.xp, 0);
+	assert.equal(flushPlayerProgressionEvents(character), 2);
+	assert.deepEqual(
+		character.socket.events.filter(([event]) => event === "skill_xp").map(([, event]) => [event.skill, event.accepted_xp]),
+		[["merchant", 200], ["merchant", 600]],
+	);
+});
+
+test("runtime enhancement awards remain uncapped by action rate and reject unknown action kinds without mutation", () => {
+	const character = player();
+	initializePlayerProgression(character, 0);
+	for (let index = 0; index < 10; index += 1) awardMerchantEnhancementXp(character, "upgrade");
+	for (let index = 0; index < 5; index += 1) awardMerchantEnhancementXp(character, "compound");
+	assert.equal(character.skills.merchant.xp, 10 * 200 + 5 * 600);
+
+	const before = {
+		skills: structuredClone(character.skills),
+		total_level: character.total_level,
+		t: structuredClone(character.t),
+		p: structuredClone(character.p),
+		events: structuredClone(character.progression_events),
+	};
+	assert.throws(() => awardMerchantEnhancementXp(character, "exchange"), { code: "invalid_merchant_enhancement" });
+	assert.deepEqual(
+		{
+			skills: character.skills,
+			total_level: character.total_level,
+			t: character.t,
+			p: character.p,
+			events: character.progression_events,
+		},
+		before,
+	);
+});
+
+test("runtime enhancement awards retain the common Merchant XP cap", () => {
+	const character = player();
+	character.info.skills.merchant = { level: 99, xp: progression.MAX_XP };
+	character.total_level = 105;
+	initializePlayerProgression(character, 0);
+	const delta = awardMerchantEnhancementXp(character, "compound");
+	assert.equal(delta.accepted_xp, 0);
+	assert.equal(character.skills.merchant.xp, progression.MAX_XP);
+	assert.equal(character.skills.merchant.level, 99);
+});
+
+test("server awards enhancement XP only from resolved upgrade and compound queues", () => {
+	const server = fs.readFileSync(path.join(__dirname, "../server.js"), "utf8");
+	const completionStart = server.indexOf("if (player.q[name].ms <= 0) {");
+	const compoundStart = server.indexOf('if (name == "compound") {', completionStart);
+	const upgradeStart = server.indexOf('if (name == "upgrade") {', compoundStart + 1);
+	const slotsStart = server.indexOf('if (name == "slots") {', upgradeStart + 1);
+	assert.notEqual(completionStart, -1);
+	assert.notEqual(compoundStart, -1);
+	assert.notEqual(upgradeStart, -1);
+	assert.notEqual(slotsStart, -1);
+	const compoundCompletion = server.slice(compoundStart, upgradeStart);
+	const upgradeCompletion = server.slice(upgradeStart, slotsStart);
+	const compoundAward = compoundCompletion.indexOf('awardMerchantEnhancementXp(player, "compound")');
+	const upgradeAward = upgradeCompletion.indexOf('awardMerchantEnhancementXp(player, "upgrade")');
+	assert.equal((compoundCompletion.match(/awardMerchantEnhancementXp\(player, "compound"\)/g) || []).length, 1);
+	assert.equal((upgradeCompletion.match(/awardMerchantEnhancementXp\(player, "upgrade"\)/g) || []).length, 1);
+	assert.ok(compoundAward > compoundCompletion.indexOf('response: "compound_success"'));
+	assert.ok(compoundAward > compoundCompletion.indexOf('response: "compound_fail"'));
+	assert.ok(compoundAward < compoundCompletion.indexOf('resend(player, "reopen+u+cid+nc+inv")'));
+	assert.ok(upgradeAward > upgradeCompletion.indexOf('response: "upgrade_success"'));
+	assert.ok(upgradeAward > upgradeCompletion.indexOf('response: "upgrade_fail"'));
+	assert.ok(upgradeAward < upgradeCompletion.indexOf('resend(player, "reopen+u+cid+nc+inv")'));
+
+	const compoundRequestStart = server.indexOf('socket.on("compound", function (data) {');
+	const upgradeRequestStart = server.indexOf('socket.on("upgrade", function (data) {');
+	const equipBatchStart = server.indexOf('socket.on("equip_batch", function (data) {');
+	assert.equal(server.slice(compoundRequestStart, upgradeRequestStart).includes("awardMerchantEnhancementXp"), false);
+	assert.equal(server.slice(upgradeRequestStart, equipBatchStart).includes("awardMerchantEnhancementXp"), false);
 });
 
 test("runtime stand settlement feeds Merchant through the common award path", () => {

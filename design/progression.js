@@ -18,6 +18,10 @@ var progression = {
 	SUPPORT_WEIGHT_PER_USE: 1,
 	SUPPORT_MAX_WEIGHT_PER_TARGET_PER_ENCOUNTER: 10,
 	BENCHMARK_TOLERANCE: 0.1,
+	MERCHANT_ENHANCEMENT_XP: Object.freeze({
+		upgrade: 200,
+		compound: 600,
+	}),
 	XP_SOURCES: [
 		"pve_damage",
 		"pve_heal",
@@ -27,6 +31,8 @@ var progression = {
 		"merchant_sale",
 		"merchant_donation",
 		"merchant_dice",
+		"merchant_upgrade",
+		"merchant_compound",
 	],
 };
 

@@ -44,6 +44,7 @@ const {
 	initializePlayerProgression,
 	awardPlayerSkillXp,
 	awardPlayerSkillXpSplit,
+	awardMerchantEnhancementXp,
 	maxCombatLevel,
 	skillLevel,
 	markStandSession,
@@ -13276,6 +13277,7 @@ function update_instance(instance) {
 							player.esize++;
 						}
 					}
+					awardMerchantEnhancementXp(player, "compound");
 					delete player.p.c_item;
 					delete player.p.c_itemx;
 					delete player.p.c_roll;
@@ -13347,6 +13349,7 @@ function update_instance(instance) {
 						}
 						xy_emit((instances.main && G.maps.main.upgrade) || player, "upgrade", { type: "upgrade", success: 0 });
 					}
+					awardMerchantEnhancementXp(player, "upgrade");
 					delete player.p.u_item;
 					delete player.p.u_type;
 					delete player.p.u_itemx;

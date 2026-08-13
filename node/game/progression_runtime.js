@@ -249,6 +249,17 @@ function awardPlayerSkillXpSplit(player, split, { source, sourceId, emit = true,
 	return deltas;
 }
 
+function awardMerchantEnhancementXp(player, kind, options) {
+	const xp = progression.MERCHANT_ENHANCEMENT_XP[kind];
+	if (!Number.isSafeInteger(xp) || xp <= 0) {
+		throw runtimeError("invalid_merchant_enhancement", "Merchant enhancement kind is not supported", {
+			path: "kind",
+			reason: "unsupported_enhancement",
+		});
+	}
+	return awardPlayerSkillXp(player, "merchant", xp, { ...options, source: `merchant_${kind}` });
+}
+
 function maxCombatLevel(player) {
 	return Math.max(
 		...COMBAT_SKILL_IDS.map((skill) => (player.skills && player.skills[skill] && player.skills[skill].level) || 1),
@@ -384,6 +395,7 @@ module.exports = {
 	initializePlayerProgression,
 	awardPlayerSkillXp,
 	awardPlayerSkillXpSplit,
+	awardMerchantEnhancementXp,
 	flushPlayerProgressionEvents,
 	clientSkillState,
 	maxCombatLevel,
