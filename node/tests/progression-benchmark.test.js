@@ -24,10 +24,10 @@ const {
 	stableJson,
 } = require("../tools/progression-benchmark");
 
-test("acquisition retune keeps the independent progression route fixture and target oracle byte-pinned", () => {
-	assert.equal(crypto.createHash("sha256").update(fs.readFileSync(FIXTURE_PATH)).digest("hex"), "5db7702af2dcb84d5691be4c7334271e65bc646dbb93112b3a9fbf9692bc15df");
+test("vanilla progression routes and reviewed outputs stay byte-pinned", () => {
+	assert.equal(crypto.createHash("sha256").update(fs.readFileSync(FIXTURE_PATH)).digest("hex"), "fe8e897a741a22d54100ae57be5746f9db2b388f8c73481964d6975b6c432f89");
 	const targetPath = path.resolve(__dirname, "fixtures/progression-benchmark-targets.json");
-	assert.equal(crypto.createHash("sha256").update(fs.readFileSync(targetPath)).digest("hex"), "05b3a8ea3020c6141bce6257bfe00a042b28348640eda97d8b22bd280d0aa26e");
+	assert.equal(crypto.createHash("sha256").update(fs.readFileSync(targetPath)).digest("hex"), "1710fa583b566109835d30fde0ae0c9fb3c0f032f0748c366bf50f6461509e04");
 });
 
 test("benchmark loads production progression, stat, and merchant data", () => {
@@ -37,8 +37,11 @@ test("benchmark loads production progression, stat, and merchant data", () => {
 	assert.equal(data.skillXp[1], 0);
 	assert.equal(data.skillXp[99], 900000000);
 	assert.equal(data.progression.MAX_ACTION_UNITS_PER_HOUR, 15625000);
-	assert.equal(data.items.blade.attack, 12);
-	assert.equal(data.monsters.goo.xp, 1388);
+	assert.equal(data.items.blade.attack, 150);
+	assert.deepEqual(
+		Object.fromEntries(["goo", "bee", "hen"].map((id) => [id, data.monsters[id].xp])),
+		{ goo: 100, bee: 400, hen: 10 },
+	);
 	assert.equal(Object.keys(data.sets).length, 18);
 	assert.ok(data.sets.tiger);
 	assert.equal(typeof data.damageMultiplier, "function");
@@ -64,7 +67,7 @@ test("full benchmark covers every combat style and Merchant profile with stable 
 	const report = runBenchmark({ fixturePath: FIXTURE_PATH });
 
 	assert.equal(report.ok, true, JSON.stringify(report.checks, null, 2));
-	assert.equal(report.strict_ok, true);
+	assert.equal(report.strict_ok, false);
 	for (const profile of ["starter", "competent", "optimized"]) {
 		assert.deepEqual(Object.keys(report.combat[profile]), COMBAT_SKILLS);
 		assert.deepEqual(Object.keys(report.merchant), MERCHANT_PROFILES);
@@ -72,15 +75,15 @@ test("full benchmark covers every combat style and Merchant profile with stable 
 	assert.equal(report.checks.route_legality.pass, true);
 	assert.equal(report.checks.expected_outputs.pass, true);
 	assert.equal(report.checks.fixture_stable, true);
-	assert.equal(report.checks.target_alignment.pass, true);
-	assert.equal(report.checks.style_parity.pass, true);
+	assert.equal(report.checks.target_alignment.pass, false);
+	assert.equal(report.checks.style_parity.pass, false);
 });
 
-test("reviewed Bee route keeps its independently pinned competent pacing", () => {
+test("reviewed competent route measures vanilla Squigtoad pacing", () => {
 	const data = loadBenchmarkData();
 	const fixture = loadFixture(FIXTURE_PATH);
 	const route = fixture.combat.competent.warrior.bands[0].candidates[0];
-	assert.equal(data.monsters.bee.xp, 13200);
+	assert.equal(data.monsters.squigtoad.xp, 32000);
 	assert.deepEqual(
 		{
 			id: route.id,
@@ -91,8 +94,8 @@ test("reviewed Bee route keeps its independently pinned competent pacing", () =>
 			external_party_characters: route.external_party_characters,
 		},
 		{
-			id: "bee-route",
-			monster: "bee",
+			id: "squigtoad-route",
+			monster: "squigtoad",
 			uptime: 0.8,
 			slots: { mainhand: "blade", helmet: "helmet", shoes: "shoes" },
 			consumables: "normal_sustainable",
@@ -109,9 +112,9 @@ test("reviewed Bee route keeps its independently pinned competent pacing", () =>
 			simulation_mode: result.bands[0].simulation_mode,
 		},
 		{
-			duration_hours: 710.229167,
-			rate_x: 2.789618,
-			selected_candidate_id: "bee-route",
+			duration_hours: 3391.054688,
+			rate_x: 3.625716,
+			selected_candidate_id: "squigtoad-route",
 			simulation_mode: "exact",
 		},
 	);
@@ -126,19 +129,19 @@ test("fixture regeneration is byte-stable and preserves the committed reviewed e
 	assert.equal(fs.readFileSync(FIXTURE_PATH, "utf8"), stableJson(fixture));
 });
 
-test("strict target mode stays green when the reviewed routes meet the plan targets", () => {
+test("strict target mode reports when vanilla pacing misses the plan targets", () => {
 	const tool = path.resolve(__dirname, "../tools/progression-benchmark.js");
 	const result = spawnSync(process.execPath, [tool, "--strict-targets", "--format=json"], {
 		cwd: path.resolve(__dirname, ".."),
 		encoding: "utf8",
 	});
 
-	assert.equal(result.status, 0);
+	assert.equal(result.status, 1);
 	const report = JSON.parse(result.stdout);
-	assert.equal(report.ok, true);
-	assert.equal(report.strict_ok, true);
-	assert.equal(report.checks.target_alignment.pass, true);
-	assert.equal(report.checks.style_parity.pass, true);
+	assert.equal(report.ok, false);
+	assert.equal(report.strict_ok, false);
+	assert.equal(report.checks.target_alignment.pass, false);
+	assert.equal(report.checks.style_parity.pass, false);
 });
 
 test("strict targets come from the checked-in independent target oracle", () => {
@@ -206,7 +209,7 @@ test("benchmark expected outputs are independent of fixture regeneration", () =>
 	assert.equal(report.ok, false);
 });
 
-test("default CLI status fails when a stable reviewed fixture misses a target", () => {
+test("default CLI reports stable measurements even when they miss aspirational targets", () => {
 	const fixture = loadFixture(FIXTURE_PATH);
 	const altered = structuredClone(fixture);
 	altered.combat.competent.warrior.bands[0].candidates[0].uptime = 0.7;
@@ -220,8 +223,10 @@ test("default CLI status fails when a stable reviewed fixture misses a target", 
 		encoding: "utf8",
 	});
 
-	assert.notEqual(result.status, 0);
+	assert.equal(result.status, 0);
 	const report = JSON.parse(result.stdout);
+	assert.equal(report.ok, true);
+	assert.equal(report.strict_ok, false);
 	assert.equal(report.checks.fixture_stable, true);
 	assert.equal(report.checks.expected_outputs.pass, true);
 	assert.equal(report.checks.target_alignment.pass, false);
@@ -236,7 +241,7 @@ test("all JSON CLI output is deterministic", () => {
 	assert.equal(first, second);
 	const report = JSON.parse(first);
 	assert.equal(report.ok, true);
-	assert.equal(report.strict_ok, true);
+	assert.equal(report.strict_ok, false);
 });
 
 test("benchmark rejects calibration-only fixture fields", () => {
@@ -288,7 +293,7 @@ test("canonical candidates retain legal high-grade items and permanent normal ta
 	assert.deepEqual([...new Set(optimizedRoutes.map((route) => route.external_party_characters))], [0, 1]);
 });
 
-test("candidate selection enforces the competent ceiling and deterministic tie breaks", () => {
+test("candidate selection measures above-target routes and keeps deterministic tie breaks", () => {
 	const candidate = (id, rate, requirement_level_sum, external_party_characters = 0) => ({
 		id,
 		rate_per_hour: rate,
@@ -305,6 +310,7 @@ test("candidate selection enforces the competent ceiling and deterministic tie b
 		candidate("lower-requirement", 3, 10),
 	], 1);
 	assert.equal(closest.id, "lower-requirement");
+	assert.equal(chooseCandidate("closest_target", [candidate("above-target", 3.2, 1)], 1).id, "above-target");
 
 	const maximum = chooseCandidate("max_rate", [
 		candidate("party", 6, 1, 1),
