@@ -10,3 +10,12 @@ tests/fixtures/progression-benchmark-targets.json
 
 # The exhaustive combat matrix uses deterministic compact JSON to stay below GitHub's blob limit.
 tests/fixtures/equipment-combat-matrix.json
+
+# Generated equipment evidence stays compact so pull requests review contracts instead of formatting noise.
+tests/fixtures/armor-set-balance.json
+tests/fixtures/equipment-acquisition-ranking.json
+tests/fixtures/equipment-balance-contract.json
+tests/fixtures/vanilla-equipment-baseline.json
+tests/fixtures/weapon-acquisition-ranking.json
+tests/fixtures/weapon-loadout-balance.json
+tests/fixtures/weapon-progression-parity.json

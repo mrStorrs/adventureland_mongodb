@@ -231,6 +231,19 @@ this balance pass. The former XP/time benchmark is archived under
 `node/tests/obsolete/` and is excluded from the default test suite, so its
 duration output is historical rather than a current release authority.
 
+Generated equipment evidence is stored as deterministic one-line JSON so its
+full data remains reproducible without overwhelming code review with formatting
+lines. GitHub marks these payloads as generated; this README carries their
+human-reviewable scale summary:
+
+| Evidence | Reviewable scale |
+|---|---:|
+| Weapon acquisition and enhancement | 83 weapons; 66 class/rank rows; 9,438 enhancement states |
+| Vanilla equipment baseline | 420 role/level rows; 129 monsters; 1,573 Warrior enhancement states |
+| Armor and sets | 138 nonweapon items; 19 sets |
+| Weapon and offhand loadouts | 11 ranks; 1,079 weapon states; 744 legal layouts |
+| Combat matrix | 735 canonical loadouts × 129 monsters = 94,815 rows |
+
 ## Merchant enhancement progression
 
 Every completed upgrade awards 200 Merchant skill XP, and every completed

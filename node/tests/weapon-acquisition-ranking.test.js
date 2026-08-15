@@ -34,6 +34,7 @@ const {
 	validateRequiredDynamicMonsterOverrides,
 } = require("../tools/weapon-acquisition-ranking");
 const { loadPropertyCalculators } = require("../tools/weapon-progression-parity");
+const { serializeFixture } = require("../tools/fixture-serialization");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const ROUTE_IDENTITY_SHA256 = "268bfd057243656fa3e20c4620d830c3a3c7686f8c4de198237bafe3f807077d";
@@ -346,7 +347,7 @@ test("the checked-in fixture embeds enhancement evidence while the exhaustive ro
 
 	assert.equal(evidence.schema_version, 5);
 	assert.ok(Buffer.byteLength(fixtureText) < 30 * 1024 * 1024, "fixture must remain below 30 MiB");
-	assert.ok(fixtureText.split("\n").length < 800000, "fixture must remain below 800,000 lines");
+	assert.equal(fixtureText, serializeFixture(evidence), "fixture must use deterministic compact JSON");
 	assert.equal(evidence.enhancement_full_sheet_rows.length, 66);
 	assert.equal(evidence.counts.weapon_routes, 5317);
 	assert.equal(evidence.counts.dependency_routes, 1042);
@@ -988,7 +989,7 @@ test("normal execution is read-only across production inputs and fixture writes 
 	const tool = path.resolve(__dirname, "../tools/weapon-acquisition-ranking.js");
 	const source = fs.readFileSync(path.resolve(__dirname, "../tools/weapon-acquisition-ranking.js"), "utf8");
 	assert.equal((source.match(/fs\.writeFileSync\(/g) || []).length, 1);
-	assert.match(source, /fs\.writeFileSync\(RANKING_FIXTURE_PATH, stableJson\(pinned\)\)/);
+	assert.match(source, /fs\.writeFileSync\(RANKING_FIXTURE_PATH, serializeFixture\(pinned\)\)/);
 	assert.doesNotMatch(source, /(?:unlinkSync|renameSync|rmSync|deleteMany|dropDatabase|mongoose|mongodb)/);
 
 	const result = spawnSync(process.execPath, [tool, "--json"], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });

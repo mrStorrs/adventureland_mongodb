@@ -23,8 +23,22 @@ test("the obsolete progression-time benchmark stays outside the default test sui
 	assert.match(notice, /not an equipment-balance or release authority/i);
 });
 
-test("the deterministic compact combat matrix stays outside Prettier discovery", () => {
+test("deterministic compact equipment fixtures stay outside Prettier and GitHub review noise", () => {
 	const ignorePath = path.join(__dirname, "../.prettierignore");
 	const ignoredPaths = fs.readFileSync(ignorePath, "utf8").split(/\r?\n/).filter(Boolean);
-	assert.ok(ignoredPaths.includes("tests/fixtures/equipment-combat-matrix.json"));
+	const attributes = fs.readFileSync(path.join(__dirname, "../../.gitattributes"), "utf8").split(/\r?\n/).filter(Boolean);
+	const fixtures = [
+		"armor-set-balance.json",
+		"equipment-acquisition-ranking.json",
+		"equipment-balance-contract.json",
+		"equipment-combat-matrix.json",
+		"vanilla-equipment-baseline.json",
+		"weapon-acquisition-ranking.json",
+		"weapon-loadout-balance.json",
+		"weapon-progression-parity.json",
+	];
+	for (const fixture of fixtures) {
+		assert.ok(ignoredPaths.includes(`tests/fixtures/${fixture}`), `${fixture} Prettier ignore`);
+		assert.ok(attributes.includes(`node/tests/fixtures/${fixture} linguist-generated=true`), `${fixture} generated attribute`);
+	}
 });

@@ -13,6 +13,7 @@ const { compactContributionEvidence, createContributionCatalog, expandContributi
 const { assertEnhancementFeasibility, compactEnhancementFeasibility, enhancementFeasibilityReport, fullSheetContext, loadRankingFixture, publicationCatalogFromSource, validateRankingPublicationBundle } = require("./weapon-acquisition-ranking");
 const { loadPropertyCalculators } = require("./weapon-progression-parity");
 const { COMPOUND_STEP_WEIGHTS, UPGRADE_STEP_WEIGHTS, enhancementStepWeight } = require("./enhancement-steps");
+const { serializeFixture } = require("./fixture-serialization");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const FIXTURE_DIRECTORY = path.resolve(__dirname, "../tests/fixtures");
@@ -3029,8 +3030,7 @@ function writePlanFourFixtures({ write = fs.writeFileSync } = {}) {
 		"equipment-combat-matrix.json": buildEquipmentCombatMatrixFixture({ data, baseline, ranking, loadoutFixture: loadout, armor }),
 	};
 	for (const [name, fixture] of Object.entries(fixtures)) {
-		const serialized = name === "equipment-combat-matrix.json" ? `${JSON.stringify(fixture)}\n` : serializeFixture(fixture);
-		write(fixturePath(name), serialized);
+		write(fixturePath(name), serializeFixture(fixture));
 	}
 	return fixtures;
 }
@@ -3053,10 +3053,6 @@ function writeBalanceFixtures({ solve_input, write = fs.writeFileSync } = {}) {
 
 function fixturePath(name) {
 	return path.resolve(FIXTURE_DIRECTORY, name);
-}
-
-function serializeFixture(value) {
-	return `${JSON.stringify(value, null, "\t")}\n`;
 }
 
 function loadEquipmentFixture(name) {

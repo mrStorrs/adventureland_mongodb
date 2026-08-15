@@ -20,6 +20,7 @@ const {
 	UPGRADE_STEP_WEIGHTS,
 	cumulativeEnhancementWeight,
 } = require("./enhancement-steps");
+const { serializeFixture } = require("./fixture-serialization");
 const acquisition = require("./acquisition-ranking");
 const {
 	FORBIDDEN_DROP_TABLES,
@@ -1926,7 +1927,7 @@ function main(argv = process.argv.slice(2)) {
 	if (argv.includes("--write-fixture")) {
 		if (!approvedMigration) throw new Error("Fixture writes require the approved shared-rank migration flag");
 		const pinned = compactRankingFixture(generated);
-		fs.writeFileSync(RANKING_FIXTURE_PATH, stableJson(pinned));
+		fs.writeFileSync(RANKING_FIXTURE_PATH, serializeFixture(pinned));
 		process.stdout.write(`Wrote ${RANKING_FIXTURE_PATH}\n`);
 		return;
 	}

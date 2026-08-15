@@ -11,6 +11,7 @@ const { buildEquipmentAcquisitionFixture, buildWeaponLoadoutBalanceFixture, vali
 const { loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
 const { loadPropertyCalculators } = require("../tools/weapon-progression-parity");
 const { loadSourceData } = require("../tools/acquisition-ranking");
+const { serializeFixture } = require("../tools/fixture-serialization");
 
 const baseline = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/vanilla-equipment-baseline.json"), "utf8"));
 const ranking = loadRankingFixture();
@@ -201,4 +202,5 @@ test("no equal-or-easier comparable legal layout strictly dominates another", ()
 test("weapon loadout evidence regenerates deterministically", () => {
 	assert.doesNotThrow(() => validateWeaponLoadoutBalanceFixture(loadoutFixture(), generatedFixture()));
 	assert.deepEqual(buildWeaponLoadoutBalanceFixture(), generatedFixture());
+	assert.equal(fs.readFileSync(path.join(__dirname, "fixtures/weapon-loadout-balance.json"), "utf8"), serializeFixture(generatedFixture()));
 });

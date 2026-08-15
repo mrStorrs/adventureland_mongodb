@@ -6,6 +6,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { calculateStats } = require("../game/stats");
 const { loadBenchmarkData, stableJson } = require("./progression-benchmark");
+const { serializeFixture } = require("./fixture-serialization");
 
 const PARITY_FIXTURE_PATH = path.resolve(__dirname, "../tests/fixtures/weapon-progression-parity.json");
 const LEGACY_BASELINE_PATH = path.resolve(__dirname, "../tests/fixtures/weapon-progression-legacy-baseline.json");
@@ -448,7 +449,7 @@ function main(argv = process.argv.slice(2)) {
 	if (argv.includes("--write-catalog-fixture")) {
 		if (!argv.includes("--approved-shared-rank-migration")) throw new Error("Parity fixture writes require the approved shared-rank migration flag");
 		const fixture = buildParityCatalogFixture();
-		fs.writeFileSync(PARITY_FIXTURE_PATH, stableJson(fixture));
+		fs.writeFileSync(PARITY_FIXTURE_PATH, serializeFixture(fixture));
 		process.stdout.write(`Wrote ${PARITY_FIXTURE_PATH}\n`);
 		return;
 	}

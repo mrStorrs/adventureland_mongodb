@@ -11,6 +11,7 @@ const { calculateStats, dexCrit } = require("../game/stats");
 const { DEX_CRIT_CALIBRATION } = require("../game/stat_calibration");
 const { extractSourceBlock } = require("./source-extract");
 const { armorOnlyRoleVector, assertCanonicalArmorCrossWeightRounding, assertNoStrictDomination, buildArmorSetBalanceFixture, buildVanillaBaseline, validateArmorSetBalanceFixture } = require("../tools/equipment-balance");
+const { serializeFixture } = require("../tools/fixture-serialization");
 
 const root = path.resolve(__dirname, "../..");
 const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/armor-set-balance.json"), "utf8"));
@@ -184,7 +185,7 @@ test("reviewed base armor and cape rows publish offense-free armor enhancements"
 	const beforePublication = loadCatalogBeforeBasePublication();
 	assert.equal(fixture.schema_version, 2);
 	assert.doesNotThrow(() => validateArmorSetBalanceFixture(fixture));
-	assert.equal(`${JSON.stringify(buildArmorSetBalanceFixture(), null, "\t")}\n`, fs.readFileSync(path.join(__dirname, "fixtures/armor-set-balance.json"), "utf8"));
+	assert.equal(serializeFixture(buildArmorSetBalanceFixture()), fs.readFileSync(path.join(__dirname, "fixtures/armor-set-balance.json"), "utf8"));
 	assert.equal(Object.keys(fixture.items).length, 138);
 	assert.deepEqual(Object.keys(catalog.base_nonweapon_progression).sort(), Object.keys(fixture.items).sort());
 	for (const [itemId, row] of Object.entries(fixture.items)) {

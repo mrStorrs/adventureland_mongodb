@@ -15,6 +15,7 @@ const {
 	loadPropertyCalculators,
 	validateParityFixture,
 } = require("../tools/weapon-progression-parity");
+const { serializeFixture } = require("../tools/fixture-serialization");
 
 test("parity fixture covers every current combat weapon or names an explicit exception", () => {
 	const fixture = loadParityFixture(PARITY_FIXTURE_PATH);
@@ -23,6 +24,7 @@ test("parity fixture covers every current combat weapon or names an explicit exc
 
 	assert.equal(validateParityFixture(fixture, report.data).missingWeapons.length, 0);
 	assert.equal(validateParityFixture(fixture, report.data).unclassifiedWeapons.length, 0);
+	assert.equal(fs.readFileSync(PARITY_FIXTURE_PATH, "utf8"), serializeFixture(fixture));
 	assert.ok(report.rows.length > 0);
 	assert.equal(report.rows.length, 80);
 	const assigned = new Map(ranking.weapons.map((weapon) => [weapon.weapon_id, weapon.assigned_requirement]));
