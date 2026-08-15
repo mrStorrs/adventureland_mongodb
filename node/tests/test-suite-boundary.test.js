@@ -22,3 +22,9 @@ test("the obsolete progression-time benchmark stays outside the default test sui
 	assert.match(notice, /obsolete/i);
 	assert.match(notice, /not an equipment-balance or release authority/i);
 });
+
+test("the deterministic compact combat matrix stays outside Prettier discovery", () => {
+	const ignorePath = path.join(__dirname, "../.prettierignore");
+	const ignoredPaths = fs.readFileSync(ignorePath, "utf8").split(/\r?\n/).filter(Boolean);
+	assert.ok(ignoredPaths.includes("tests/fixtures/equipment-combat-matrix.json"));
+});
