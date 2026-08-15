@@ -1104,8 +1104,8 @@ function cumulativeSetProperties(sets, set_id, count, fields = DOMINATION_FIELDS
 	return total;
 }
 
-function pinnedSetProperties(sets, set_counts = {}) {
-	return Object.entries(set_counts).reduce((total, [set_id, count]) => addVector(total, cumulativeSetProperties(sets, set_id, count), DOMINATION_FIELDS), Object.fromEntries(DOMINATION_FIELDS.map((field) => [field, 0])));
+function pinnedSetProperties(sets, set_counts = {}, fields = DOMINATION_FIELDS) {
+	return Object.entries(set_counts).reduce((total, [set_id, count]) => addVector(total, cumulativeSetProperties(sets, set_id, count, fields), fields), Object.fromEntries(fields.map((field) => [field, 0])));
 }
 
 function pinnedRoleRows() {
@@ -2316,11 +2316,100 @@ function normalizedPinnedWeaponCatalog(pinnedItems) {
 	return catalog;
 }
 
-function endpointSheet(role, mainhandId, pinnedItems, pinnedSets) {
+function legacyEndpointCombatSheet({ role, classDefinition, mainhand, equipmentEntries, frozenEntries, catalog, setProperties }) {
+	const itemRows = [
+		["mainhand", mainhand],
+		...equipmentEntries,
+		...frozenEntries,
+	].map(([slot, item]) => ({ slot, item, properties: pinnedCombatProperties(catalog[item.name], item.level || 0, item) }));
+	const sheet = {
+		str: Number(role.class_core.str || 0),
+		dex: Number(role.class_core.dex || 0),
+		int: Number(role.class_core.int || 0),
+	};
+	for (const { properties } of itemRows)
+		for (const field of ["str", "dex", "int"]) sheet[field] += Number(properties[field] || 0);
+	for (const field of ["str", "dex", "int"]) sheet[field] += Number(setProperties[field] || 0);
+
+	let itemAttack = 0;
+	let rawAttack = 0;
+	let itemAndProfileFrequency = 0;
+	let outputDelta = 0;
+	const applyCombatProperties = (properties) => {
+		rawAttack += Number(properties?.attack || 0);
+		itemAndProfileFrequency += Number(properties?.frequency || 0) / 100;
+		outputDelta += Number(properties?.output || 0);
+	};
+	for (const { slot, item, properties } of itemRows) {
+		applyCombatProperties(properties);
+		if (slot === "mainhand") {
+			itemAttack += Number(properties.attack || 0);
+			const weaponType = catalog[item.name].wtype;
+			applyCombatProperties(classDefinition.doublehand?.[weaponType] || classDefinition.mainhand?.[weaponType]);
+		}
+		if (slot === "offhand") {
+			itemAttack += Number(properties.attack || 0) * 0.7;
+			const definition = catalog[item.name];
+			applyCombatProperties(classDefinition.offhand?.[definition.wtype] || classDefinition.offhand?.[definition.type]);
+		}
+	}
+	applyCombatProperties(setProperties);
+	const offhand = itemRows.find((row) => row.slot === "offhand");
+	if (offhand && catalog[mainhand.name].wtype === "stars" && catalog[offhand.item.name].wtype !== "stars") itemAttack /= 3;
+	itemAttack = Math.max(itemAttack, 5);
+
+	const primaryMultiplier = role.skill === "paladin"
+		? sheet.str / 20 + sheet.int / 40
+		: sheet[classDefinition.main_stat] / 20;
+	const itemScaled = itemAttack * primaryMultiplier;
+	const priestMultiplier = role.skill === "priest" ? 1.6 : 1;
+	const preOutput = (Number(classDefinition.attack || 0) + itemScaled + rawAttack) * priestMultiplier;
+	const outputPercent = Math.max(5, Number(classDefinition.output || 0) + outputDelta);
+	const attack = Math.round(preOutput * outputPercent / 100);
+	const levelFrequency = Math.min(role.level, 80) / 164;
+	const dexFrequency = Math.min(160, sheet.dex) / 640 + Math.max(sheet.dex - 160, 0) / 925;
+	const intFrequency = sheet.int / 1575;
+	const classFrequency = Number(classDefinition.frequency || 0);
+	const frequency = classFrequency + itemAndProfileFrequency + levelFrequency + dexFrequency + intFrequency;
+
+	return {
+		sheet: {
+			attack,
+			frequency: evidenceNumber(frequency),
+			str: sheet.str,
+			dex: sheet.dex,
+			int: sheet.int,
+		},
+		legacy_formula: {
+			attack: {
+				class_base: evidenceNumber(classDefinition.attack || 0),
+				item_attack: evidenceNumber(itemAttack),
+				primary_multiplier: evidenceNumber(primaryMultiplier),
+				item_scaled: evidenceNumber(itemScaled),
+				raw_item_and_profile: evidenceNumber(rawAttack),
+				priest_multiplier: evidenceNumber(priestMultiplier),
+				pre_output: evidenceNumber(preOutput),
+				output_percent: evidenceNumber(outputPercent),
+				rounded: attack,
+			},
+			frequency: {
+				class_base: evidenceNumber(classFrequency),
+				item_and_profile: evidenceNumber(itemAndProfileFrequency),
+				level: evidenceNumber(levelFrequency),
+				dex: evidenceNumber(dexFrequency),
+				int: evidenceNumber(intFrequency),
+				total: evidenceNumber(frequency),
+			},
+		},
+	};
+}
+
+function endpointSheet(role, mainhandId, pinnedItems, pinnedSets, classDefinitions) {
 	const catalog = normalizedPinnedWeaponCatalog(pinnedItems);
 	const statType = FROZEN_LOADOUTS[role.skill].stat_type;
 	const mainhand = { name: mainhandId, level: 0, stat_type: statType };
-	if (!catalog[mainhandId] || catalog[mainhandId].type !== "weapon") return null;
+	const classDefinition = classDefinitions[role.skill];
+	if (!catalog[mainhandId] || catalog[mainhandId].type !== "weapon" || !classDefinition) return null;
 	const targetItems = Object.entries(role.loadout.target_items)
 		.filter(([, item]) => item.item_id)
 		.map(([slot, item]) => [slot, { name: item.item_id, level: item.level || 0, stat_type: item.stat_type || statType }]);
@@ -2331,22 +2420,10 @@ function endpointSheet(role, mainhandId, pinnedItems, pinnedSets) {
 	const frozenEntries = Object.entries(role.loadout.frozen_slots).map(([slot, item]) => [slot, { name: item.item_id, level: item.level || 0, stat_type: item.stat_type || statType }]);
 	const countedInstances = [mainhand, ...equipmentEntries.map(([, item]) => item), ...frozenEntries.map(([, item]) => item)];
 	const setCounts = pinnedSetCounts(catalog, countedInstances.map((item) => ({ item_id: item.name })));
-	const setProperties = pinnedSetProperties(pinnedSets, setCounts);
-	const classItem = classCoreItem(role.class_core, role.skill);
-	const setItem = { type: "endpoint_set_bonus", name: "Pinned endpoint set bonus", ...setProperties };
-	const endpointCatalog = { ...catalog, __class_core: classItem, __set_bonus: setItem };
-	const slots = {
-		mainhand,
-		...Object.fromEntries(equipmentEntries),
-		...Object.fromEntries(frozenEntries),
-		class_core: { name: "__class_core", level: 0 },
-		set_bonus: { name: "__set_bonus", level: 0 },
-	};
-	const getItemProperties = (instance, definition) =>
-		instance.name === "__class_core" || instance.name === "__set_bonus"
-			? definition
-			: pinnedCombatProperties(definition, instance.level || 0, instance);
-	const sheet = calculateStats({ slots, items: endpointCatalog, sets: {}, getItemProperties });
+	const endpointFields = [...new Set([...DOMINATION_FIELDS, "attack", "output"])];
+	const setProperties = pinnedSetProperties(pinnedSets, setCounts, endpointFields);
+	const legacy = legacyEndpointCombatSheet({ role, classDefinition, mainhand, equipmentEntries, frozenEntries, catalog, setProperties });
+	const sheet = legacy.sheet;
 	const baseDps = evidenceNumber(sheet.attack * sheet.frequency);
 	if (!(baseDps > 0) || !Number.isFinite(baseDps)) return null;
 	const equipmentInstances = [...equipmentEntries.map(([, item]) => item), ...frozenEntries.map(([, item]) => item)];
@@ -2373,6 +2450,7 @@ function endpointSheet(role, mainhandId, pinnedItems, pinnedSets) {
 			dex: sheet.dex,
 			int: sheet.int,
 		},
+		legacy_formula: legacy.legacy_formula,
 		base_dps: baseDps,
 		source_items: {
 			mainhand: mainhandId,
@@ -2385,11 +2463,11 @@ function endpointSheet(role, mainhandId, pinnedItems, pinnedSets) {
 	};
 }
 
-function buildWeaponRankEndpointOracle(roleRows = pinnedRoleRows(), pinnedItems = pinnedCatalog("design/items.js", "items"), pinnedSets = pinnedCatalog("design/items.js", "sets")) {
+function buildWeaponRankEndpointOracle(roleRows = pinnedRoleRows(), pinnedItems = pinnedCatalog("design/items.js", "items"), pinnedSets = pinnedCatalog("design/items.js", "sets"), classDefinitions = pinnedClasses()) {
 	const levelOneRows = ROLE_SKILLS.map((skill) => roleRows.find((row) => row.skill === skill && row.level === 1));
 	if (levelOneRows.some((row) => !row)) throw new Error("Pinned level-1 endpoint role rows are incomplete");
 	const starterCandidates = levelOneRows
-		.map((role) => endpointSheet(role, role.loadout.weapon_slot.item_id, pinnedItems, pinnedSets))
+		.map((role) => endpointSheet(role, role.loadout.weapon_slot.item_id, pinnedItems, pinnedSets, classDefinitions))
 		.filter(Boolean)
 		.sort((left, right) => left.base_dps - right.base_dps || left.id.localeCompare(right.id));
 	const warriorSeventy = roleRows.find((row) => row.skill === "warrior" && row.level === 70);
@@ -2398,7 +2476,7 @@ function buildWeaponRankEndpointOracle(roleRows = pinnedRoleRows(), pinnedItems 
 		.filter((row) => row.origin === "retained" && row.skill === "warrior")
 		.map((row) => row.weapon_id);
 	const endCandidates = retainedWarriorIds
-		.map((weaponId) => endpointSheet(warriorSeventy, weaponId, pinnedItems, pinnedSets))
+		.map((weaponId) => endpointSheet(warriorSeventy, weaponId, pinnedItems, pinnedSets, classDefinitions))
 		.filter(Boolean)
 		.sort((left, right) => right.base_dps - left.base_dps || left.id.localeCompare(right.id));
 	if (!starterCandidates.length || !endCandidates.length) throw new Error("Pinned full-sheet endpoint oracle has no valid candidates");

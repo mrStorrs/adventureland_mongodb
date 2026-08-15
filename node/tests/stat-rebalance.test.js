@@ -218,7 +218,7 @@ test("the recorded catalog loadout calibrates the DEX crit ceiling", () => {
 		(total, item) => total + catalog.properties(item).crit,
 		0,
 	);
-	assert.equal(calculateDexCritCalibration(catalog.items, catalog.properties), 844);
+	assert.equal(calculateDexCritCalibration(catalog.items, catalog.properties), 788);
 	assert.equal(rawCrit, 9.625);
 	assert.equal(dexCrit(DEX_CRIT_CALIBRATION, DEX_CRIT_CALIBRATION), 80);
 });

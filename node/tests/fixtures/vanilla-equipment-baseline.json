@@ -79918,25 +79918,25 @@
 	"weapon_rank_endpoint_oracle": {
 		"start": {
 			"selection": "lowest-valid-level-1-starter",
-			"id": "rogue:1:claw+lantern",
-			"skill": "rogue",
+			"id": "priest:1:wbook0+wshield",
+			"skill": "priest",
 			"reference_level": 1,
-			"mainhand_id": "claw",
-			"offhand_id": "lantern",
+			"mainhand_id": "wbook0",
+			"offhand_id": "wshield",
 			"class_core": {
-				"armor": 19,
-				"dex": 11,
-				"hp": 349,
-				"int": 3,
-				"mp": 80,
-				"resistance": 13,
-				"str": 4,
-				"vit": 3
+				"armor": 4,
+				"dex": 3,
+				"hp": 305,
+				"int": 11,
+				"mp": 470,
+				"resistance": 16,
+				"str": 2,
+				"vit": 4
 			},
 			"weapon_core": {
 				"str": 0,
 				"dex": 0,
-				"int": 0,
+				"int": 6,
 				"vit": 0,
 				"hp": 0,
 				"mp": 0,
@@ -79945,7 +79945,7 @@
 				"crit": 0,
 				"frequency": 0,
 				"speed": 0,
-				"range": 5,
+				"range": 0,
 				"apiercing": 0,
 				"rpiercing": 0,
 				"lifesteal": 0,
@@ -79962,27 +79962,50 @@
 			},
 			"equipment_core": {
 				"str": 0,
-				"dex": 39,
-				"int": 8,
+				"dex": 34,
+				"int": 16,
 				"vit": 5,
 				"hp": 0,
 				"mp": 0,
-				"armor": 10,
-				"resistance": 120
+				"armor": 55,
+				"resistance": 21
 			},
 			"set_counts": {},
 			"sheet": {
-				"attack": 2,
-				"frequency": 0.528125,
-				"str": 4,
-				"dex": 50,
-				"int": 11
+				"attack": 24,
+				"frequency": 0.434862441928,
+				"str": 2,
+				"dex": 37,
+				"int": 33
 			},
-			"base_dps": 1.05625,
+			"legacy_formula": {
+				"attack": {
+					"class_base": 30,
+					"item_attack": 5,
+					"primary_multiplier": 1.65,
+					"item_scaled": 8.25,
+					"raw_item_and_profile": 0,
+					"priest_multiplier": 1.6,
+					"pre_output": 61.2,
+					"output_percent": 40,
+					"rounded": 24
+				},
+				"frequency": {
+					"class_base": 0.35,
+					"item_and_profile": 0,
+					"level": 0.00609756097561,
+					"dex": 0.0578125,
+					"int": 0.0209523809524,
+					"total": 0.434862441928
+				}
+			},
+			"base_dps": 10.4366986063,
 			"source_items": {
-				"mainhand": "claw",
-				"offhand": "lantern",
-				"armor": [],
+				"mainhand": "wbook0",
+				"offhand": "wshield",
+				"armor": [
+					"partyhat"
+				],
 				"cape": "horsecape",
 				"frozen_accessories": [
 					"cring",
@@ -80062,13 +80085,34 @@
 				"wt4": 5
 			},
 			"sheet": {
-				"attack": 370,
-				"frequency": 0.49312500000000004,
+				"attack": 478,
+				"frequency": 0.94535109369,
 				"str": 154,
 				"dex": 66,
 				"int": 40
 			},
-			"base_dps": 182.45625,
+			"legacy_formula": {
+				"attack": {
+					"class_base": 60,
+					"item_attack": 48,
+					"primary_multiplier": 7.7,
+					"item_scaled": 369.6,
+					"raw_item_and_profile": 48,
+					"priest_multiplier": 1,
+					"pre_output": 477.6,
+					"output_percent": 100,
+					"rounded": 478
+				},
+				"frequency": {
+					"class_base": 0.5,
+					"item_and_profile": -0.11,
+					"level": 0.426829268293,
+					"dex": 0.103125,
+					"int": 0.0253968253968,
+					"total": 0.94535109369
+				}
+			},
+			"base_dps": 451.877822784,
 			"source_items": {
 				"mainhand": "scythe",
 				"offhand": null,
@@ -80100,7 +80144,7 @@
 			}
 		},
 		"candidate_counts": {
-			"start": 5,
+			"start": 6,
 			"end": 15
 		}
 	},
