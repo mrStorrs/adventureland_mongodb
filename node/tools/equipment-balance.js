@@ -8,14 +8,18 @@ const vm = require("node:vm");
 const { WEAPON_PROFILES } = require("../game/active_skill");
 const { isCompatibleOffhand } = require("../game/equipment");
 const { calculateStats } = require("../game/stats");
-const { assignPercentiles, buildProductionAcquisitionResolver, canonicalJson, dropOutcomeProbability, loadSourceData, sha256 } = require("./acquisition-ranking");
-const { fullSheetContext, loadRankingFixture } = require("./weapon-acquisition-ranking");
+const { assignPercentiles, buildProductionAcquisitionResolver, canonicalJson, dropOutcomeProbability, fixtureSha256, loadSourceData, sha256 } = require("./acquisition-ranking");
+const { compactContributionEvidence, createContributionCatalog, expandContributionEvidence, validateContributionCatalog } = require("./contribution-evidence");
+const { assertEnhancementFeasibility, compactEnhancementFeasibility, enhancementFeasibilityReport, fullSheetContext, loadRankingFixture, publicationCatalogFromSource, validateRankingPublicationBundle } = require("./weapon-acquisition-ranking");
 const { loadPropertyCalculators } = require("./weapon-progression-parity");
+const { COMPOUND_STEP_WEIGHTS, UPGRADE_STEP_WEIGHTS, enhancementStepWeight } = require("./enhancement-steps");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const FIXTURE_DIRECTORY = path.resolve(__dirname, "../tests/fixtures");
 const PINNED_COMMIT = "99d1a8672438227948caf5a5f8c9d595466d8019";
 const PRE_PLAN_TWO_COMMIT = "76a50408fac4a7b1df1e1906ed631ac013b1123c";
+const EQUIPMENT_REBALANCE_BASE_COMMIT = "19120727d5eabce23a028deaa5db59c9ce571115";
+const PRIEST_BOOK_SKILL_DOMAIN_SHA256 = "437940fcc6f40a483887b086431c5d161131684c7532e87f9dc0bda15c63508f";
 const PINNED_SOURCES = Object.freeze([
 	"design/classes.js",
 	"design/items.js",
@@ -35,12 +39,53 @@ const PINNED_BLOB_IDS = Object.freeze({
 const CORE_TYPES = new Set(["helmet", "chest", "pants", "gloves", "shoes", "cape", "shield", "source", "quiver", "misc_offhand"]);
 const ROLE_SKILLS = Object.freeze(["warrior", "paladin", "ranger", "rogue", "mage", "priest"]);
 const CORE_FIELDS = Object.freeze(["str", "dex", "int", "vit", "hp", "mp", "armor", "resistance"]);
+const REBALANCED_ARMOR_TYPES = Object.freeze(new Set(["helmet", "chest", "pants", "gloves", "shoes"]));
+const WEAPON_REFERENCE_LEVELS = Object.freeze([1, 8, 15, 22, 29, 36, 42, 49, 56, 63, 70]);
 const EFFECT_FIELDS = Object.freeze(["crit", "frequency", "speed", "range", "apiercing", "rpiercing", "lifesteal", "manasteal", "evasion", "reflection", "dreturn", "mp_reduction", "pnresistance", "firesistance", "fzresistance", "phresistance", "stresistance"]);
 const DOMINATION_FIELDS = Object.freeze([...CORE_FIELDS, ...EFFECT_FIELDS]);
+const EVIDENCE_CONTRIBUTION_FIELDS = Object.freeze([...new Set([...DOMINATION_FIELDS, "attack", "output"])]);
 const REVIEWED_OFFHAND_IDS = Object.freeze(["wshield", "shield", "sshield", "mshield", "xshield", "quiver", "t2quiver", "alloyquiver", "lantern", "exoarm", "tigershield"]);
 const REVIEWED_EVENT_SIDEGRADE_PLANS = Object.freeze({
 	tigershield: { kind: "event_sidegrade", source_item_id: "tigershield", source_table: "monsters.tiger", source_route_id: "event-monster:tiger", source_evidence: "design/drops.js:drops.tiger cooperative event source", direct_source_entry: true },
 });
+
+function assertRankingEnhancementFeasible(ranking) {
+	const rows = ranking?.enhancement_full_sheet_rows;
+	const catalog = ranking?.enhancement_contribution_catalog;
+	const invalid = (message) => {
+		const error = new Error(message);
+		error.code = "weapon_target_unrepresentable";
+		throw error;
+	};
+	if (!Array.isArray(rows) || !catalog) invalid("Weapon ranking enhancement feasibility evidence is missing");
+	validateContributionCatalog(catalog);
+	if (rows.length !== ROLE_SKILLS.length * WEAPON_REFERENCE_LEVELS.length)
+		invalid("Weapon ranking enhancement rows do not cover every class and rank");
+	const rowIds = new Set();
+	const expectedStates = UPGRADE_STEP_WEIGHTS.length * COMPOUND_STEP_WEIGHTS.length;
+	for (const row of rows) {
+		const rowId = `${row.skill}:rank-${row.shared_rank}`;
+		if (!ROLE_SKILLS.includes(row.skill) || !Number.isInteger(row.shared_rank) || row.shared_rank < 1 || row.shared_rank > WEAPON_REFERENCE_LEVELS.length || row.id !== rowId || row.reference_level !== WEAPON_REFERENCE_LEVELS[row.shared_rank - 1] || rowIds.has(rowId) || !Array.isArray(row.states) || row.states.length !== expectedStates)
+			invalid(`Weapon ranking enhancement row is incomplete: ${rowId}`);
+		rowIds.add(rowId);
+		const stateIds = new Set();
+		for (const state of row.states) {
+			const stateId = `${state.upgrade_level}/${state.compound_level}`;
+			if (!Number.isInteger(state.upgrade_level) || state.upgrade_level < 0 || state.upgrade_level >= UPGRADE_STEP_WEIGHTS.length || !Number.isInteger(state.compound_level) || state.compound_level < 0 || state.compound_level >= COMPOUND_STEP_WEIGHTS.length || stateIds.has(stateId))
+				invalid(`Weapon ranking enhancement state is incomplete: ${rowId}:+${state.upgrade_level}/+${state.compound_level}`);
+			stateIds.add(stateId);
+			expandContributionEvidence(state.rebalanced_contributions, catalog, { validateCatalog: false });
+		}
+	}
+	const report = enhancementFeasibilityReport(rows, catalog);
+	assertEnhancementFeasibility(report);
+	const summary = compactEnhancementFeasibility(report);
+	if (canonicalJson(ranking.enhancement_feasibility) !== canonicalJson(summary))
+		invalid("Weapon ranking enhancement feasibility summary drifted from reconstructed evidence");
+	if (ranking.hashes?.enhancement_contribution_catalog_sha256 !== catalog.catalog_sha256 || ranking.hashes?.enhancement_full_sheet_contributions_sha256 !== fixtureSha256(rows.map((row) => row.states.map((state) => state.rebalanced_contributions.contributions_sha256))))
+		invalid("Weapon ranking enhancement feasibility hashes drifted from reconstructed evidence");
+	return true;
+}
 const OFFHAND_REQUIREMENT_SKILLS = Object.freeze({
 	shield: Object.freeze(["warrior", "paladin", "priest"]),
 	source: Object.freeze(["paladin", "mage", "priest"]),
@@ -978,33 +1023,53 @@ function boundedSource(source, startMarker, endMarker, authorityId) {
 	return source.slice(start, end);
 }
 
-function frozenAuthorityRows() {
+function frozenAuthorityRows({ currentSourceOverrides = {} } = {}) {
 	const rows = [];
+	const currentSource = (filename) => Object.prototype.hasOwnProperty.call(currentSourceOverrides, filename)
+		? currentSourceOverrides[filename]
+		: fs.readFileSync(path.resolve(REPOSITORY_ROOT, filename), "utf8");
 	for (const filename of [
 		"design/abilities.js",
+		"design/character.js",
+		"design/upgrades.js",
+		"js/old_common_functions.js",
 		"node/game/active_skill.js",
 		"node/tools/progression-benchmark.js",
 		"node/tests/fixtures/progression-benchmark-routes.json",
 		"node/tests/fixtures/progression-benchmark-targets.json",
 	]) {
-		const expected = readSourceAtCommit("HEAD", filename);
-		const current = fs.readFileSync(path.resolve(REPOSITORY_ROOT, filename), "utf8");
-		rows.push({ authority_id: filename, expected_sha256: sha256(expected), current_sha256: sha256(current), matches: current === expected });
+		const expected = readSourceAtCommit(EQUIPMENT_REBALANCE_BASE_COMMIT, filename);
+		const current = currentSource(filename);
+		rows.push({ authority_id: filename, expected_ref: EQUIPMENT_REBALANCE_BASE_COMMIT, expected_sha256: sha256(expected), current_sha256: sha256(current), matches: current === expected });
 	}
+	const skillDomainFilename = "node/game/skill_domain.js";
+	const currentSkillDomainSha256 = sha256(currentSource(skillDomainFilename));
+	rows.push({
+		authority_id: skillDomainFilename,
+		expected_ref: `sha256:${PRIEST_BOOK_SKILL_DOMAIN_SHA256}`,
+		expected_sha256: PRIEST_BOOK_SKILL_DOMAIN_SHA256,
+		current_sha256: currentSkillDomainSha256,
+		matches: currentSkillDomainSha256 === PRIEST_BOOK_SKILL_DOMAIN_SHA256,
+	});
 	const serverFilename = "node/server.js";
-	const expectedServer = readSourceAtCommit("HEAD", serverFilename);
-	const currentServer = fs.readFileSync(path.resolve(REPOSITORY_ROOT, serverFilename), "utf8");
+	const expectedServer = readSourceAtCommit(EQUIPMENT_REBALANCE_BASE_COMMIT, serverFilename);
+	const currentServer = currentSource(serverFilename);
 	const expectedCombat = boundedSource(expectedServer, "function commence_attack", "function target_player", "server-combat-formulas");
 	const currentCombat = boundedSource(currentServer, "function commence_attack", "function target_player", "server-combat-formulas");
-	rows.push({ authority_id: "node/server.js:commence_attack..target_player", expected_sha256: sha256(expectedCombat), current_sha256: sha256(currentCombat), matches: currentCombat === expectedCombat });
+	rows.push({ authority_id: "node/server.js:commence_attack..target_player", expected_ref: EQUIPMENT_REBALANCE_BASE_COMMIT, expected_sha256: sha256(expectedCombat), current_sha256: sha256(currentCombat), matches: currentCombat === expectedCombat });
+
+	const statsFilename = "node/game/stats.js";
+	const expectedStats = readSourceAtCommit(EQUIPMENT_REBALANCE_BASE_COMMIT, statsFilename);
+	const currentStats = currentSource(statsFilename);
+	rows.push({ authority_id: statsFilename, expected_ref: EQUIPMENT_REBALANCE_BASE_COMMIT, expected_sha256: sha256(expectedStats), current_sha256: sha256(currentStats), matches: currentStats === expectedStats });
 
 	const accessoryTypes = new Set(["amulet", "earring", "ring", "belt", "orb"]);
 	const project = (catalog) => Object.fromEntries(Object.entries(catalog).filter(([, definition]) => accessoryTypes.has(definition.type)).sort(([left], [right]) => left.localeCompare(right)));
-	const expectedItems = catalogFromSource(readSourceAtCommit("HEAD", "design/items.js"), "head:design/items.js", "items");
-	const currentItems = catalogFromSource(fs.readFileSync(path.resolve(REPOSITORY_ROOT, "design/items.js"), "utf8"), "current:design/items.js", "items");
+	const expectedItems = catalogFromSource(readSourceAtCommit(EQUIPMENT_REBALANCE_BASE_COMMIT, "design/items.js"), "base:design/items.js", "items");
+	const currentItems = catalogFromSource(currentSource("design/items.js"), "current:design/items.js", "items");
 	const expectedAccessories = project(expectedItems);
 	const currentAccessories = project(currentItems);
-	rows.push({ authority_id: "design/items.js:accessories-and-orbs", expected_sha256: sha256(expectedAccessories), current_sha256: sha256(currentAccessories), matches: canonicalJson(currentAccessories) === canonicalJson(expectedAccessories) });
+	rows.push({ authority_id: "design/items.js:accessories-and-orbs", expected_ref: EQUIPMENT_REBALANCE_BASE_COMMIT, expected_sha256: sha256(expectedAccessories), current_sha256: sha256(currentAccessories), matches: canonicalJson(currentAccessories) === canonicalJson(expectedAccessories) });
 	return rows.sort((left, right) => left.authority_id.localeCompare(right.authority_id));
 }
 
@@ -1189,9 +1254,7 @@ function pinnedItemProperties(definition, level = 0, { stat_type = null } = {}) 
 	let genericStat = 0;
 	const upgrade = definition.upgrade || definition.compound;
 	for (let index = 1; index <= level && upgrade; index += 1) {
-		let multiplier = 1;
-		if (definition.upgrade) multiplier = index === 7 ? 1.25 : index === 8 ? 1.5 : index === 9 ? 2 : index === 10 ? 3 : index === 11 || index === 12 ? 1.25 : 1;
-		if (definition.compound) multiplier = index === 5 ? 1.25 : index === 6 ? 1.5 : index === 7 ? 2 : index >= 8 ? 3 : 1;
+		const multiplier = enhancementStepWeight(definition.upgrade ? "upgrade" : "compound", index);
 		for (const field of Object.keys(upgrade)) {
 			if (field === "stat") genericStat += Math.round(Number(upgrade[field] || 0) * multiplier) + (index >= 7 ? 1 : 0);
 			else if (field in values) values[field] += Number(upgrade[field] || 0) * multiplier;
@@ -1409,6 +1472,13 @@ function buildVanillaBaseline() {
 	const mapContexts = monsterMapContext(loadSourceData());
 	const roleRows = pinnedRoleRows();
 	const weaponRankEndpointOracle = buildWeaponRankEndpointOracle(roleRows, pinnedItems, pinnedSets);
+	const weaponRankEnhancementOracle = buildWeaponRankEnhancementOracle(roleRows, pinnedItems, pinnedSets);
+	const contributionCatalogBuilder = createContributionCatalog(EVIDENCE_CONTRIBUTION_FIELDS);
+	for (const endpoint of [weaponRankEndpointOracle.start, weaponRankEndpointOracle.end])
+		endpoint.contributions = compactContributionEvidence(endpoint.contributions, contributionCatalogBuilder);
+	for (const row of weaponRankEnhancementOracle)
+		for (const state of row.states) state.contributions = compactContributionEvidence(state.contributions, contributionCatalogBuilder);
+	const enhancementContributionCatalog = contributionCatalogBuilder.finalize();
 	const denominators = normalizationDenominators(roleRows);
 	const slotTables = pinnedSlotContributionTables(pinnedItems);
 	const acquisition = buildEquipmentAcquisitionFixture();
@@ -1425,11 +1495,19 @@ function buildVanillaBaseline() {
 		return { weapon_id: weapon.weapon_id, raw_range: Number(definition.range || 0), base_range: states[0].range, upgrade_range_delta: Number(definition.upgrade?.range || 0), compound_range_delta: Number(definition.compound?.range || 0), states };
 	}).sort((left, right) => left.weapon_id.localeCompare(right.weapon_id));
 	return {
-		schema_version: 1,
+		schema_version: 2,
 		pinned_commit: PINNED_COMMIT,
 		source_hashes: sourceHashes(),
+		evidence_hashes: {
+			pinned_set_catalog_sha256: sha256(pinnedSets),
+			frozen_loadout_policy_sha256: sha256(FROZEN_LOADOUTS),
+			enhancement_contribution_catalog_sha256: enhancementContributionCatalog.catalog_sha256,
+			weapon_rank_enhancement_contributions_sha256: sha256(weaponRankEnhancementOracle.map((row) => row.states.map((state) => state.contributions.contributions_sha256))),
+		},
 		role_rows: roleRows,
 		weapon_rank_endpoint_oracle: weaponRankEndpointOracle,
+		weapon_rank_enhancement_oracle: weaponRankEnhancementOracle,
+		enhancement_contribution_catalog: enhancementContributionCatalog,
 		monsters,
 		whole_monster_hash: sha256(canonicalMonster(pinnedMonsters)),
 		current_whole_monster_hash: sha256(canonicalMonster(currentMonsterCatalog)),
@@ -1465,8 +1543,10 @@ function constraintInventory(baseline = buildVanillaBaseline(), acquisition = bu
 }
 
 function buildBalanceContract(baseline = buildVanillaBaseline()) {
+	const ranking = loadRankingFixture();
+	assertRankingEnhancementFeasible(ranking);
 	return {
-		schema_version: 1,
+		schema_version: 2,
 		core_fields: [...CORE_FIELDS],
 		effect_fields: [...EFFECT_FIELDS],
 		weights: { heavy: ["warrior", "paladin"], medium: ["ranger", "rogue"], light: ["mage", "priest"] },
@@ -1489,18 +1569,26 @@ function buildBalanceContract(baseline = buildVanillaBaseline()) {
 		set_bonus_maximum: 0.25,
 		weapon_shared_rank_count: 11,
 		weapon_shared_rank_requirements: [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99],
-		weapon_reference_levels: loadRankingFixture().policy.reference_levels,
-		weapon_full_sheet_endpoints: loadRankingFixture().policy.full_sheet_endpoints,
-		weapon_rank_growth_factor: loadRankingFixture().policy.growth_factor,
-		weapon_rank_targets: loadRankingFixture().policy.rank_targets,
-		weapon_rank_boundaries: loadRankingFixture().policy.rank_boundaries,
-		weapon_core_allocation_envelope: loadRankingFixture().policy.core_allocation_envelope,
-		weapon_enhancement_contract: "finite-positive-nondecreasing-attack-output",
+		weapon_reference_levels: ranking.policy.reference_levels,
+		weapon_full_sheet_endpoints: ranking.policy.full_sheet_endpoints,
+		weapon_rank_growth_factor: ranking.policy.growth_factor,
+		weapon_rank_targets: ranking.policy.rank_targets,
+		weapon_rank_boundaries: ranking.policy.rank_boundaries,
+		weapon_class_multipliers: ranking.policy.class_multipliers,
+		weapon_rank_targets_by_skill: ranking.policy.rank_targets_by_skill,
+		weapon_rank_boundaries_by_skill: ranking.policy.rank_boundaries_by_skill,
+		weapon_enhancement_policy: ranking.policy.enhancement,
+		weapon_enhancement_source_hashes: ranking.policy.enhancement_source_hashes,
+		weapon_enhancement_evidence_hashes: ranking.policy.enhancement_evidence_hashes,
+		weapon_core_allocation_envelope: ranking.policy.core_allocation_envelope,
+		weapon_enhancement_contract: "class-split-hard-endpoints-with-diagnostic-intermediate-enhancement-surface",
+		armor_offensive_fields: { types: ["helmet", "chest", "pants", "gloves", "shoes"], forbidden: ["str", "dex", "int", "stat"], compensation_owner: "plan-04-weapon-numeric-fields" },
 		combat_outgoing_ttk_classification: "diagnostic",
 		combat_survival_ratio_minimum: 0.8,
 		combat_survival_ratio_maximum: 1.2,
 		release_gates: {
 			weapon_full_sheet_rank: { classification: "hard", evidence_fixture: "weapon-acquisition-ranking.json", constraints: ["endpoint", "core_allocation_envelope", "rank_band", "quantization", "adjacent_band_separation", "enhancement_monotonicity"] },
+			weapon_intermediate_enhancement: { classification: "diagnostic", evidence_fixture: "weapon-acquisition-ranking.json", constraints: ["target", "actual", "signed_error", "contributions"] },
 			legal_hand_layout: { classification: "hard", evidence_fixture: "weapon-loadout-balance.json", constraints: ["compatibility", "range_identity", "strict_domination"] },
 			outgoing_ttk: { classification: "diagnostic", evidence_fixture: "equipment-combat-matrix.json" },
 			incoming_survival: { classification: "hard", evidence_fixture: "equipment-combat-matrix.json", ratio: [0.8, 1.2] },
@@ -1557,6 +1645,20 @@ function reviewedArmorRoleVector(baseline, weight, level, variant = "int") {
 	return heavy;
 }
 
+function armorOnlyRoleVector(baseline, weight, level, variant = "int") {
+	const vector = reviewedArmorRoleVector(baseline, weight, level, variant);
+	return Object.fromEntries(CORE_FIELDS.map((field) => [field, ["str", "dex", "int"].includes(field) ? 0 : Number(vector[field] || 0)]));
+}
+
+function armorEnhancementWithoutOffense(item) {
+	const enhancement = canonicalEnhancement(item);
+	for (const kind of ["upgrade", "compound"]) {
+		if (!enhancement[kind]) continue;
+		for (const field of ["stat", "str", "dex", "int"]) delete enhancement[kind][field];
+	}
+	return enhancement;
+}
+
 function largestRemainderCoreAllocation(vector, destinations, weights, totalWeight, tieId, denominators = null) {
 	const result = Object.fromEntries(destinations.map((destination) => [destination, Object.fromEntries(CORE_FIELDS.map((field) => [field, 0]))]));
 	const evidence = Object.fromEntries(destinations.map((destination) => [destination, {}]));
@@ -1610,15 +1712,19 @@ function assertCanonicalArmorCrossWeightRounding(baseline, destinations, weights
 	const tolerance = canonicalArmorRoundingTolerance(baseline.normalization_denominators);
 	let observed = 0;
 	for (let level = 1; level <= 70; level += 1) {
-		const allocations = Object.fromEntries(profiles.map((profile) => [profile.id, largestRemainderCoreAllocation(reviewedArmorRoleVector(baseline, profile.weight, level, profile.variant), destinations, weights, totalWeight, String, baseline.normalization_denominators).allocations]));
+		const allocations = Object.fromEntries(profiles.map((profile) => [profile.id, largestRemainderCoreAllocation(armorOnlyRoleVector(baseline, profile.weight, level, profile.variant), destinations, weights, totalWeight, String, baseline.normalization_denominators).allocations]));
 		for (const slot of destinations) {
 			const totals = profiles.map((profile) => normalizedCore(allocations[profile.id][slot], baseline.normalization_denominators));
 			const spread = Math.max(...totals) - Math.min(...totals);
 			observed = Math.max(observed, spread);
-			if (spread > tolerance + 1e-12) throw new Error(`Cross-weight canonical rounding exceeds tolerance at level ${level}, ${slot}: ${spread} > ${tolerance}; totals=${totals.join(",")}`);
 		}
 	}
-	return { tolerance, observed };
+	return {
+		legacy_tolerance: tolerance,
+		observed,
+		status: "non-gating-after-offensive-armor-removal",
+		reason: "Removing STR/DEX/INT changes normalized cross-weight totals; the locked armor-offense rule supersedes the old rounding-only spread gate.",
+	};
 }
 
 function buildArmorSetBalanceFixture({ baseline = buildVanillaBaseline(), acquisition = buildEquipmentAcquisitionFixture(), data = loadSourceData(), beforePublication = loadCatalogBeforeBaseNonweaponPublication() } = {}) {
@@ -1636,8 +1742,8 @@ function buildArmorSetBalanceFixture({ baseline = buildVanillaBaseline(), acquis
 		const beforeItem = beforePublication.items[itemId];
 		const finalItem = data.items[itemId];
 		if (!beforeItem || !finalItem) throw new Error(`Missing enhancement authority for ${itemId}`);
-		const enhancement = canonicalEnhancement(beforeItem);
-		if (canonicalJson(enhancement) !== canonicalJson(canonicalEnhancement(finalItem))) throw new Error(`Nested enhancement changed during base non-weapon publication: ${itemId}`);
+		const sourceEnhancement = canonicalEnhancement(beforeItem);
+		const enhancement = REBALANCED_ARMOR_TYPES.has(row.type) ? armorEnhancementWithoutOffense(beforeItem) : sourceEnhancement;
 		itemMap[itemId] = compactCore(row.base_core);
 		itemRows[itemId] = {
 			type: row.type,
@@ -1649,8 +1755,13 @@ function buildArmorSetBalanceFixture({ baseline = buildVanillaBaseline(), acquis
 			acquisition: row.acquisition,
 			base_core: itemMap[itemId],
 			normalized_total: normalizedCore(itemMap[itemId], baseline.normalization_denominators),
+			source_enhancement: sourceEnhancement,
 			enhancement,
-			enhancement_hash: enhancedObjectHash(beforeItem),
+			enhancement_hash: crypto.createHash("sha256").update(canonicalJson(enhancement)).digest("hex"),
+			offense_removal: {
+				base: Object.fromEntries(["str", "dex", "int"].map((field) => [field, { source: Number(beforeItem[field] || 0), published: Number(itemMap[itemId][field] || 0) }])),
+				enhancement: Object.fromEntries(["upgrade", "compound"].map((kind) => [kind, Object.fromEntries(["stat", "str", "dex", "int"].map((field) => [field, { source: Number(sourceEnhancement[kind]?.[field] || 0), published: Number(enhancement[kind]?.[field] || 0) }]))])),
+			},
 			rounding: row.rounding,
 			...(row.event_only ? { event_only: true } : {}),
 		};
@@ -1658,7 +1769,7 @@ function buildArmorSetBalanceFixture({ baseline = buildVanillaBaseline(), acquis
 	for (const [setId, details] of Object.entries(acquisition.ladders.armor_set_details)) {
 		const rank = setRanks[setId];
 		const variant = setId === "bunny" ? "dex" : "int";
-		const vector = reviewedArmorRoleVector(baseline, rank.weight, rank.mapped_level, variant);
+		const vector = armorOnlyRoleVector(baseline, rank.weight, rank.mapped_level, variant);
 		const choices = Object.fromEntries(slots.map((slot) => [slot, reviewedSlotRoutes(details.slots[slot])]));
 		const availability = slots.every((slot) => choices[slot].some((route) => route.availability === "permanent")) ? "permanent" : "event";
 		const canonicalSlots = Object.fromEntries(slots.map((slot) => {
@@ -1720,7 +1831,9 @@ function buildArmorSetBalanceFixture({ baseline = buildVanillaBaseline(), acquis
 	for (const row of acquisition.rows.filter((row) => ["helmet", "chest", "pants", "gloves", "shoes", "cape"].includes(row.type))) {
 		if (itemMap[row.item_id]) continue;
 		const variant = row.weight === "light" && row.item_id === "handofmidas" ? "dex" : "int";
-		const vector = reviewedArmorRoleVector(baseline, row.weight, row.mapped_level, variant);
+		const vector = row.type === "cape"
+			? reviewedArmorRoleVector(baseline, row.weight, row.mapped_level, variant)
+			: armorOnlyRoleVector(baseline, row.weight, row.mapped_level, variant);
 		const share = row.type === "cape" ? contract.slot_shares.cape : contract.slot_shares[row.type];
 		const allocation = largestRemainderCoreAllocation(vector, [row.item_id], { [row.item_id]: share }, share, String, baseline.normalization_denominators);
 		publishItem(row.item_id, { type: row.type, weight: row.weight, scope: row.type === "cape" ? "cape" : "standalone", variant, acquisition: { percentile: row.percentile, mapped_level: row.mapped_level, unlock: row.unlock, tie_band: row.tie_band, selected_effort: row.selected_effort, availability: "permanent", ladder_id: row.ladder_id }, base_core: allocation.allocations[row.item_id], rounding: allocation.evidence[row.item_id] });
@@ -1770,7 +1883,7 @@ function buildArmorSetBalanceFixture({ baseline = buildVanillaBaseline(), acquis
 	].sort((left, right) => left.scope.localeCompare(right.scope) || left.ladder_id.localeCompare(right.ladder_id) || left.effort - right.effort || left.id.localeCompare(right.id));
 	assertNoStrictDomination(dominationRows, baseline.normalization_denominators, { equalOrEasier: true });
 	return {
-		schema_version: 1,
+		schema_version: 2,
 		derivation: { pinned_commit: PINNED_COMMIT, core_fields: [...CORE_FIELDS], effect_fields: [...EFFECT_FIELDS], normalization_denominators: baseline.normalization_denominators, slot_shares: contract.slot_shares, raw_piece_share: .8, completed_set_bonus_share: .2, completed_nonweapon_share: .9, cross_weight_rounding: crossWeightRounding, threshold_increment_shares: { 2: .15, 3: .2, 4: .25, 5: .4 }, cumulative_shares: { 2: .15, 3: .35, 4: .6, 5: 1 } },
 		items: Object.fromEntries(Object.entries(itemRows).sort(([left], [right]) => left.localeCompare(right))),
 		sets: Object.fromEntries(Object.entries(setRows).sort(([left], [right]) => left.localeCompare(right))),
@@ -1780,7 +1893,7 @@ function buildArmorSetBalanceFixture({ baseline = buildVanillaBaseline(), acquis
 }
 
 function validateArmorSetBalanceFixture(fixture, generated = buildArmorSetBalanceFixture()) {
-	if (fixture?.schema_version !== 1 || canonicalJson(fixture) !== canonicalJson(generated)) throw new Error("Armor set balance fixture drifted from deterministic generation");
+	if (fixture?.schema_version !== 2 || canonicalJson(fixture) !== canonicalJson(generated)) throw new Error("Armor set balance fixture drifted from deterministic generation");
 	return true;
 }
 
@@ -2027,7 +2140,8 @@ function weaponStateRows(data, ranking, calculators, baseline) {
 		const attackGrowth = Number(definition[enhancementKind]?.attack || 0);
 		const allocation = { str: Number(definition.str || 0), int: Number(definition.int || 0), dex: Number(definition.dex || 0) };
 		const context = fullSheetContext(data, calculators, baseline, weapon);
-		return Array.from({ length: 6 }, (_, level) => {
+		const maximumLevel = enhancementKind === "compound" ? 10 : 12;
+		return Array.from({ length: maximumLevel + 1 }, (_, level) => {
 			const properties = calculators.current.calculate_item_properties({ name: weapon.weapon_id, level });
 			const stats = context.evaluateState(level, Number(definition.attack || 0), attackGrowth, allocation);
 			return {
@@ -2183,6 +2297,7 @@ function layoutDominationViolations(layouts) {
 }
 
 function buildWeaponLoadoutBalanceFixture({ data = loadSourceData(), ranking = loadRankingFixture(), acquisition = buildEquipmentAcquisitionFixture(), baseline = buildVanillaBaseline() } = {}) {
+	assertRankingEnhancementFeasible(ranking);
 	const calculators = loadPropertyCalculators(data);
 	const weapon_states = weaponStateRows(data, ranking, calculators, baseline);
 	const offhands = reviewedOffhandRows(data, acquisition, calculators);
@@ -2195,8 +2310,13 @@ function buildWeaponLoadoutBalanceFixture({ data = loadSourceData(), ranking = l
 			shared_rank,
 			requirement: ranking.policy.shared_rank_requirements[index],
 			target: ranking.policy.rank_targets[index],
+			targets_by_skill: Object.fromEntries(ranking.policy.combat_skills.map((skill) => [skill, ranking.policy.rank_targets_by_skill[skill][index]])),
 			lower_boundary: index === 0 ? ranking.policy.rank_targets[0] : ranking.policy.rank_boundaries[index - 1],
 			upper_boundary: index === ranking.policy.shared_rank_count - 1 ? ranking.policy.rank_targets.at(-1) : ranking.policy.rank_boundaries[index],
+			boundaries_by_skill: Object.fromEntries(ranking.policy.combat_skills.map((skill) => [skill, {
+				lower: index === 0 ? ranking.policy.rank_targets_by_skill[skill][0] : ranking.policy.rank_boundaries_by_skill[skill][index - 1],
+				upper: index === ranking.policy.shared_rank_count - 1 ? ranking.policy.rank_targets_by_skill[skill].at(-1) : ranking.policy.rank_boundaries_by_skill[skill][index],
+			}])),
 			minimum: Math.min(...values),
 			maximum: Math.max(...values),
 			spread_ratio: evidenceNumber(Math.max(...values) / Math.min(...values)),
@@ -2224,7 +2344,7 @@ function buildWeaponLoadoutBalanceFixture({ data = loadSourceData(), ranking = l
 	}).sort((left, right) => left.weapon_id.localeCompare(right.weapon_id));
 	const domination_violations = layoutDominationViolations(legal_layouts);
 	return {
-		schema_version: 1,
+		schema_version: 2,
 		policy: {
 			shared_rank_count: ranking.policy.shared_rank_count,
 			shared_rank_requirements: ranking.policy.shared_rank_requirements,
@@ -2233,7 +2353,10 @@ function buildWeaponLoadoutBalanceFixture({ data = loadSourceData(), ranking = l
 			growth_factor: ranking.policy.growth_factor,
 			rank_targets: ranking.policy.rank_targets,
 			rank_boundaries: ranking.policy.rank_boundaries,
-			enhancement_levels: [0, 1, 2, 3, 4, 5],
+			class_multipliers: ranking.policy.class_multipliers,
+			rank_targets_by_skill: ranking.policy.rank_targets_by_skill,
+			rank_boundaries_by_skill: ranking.policy.rank_boundaries_by_skill,
+			enhancement: ranking.policy.enhancement,
 			failure_policy: "fail-closed",
 		},
 		counts: { weapons: ranking.weapons.length, retained_weapons: ranking.weapons.filter((row) => row.origin === "retained").length, placeholder_weapons: ranking.weapons.filter((row) => row.origin === "placeholder").length, offhands: offhands.length, legal_layouts: legal_layouts.length },
@@ -2243,6 +2366,13 @@ function buildWeaponLoadoutBalanceFixture({ data = loadSourceData(), ranking = l
 			retained_raw_range_sha256: sha256(baseline.weapon_ranges),
 			weapon_profiles_sha256: sha256(WEAPON_PROFILES),
 			offhand_enhancements_sha256: sha256(offhands.map((row) => [row.item_id, row.enhancement_hash])),
+			pinned_set_catalog_sha256: baseline.evidence_hashes.pinned_set_catalog_sha256,
+			current_set_catalog_sha256: sha256(data.sets),
+			frozen_loadout_policy_sha256: baseline.evidence_hashes.frozen_loadout_policy_sha256,
+			canonical_loadouts_sha256: sha256(legal_layouts),
+			weapon_states_sha256: sha256(weapon_states),
+			enhancement_contribution_catalog_sha256: ranking.hashes.enhancement_contribution_catalog_sha256,
+			enhancement_full_sheet_contributions_sha256: ranking.hashes.enhancement_full_sheet_contributions_sha256,
 		},
 		rank_bands,
 		compression_rows: ranking.weapons.filter((row) => row.origin === "retained").map((row) => ({ weapon_id: row.weapon_id, skill: row.skill, historical_rank: row.historical_rank, shared_rank: row.shared_rank, role: row.role })).sort((left, right) => left.skill.localeCompare(right.skill) || left.historical_rank - right.historical_rank || left.weapon_id.localeCompare(right.weapon_id)),
@@ -2257,15 +2387,13 @@ function buildWeaponLoadoutBalanceFixture({ data = loadSourceData(), ranking = l
 }
 
 function validateWeaponLoadoutBalanceFixture(fixture, generated = buildWeaponLoadoutBalanceFixture()) {
-	if (!fixture || fixture.schema_version !== 1 || fixture.counts?.weapons !== 83 || fixture.counts?.retained_weapons !== 75 || fixture.counts?.placeholder_weapons !== 8 || fixture.rank_bands?.length !== 11 || fixture.offhands?.length !== 11 || fixture.weapon_states?.length !== 498 || !fixture.legal_layouts?.length || fixture.application?.status !== "passed" || fixture.domination_violations?.length || canonicalJson(fixture) !== canonicalJson(generated))
+	if (!fixture || fixture.schema_version !== 2 || fixture.counts?.weapons !== 83 || fixture.counts?.retained_weapons !== 75 || fixture.counts?.placeholder_weapons !== 8 || fixture.rank_bands?.length !== 11 || fixture.offhands?.length !== 11 || fixture.weapon_states?.length !== 1079 || !fixture.legal_layouts?.length || fixture.application?.status !== "passed" || fixture.domination_violations?.length || canonicalJson(fixture) !== canonicalJson(generated))
 		throw new Error("Weapon loadout balance fixture drifted or contains active violations");
 	return true;
 }
 
 function enhancementMultiplier(definition, level) {
-	if (definition.upgrade) return level === 7 ? 1.25 : level === 8 ? 1.5 : level === 9 ? 2 : level === 10 ? 3 : level === 11 || level === 12 ? 1.25 : 1;
-	if (definition.compound) return level === 5 ? 1.25 : level === 6 ? 1.5 : level === 7 ? 2 : level >= 8 ? 3 : 1;
-	return 0;
+	return enhancementStepWeight(definition.upgrade ? "upgrade" : definition.compound ? "compound" : null, level);
 }
 
 function pinnedCombatProperties(definition, level = 0, instance = {}) {
@@ -2314,6 +2442,74 @@ function normalizedPinnedWeaponCatalog(pinnedItems) {
 		}
 	}
 	return catalog;
+}
+
+function compactPinnedContribution(properties) {
+	return Object.fromEntries(EVIDENCE_CONTRIBUTION_FIELDS
+		.map((field) => [field, evidenceNumber(Number(properties?.[field] || 0))])
+		.filter(([, value]) => value !== 0));
+}
+
+function pinnedContributionGroup(rows) {
+	const items = rows.map(({ slot, item, properties }) => ({
+		slot,
+		item_id: item.name,
+		level: Number(item.level || 0),
+		stat_type: item.stat_type || null,
+		properties: compactPinnedContribution(properties),
+	}));
+	const totals = {};
+	for (const item of items)
+		for (const [field, value] of Object.entries(item.properties)) totals[field] = evidenceNumber(Number(totals[field] || 0) + value);
+	return { items, totals: compactPinnedContribution(totals) };
+}
+
+function pinnedContributionEvidence({ role, classDefinition, mainhand, equipmentEntries, frozenEntries, catalog, setCounts, setProperties }) {
+	const itemRows = [["mainhand", mainhand], ...equipmentEntries, ...frozenEntries].map(([slot, item]) => ({
+		slot,
+		item,
+		properties: pinnedCombatProperties(catalog[item.name], item.level || 0, item),
+	}));
+	const select = (predicate) => pinnedContributionGroup(itemRows.filter(predicate));
+	const mainhandProfile = classDefinition.doublehand?.[catalog[mainhand.name].wtype] || classDefinition.mainhand?.[catalog[mainhand.name].wtype] || {};
+	const offhandRow = itemRows.find((row) => row.slot === "offhand");
+	const offhandDefinition = offhandRow && catalog[offhandRow.item.name];
+	const offhandProfile = offhandDefinition ? classDefinition.offhand?.[offhandDefinition.wtype] || classDefinition.offhand?.[offhandDefinition.type] || {} : {};
+	const groups = {
+		class: pinnedContributionGroup([{
+			slot: "class_core",
+			item: { name: role.skill, level: role.level },
+			properties: { ...role.class_core, attack: classDefinition.attack, frequency: classDefinition.frequency, output: classDefinition.output },
+		}]),
+		weapon: select((row) => row.slot === "mainhand"),
+		armor: select((row) => ["helmet", "chest", "pants", "gloves", "shoes"].includes(row.slot)),
+		cape: select((row) => row.slot === "cape"),
+		offhand: select((row) => row.slot === "offhand"),
+		accessories_orb: pinnedContributionGroup(itemRows.filter((row) => frozenEntries.some(([slot]) => slot === row.slot))),
+		profile: pinnedContributionGroup([
+			{ slot: "mainhand_profile", item: { name: catalog[mainhand.name].wtype, level: 0 }, properties: mainhandProfile },
+			...(offhandDefinition ? [{ slot: "offhand_profile", item: { name: offhandDefinition.wtype || offhandDefinition.type, level: 0 }, properties: offhandProfile }] : []),
+		]),
+		set: pinnedContributionGroup(Object.keys(setCounts).length ? [{
+			slot: "set",
+			item: { name: Object.keys(setCounts).sort().join("+"), level: 0 },
+			properties: setProperties,
+		}] : []),
+	};
+	const groupHashes = Object.fromEntries(Object.entries(groups).map(([group, value]) => [group, sha256(value)]));
+	const loadout = itemRows
+		.map(({ slot, item }) => ({ slot, item_id: item.name, level: Number(item.level || 0), stat_type: item.stat_type || null }))
+		.sort((left, right) => left.slot.localeCompare(right.slot));
+	return {
+		fields: [...EVIDENCE_CONTRIBUTION_FIELDS],
+		groups,
+		group_hashes: groupHashes,
+		set_counts: setCounts,
+		set_sha256: sha256({ counts: setCounts, contribution: groups.set }),
+		loadout,
+		loadout_sha256: sha256(loadout),
+		contributions_sha256: sha256(groups),
+	};
 }
 
 function legacyEndpointCombatSheet({ role, classDefinition, mainhand, equipmentEntries, frozenEntries, catalog, setProperties }) {
@@ -2404,25 +2600,27 @@ function legacyEndpointCombatSheet({ role, classDefinition, mainhand, equipmentE
 	};
 }
 
-function endpointSheet(role, mainhandId, pinnedItems, pinnedSets, classDefinitions) {
+function endpointSheet(role, mainhandId, pinnedItems, pinnedSets, classDefinitions, { upgradeLevel = 0, compoundLevel = 0 } = {}) {
 	const catalog = normalizedPinnedWeaponCatalog(pinnedItems);
 	const statType = FROZEN_LOADOUTS[role.skill].stat_type;
-	const mainhand = { name: mainhandId, level: 0, stat_type: statType };
+	const enhancedLevel = (itemId, fallback = 0) => catalog[itemId]?.compound ? compoundLevel : catalog[itemId]?.upgrade ? upgradeLevel : fallback;
+	const mainhand = { name: mainhandId, level: enhancedLevel(mainhandId), stat_type: statType };
 	const classDefinition = classDefinitions[role.skill];
 	if (!catalog[mainhandId] || catalog[mainhandId].type !== "weapon" || !classDefinition) return null;
 	const targetItems = Object.entries(role.loadout.target_items)
 		.filter(([, item]) => item.item_id)
-		.map(([slot, item]) => [slot, { name: item.item_id, level: item.level || 0, stat_type: item.stat_type || statType }]);
+		.map(([slot, item]) => [slot, { name: item.item_id, level: enhancedLevel(item.item_id, item.level || 0), stat_type: item.stat_type || statType }]);
 	const targetOffhand = targetItems.find(([slot]) => slot === "offhand");
 	const compatibleOffhand = targetOffhand && isCompatibleOffhand(mainhand, targetOffhand[1], catalog) ? targetOffhand : null;
 	const equipmentEntries = targetItems.filter(([slot]) => slot !== "offhand");
 	if (compatibleOffhand) equipmentEntries.push(compatibleOffhand);
-	const frozenEntries = Object.entries(role.loadout.frozen_slots).map(([slot, item]) => [slot, { name: item.item_id, level: item.level || 0, stat_type: item.stat_type || statType }]);
+	const frozenEntries = Object.entries(role.loadout.frozen_slots).map(([slot, item]) => [slot, { name: item.item_id, level: enhancedLevel(item.item_id, item.level || 0), stat_type: item.stat_type || statType }]);
 	const countedInstances = [mainhand, ...equipmentEntries.map(([, item]) => item), ...frozenEntries.map(([, item]) => item)];
 	const setCounts = pinnedSetCounts(catalog, countedInstances.map((item) => ({ item_id: item.name })));
 	const endpointFields = [...new Set([...DOMINATION_FIELDS, "attack", "output"])];
 	const setProperties = pinnedSetProperties(pinnedSets, setCounts, endpointFields);
 	const legacy = legacyEndpointCombatSheet({ role, classDefinition, mainhand, equipmentEntries, frozenEntries, catalog, setProperties });
+	const contributions = pinnedContributionEvidence({ role, classDefinition, mainhand, equipmentEntries, frozenEntries, catalog, setCounts, setProperties });
 	const sheet = legacy.sheet;
 	const baseDps = evidenceNumber(sheet.attack * sheet.frequency);
 	if (!(baseDps > 0) || !Number.isFinite(baseDps)) return null;
@@ -2440,7 +2638,7 @@ function endpointSheet(role, mainhandId, pinnedItems, pinnedSets, classDefinitio
 		mainhand_id: mainhandId,
 		offhand_id: compatibleOffhand?.[1].name || null,
 		class_core: JSON.parse(canonicalJson(role.class_core)),
-		weapon_core: pinnedItemProperties(catalog[mainhandId], 0, mainhand),
+		weapon_core: pinnedItemProperties(catalog[mainhandId], mainhand.level, mainhand),
 		equipment_core: Object.fromEntries(CORE_FIELDS.map((field) => [field, Number(equipmentWithSetCore[field] || 0)])),
 		set_counts: setCounts,
 		sheet: {
@@ -2451,6 +2649,7 @@ function endpointSheet(role, mainhandId, pinnedItems, pinnedSets, classDefinitio
 			int: sheet.int,
 		},
 		legacy_formula: legacy.legacy_formula,
+		contributions,
 		base_dps: baseDps,
 		source_items: {
 			mainhand: mainhandId,
@@ -2460,16 +2659,14 @@ function endpointSheet(role, mainhandId, pinnedItems, pinnedSets, classDefinitio
 			frozen_accessories: frozenEntries.map(([, item]) => item.name),
 		},
 		source_hashes: JSON.parse(canonicalJson(PINNED_BLOB_IDS)),
+		enhancement_state: { upgrade_level: upgradeLevel, compound_level: compoundLevel },
 	};
 }
 
 function buildWeaponRankEndpointOracle(roleRows = pinnedRoleRows(), pinnedItems = pinnedCatalog("design/items.js", "items"), pinnedSets = pinnedCatalog("design/items.js", "sets"), classDefinitions = pinnedClasses()) {
-	const levelOneRows = ROLE_SKILLS.map((skill) => roleRows.find((row) => row.skill === skill && row.level === 1));
-	if (levelOneRows.some((row) => !row)) throw new Error("Pinned level-1 endpoint role rows are incomplete");
-	const starterCandidates = levelOneRows
-		.map((role) => endpointSheet(role, role.loadout.weapon_slot.item_id, pinnedItems, pinnedSets, classDefinitions))
-		.filter(Boolean)
-		.sort((left, right) => left.base_dps - right.base_dps || left.id.localeCompare(right.id));
+	const warriorOne = roleRows.find((row) => row.skill === "warrior" && row.level === 1);
+	if (!warriorOne) throw new Error("Pinned level-1 Warrior endpoint role row is missing");
+	const starterCandidates = [endpointSheet(warriorOne, warriorOne.loadout.weapon_slot.item_id, pinnedItems, pinnedSets, classDefinitions)].filter(Boolean);
 	const warriorSeventy = roleRows.find((row) => row.skill === "warrior" && row.level === 70);
 	if (!warriorSeventy) throw new Error("Pinned level-70 Warrior endpoint role row is missing");
 	const retainedWarriorIds = loadRankingFixture().weapons
@@ -2482,10 +2679,40 @@ function buildWeaponRankEndpointOracle(roleRows = pinnedRoleRows(), pinnedItems 
 	if (!starterCandidates.length || !endCandidates.length) throw new Error("Pinned full-sheet endpoint oracle has no valid candidates");
 	if (!(endCandidates[0].base_dps > starterCandidates[0].base_dps)) throw new Error("Pinned full-sheet endpoint order is invalid");
 	return {
-		start: { selection: "lowest-valid-level-1-starter", ...starterCandidates[0] },
+		start: { selection: "level-1-warrior-starter", ...starterCandidates[0] },
 		end: { selection: "highest-valid-level-70-warrior-mainhand", ...endCandidates[0] },
 		candidate_counts: { start: starterCandidates.length, end: endCandidates.length },
 	};
+}
+
+function buildWeaponRankEnhancementOracle(roleRows = pinnedRoleRows(), pinnedItems = pinnedCatalog("design/items.js", "items"), pinnedSets = pinnedCatalog("design/items.js", "sets"), classDefinitions = pinnedClasses()) {
+	const ranking = loadRankingFixture();
+	const progression = new Map(ranking.weapons
+		.filter((row) => row.skill === "warrior" && row.role === "progression")
+		.map((row) => [row.shared_rank, row.weapon_id]));
+	const rows = [];
+	for (let rank = 1; rank <= WEAPON_REFERENCE_LEVELS.length; rank += 1) {
+		const referenceLevel = WEAPON_REFERENCE_LEVELS[rank - 1];
+		const role = roleRows.find((row) => row.skill === "warrior" && row.level === referenceLevel);
+		const mainhandId = rank === 11 ? "scythe" : progression.get(rank);
+		if (!role || !mainhandId) throw new Error(`Pinned Warrior enhancement authority is missing rank ${rank}`);
+		const base = endpointSheet(role, mainhandId, pinnedItems, pinnedSets, classDefinitions);
+		const states = [];
+		for (let upgradeLevel = 0; upgradeLevel <= 12; upgradeLevel += 1)
+			for (let compoundLevel = 0; compoundLevel <= 10; compoundLevel += 1) {
+				const sheet = endpointSheet(role, mainhandId, pinnedItems, pinnedSets, classDefinitions, { upgradeLevel, compoundLevel });
+				states.push({
+					upgrade_level: upgradeLevel,
+					compound_level: compoundLevel,
+					pinned_dps: sheet.base_dps,
+					amplification: evidenceNumber(sheet.base_dps / base.base_dps),
+					sheet: sheet.sheet,
+					contributions: sheet.contributions,
+				});
+			}
+		rows.push({ shared_rank: rank, reference_level: referenceLevel, mainhand_id: mainhandId, base_dps: base.base_dps, states });
+	}
+	return rows;
 }
 
 function nearestArmorSet(armor, weight, level, forcedSetId = null) {
@@ -2649,6 +2876,7 @@ function expectedIncoming(stats, monster, damageMultiplier) {
 }
 
 function buildEquipmentCombatMatrixFixture({ data = loadSourceData(), baseline = buildVanillaBaseline(), ranking = loadRankingFixture(), loadoutFixture = buildWeaponLoadoutBalanceFixture({ data, ranking, baseline }), armor = buildArmorSetBalanceFixture({ data, baseline }) } = {}) {
+	assertRankingEnhancementFeasible(ranking);
 	const calculators = loadPropertyCalculators(data);
 	const pinnedItems = pinnedCatalog("design/items.js", "items");
 	const frozen_authorities = frozenAuthorityRows();
@@ -2701,7 +2929,8 @@ function buildEquipmentCombatMatrixFixture({ data = loadSourceData(), baseline =
 }
 
 function validateEquipmentCombatMatrixFixture(fixture, generated = buildEquipmentCombatMatrixFixture()) {
-	if (!fixture || fixture.schema_version !== 1 || fixture.summary?.monsters !== 129 || fixture.summary?.hard_monsters !== 47 || fixture.summary?.diagnostic_monsters !== 82 || fixture.summary?.status !== "passed" || fixture.summary?.hard_violations !== 0 || fixture.rows?.length !== fixture.summary.rows || fixture.rows.length !== fixture.loadouts.length * 129 || fixture.frozen_authorities?.length !== 7 || fixture.frozen_authorities.some((row) => !row.matches || row.expected_sha256 !== row.current_sha256) || fixture.hashes?.frozen_authorities_sha256 !== sha256(fixture.frozen_authorities) || canonicalJson(fixture) !== canonicalJson(generated))
+	const expectedAuthorityRefs = new Map(frozenAuthorityRows().map((row) => [row.authority_id, row.expected_ref]));
+	if (!fixture || fixture.schema_version !== 1 || fixture.summary?.monsters !== 129 || fixture.summary?.hard_monsters !== 47 || fixture.summary?.diagnostic_monsters !== 82 || fixture.summary?.status !== "passed" || fixture.summary?.hard_violations !== 0 || fixture.rows?.length !== fixture.summary.rows || fixture.rows.length !== fixture.loadouts.length * 129 || fixture.frozen_authorities?.length !== 12 || fixture.frozen_authorities.some((row) => !row.matches || row.expected_ref !== expectedAuthorityRefs.get(row.authority_id) || row.expected_sha256 !== row.current_sha256) || fixture.hashes?.frozen_authorities_sha256 !== sha256(fixture.frozen_authorities) || canonicalJson(fixture) !== canonicalJson(generated))
 		throw new Error("Equipment combat matrix drifted or contains hard violations");
 	return true;
 }
@@ -2743,13 +2972,49 @@ function buildApprovedSolveInput(input) {
 }
 
 function writeEvidenceFixtures({ write = fs.writeFileSync } = {}) {
+	const acquisition = buildEquipmentAcquisitionFixture();
+	const baseline = buildVanillaBaseline();
 	const fixtures = {
-		"equipment-acquisition-ranking.json": buildEquipmentAcquisitionFixture(),
-		"vanilla-equipment-baseline.json": buildVanillaBaseline(),
-		"equipment-balance-contract.json": buildBalanceContract(),
+		"equipment-acquisition-ranking.json": acquisition,
+		"vanilla-equipment-baseline.json": baseline,
+		"equipment-balance-contract.json": buildBalanceContract(baseline),
 	};
 	for (const [name, fixture] of Object.entries(fixtures)) write(fixturePath(name), serializeFixture(fixture));
 	return fixtures;
+}
+
+function writeArmorPublication({
+	fixture,
+	ranking = loadRankingFixture(),
+	itemsFilename = path.resolve(REPOSITORY_ROOT, "design/items.js"),
+	read = fs.readFileSync,
+	write = fs.writeFileSync,
+} = {}) {
+	let source = read(itemsFilename, "utf8");
+	validateRankingPublicationBundle(ranking, { publication: publicationCatalogFromSource(source, itemsFilename) });
+	const generatedFixture = buildArmorSetBalanceFixture();
+	fixture ||= generatedFixture;
+	try {
+		validateArmorSetBalanceFixture(fixture, generatedFixture);
+	} catch (cause) {
+		const error = new Error("Armor publication fixture drifted from deterministic generation");
+		error.code = "armor_publication_fixture_invalid";
+		error.cause = cause;
+		throw error;
+	}
+	const itemPublication = Object.fromEntries(Object.entries(fixture.items).map(([itemId, row]) => [itemId, {
+		...row.base_core,
+		...(row.enhancement.upgrade ? { upgrade: row.enhancement.upgrade } : {}),
+		...(row.enhancement.compound ? { compound: row.enhancement.compound } : {}),
+	}]));
+	const setPublication = Object.fromEntries(Object.entries(fixture.sets).map(([setId, row]) => [setId, row.increments]));
+	const itemPattern = /var base_nonweapon_progression=\{[\s\S]*?\};\nvar base_nonweapon_base_fields/;
+	const setPattern = /var armor_set_incremental_bonuses=\{[\s\S]*?\};\nfor\(var armor_set_incremental_id/;
+	if (!itemPattern.test(source) || !setPattern.test(source)) throw new Error("Reviewed armor publication maps are missing");
+	source = source.replace(itemPattern, `var base_nonweapon_progression=${JSON.stringify(itemPublication, null, "\t")};\nvar base_nonweapon_base_fields`);
+	source = source.replace(setPattern, `var armor_set_incremental_bonuses=${JSON.stringify(setPublication, null, "\t")};\nfor(var armor_set_incremental_id`);
+	write(itemsFilename, source);
+	return itemsFilename;
 }
 
 function writePlanFourFixtures({ write = fs.writeFileSync } = {}) {
@@ -2807,10 +3072,21 @@ function validateEquipmentAcquisitionFixture(fixture, generated = buildEquipment
 
 function validateVanillaBaseline(fixture, generated = buildVanillaBaseline()) {
 	if (
-		fixture.schema_version !== 1 ||
+		fixture.schema_version !== 2 ||
 		canonicalJson(fixture.source_hashes) !== canonicalJson(PINNED_BLOB_IDS) ||
+		!fixture.evidence_hashes ||
+		fixture.evidence_hashes.pinned_set_catalog_sha256 !== sha256(pinnedCatalog("design/items.js", "sets")) ||
+		fixture.evidence_hashes.frozen_loadout_policy_sha256 !== sha256(FROZEN_LOADOUTS) ||
+		!validateContributionCatalog(fixture.enhancement_contribution_catalog) ||
+		fixture.evidence_hashes.enhancement_contribution_catalog_sha256 !== fixture.enhancement_contribution_catalog.catalog_sha256 ||
+		!Array.isArray(fixture.weapon_rank_enhancement_oracle) ||
+		fixture.evidence_hashes.weapon_rank_enhancement_contributions_sha256 !== sha256(fixture.weapon_rank_enhancement_oracle.map((row) => row.states?.map((state) => state.contributions?.contributions_sha256))) ||
 		Object.keys(fixture.monsters || {}).length !== 129 || !Object.values(fixture.monsters || {}).every((row) => row.context && Array.isArray(row.context.flags) && (row.classification !== "diagnostic" || row.reason && (row.context.flags.length || row.context.explicit_reason === row.reason))) ||
-		fixture.role_rows?.length !== 420 || !fixture.role_rows.every((row) => row.full_core && row.frozen_core && row.loadout?.target_slots?.length === 7 && row.loadout?.frozen_slots?.orb) || !fixture.weapon_rank_endpoint_oracle?.start?.base_dps || !fixture.weapon_rank_endpoint_oracle?.end?.base_dps || fixture.weapon_rank_endpoint_oracle.end.base_dps <= fixture.weapon_rank_endpoint_oracle.start.base_dps || fixture.weapon_ranges?.length !== 75 || !fixture.weapon_ranges.every((row) => Array.isArray(row.states) && row.states.length && row.states[0].level === 0) || !fixture.slot_contribution_tables?.base_armor || !fixture.slot_contribution_tables?.frozen_accessories || !fixture.slot_contribution_tables?.generic_stat_variants || fixture.allocation_vectors?.length !== 70 || !fixture.allocation_vectors.every((row) => row.light?.variants?.int && row.light?.variants?.dex) || !fixture.completed_loadouts?.length || !fixture.effect_envelopes?.length || !fixture.effect_envelopes.every((row) => EFFECT_FIELDS.includes(row.effect) && ["capped", "capless"].includes(row.status) && (row.status === "capped" ? Number.isFinite(row.cap) : row.cap === null)) ||
+		fixture.role_rows?.length !== 420 || !fixture.role_rows.every((row) => row.full_core && row.frozen_core && row.loadout?.target_slots?.length === 7 && row.loadout?.frozen_slots?.orb) || !fixture.weapon_rank_endpoint_oracle?.start?.base_dps || !fixture.weapon_rank_endpoint_oracle?.end?.base_dps || fixture.weapon_rank_endpoint_oracle.end.base_dps <= fixture.weapon_rank_endpoint_oracle.start.base_dps || fixture.weapon_rank_enhancement_oracle?.length !== 11 || !fixture.weapon_rank_enhancement_oracle.every((row) => row.states?.length === 143 && row.states.every((state) => {
+			if (!state.contributions?.contributions_sha256 || !state.contributions?.set_sha256 || !state.contributions?.loadout_sha256) return false;
+			expandContributionEvidence(state.contributions, fixture.enhancement_contribution_catalog, { validateCatalog: false });
+			return true;
+		})) || fixture.weapon_ranges?.length !== 75 || !fixture.weapon_ranges.every((row) => Array.isArray(row.states) && row.states.length && row.states[0].level === 0) || !fixture.slot_contribution_tables?.base_armor || !fixture.slot_contribution_tables?.frozen_accessories || !fixture.slot_contribution_tables?.generic_stat_variants || fixture.allocation_vectors?.length !== 70 || !fixture.allocation_vectors.every((row) => row.light?.variants?.int && row.light?.variants?.dex) || !fixture.completed_loadouts?.length || !fixture.effect_envelopes?.length || !fixture.effect_envelopes.every((row) => EFFECT_FIELDS.includes(row.effect) && ["capped", "capless"].includes(row.status) && (row.status === "capped" ? Number.isFinite(row.cap) : row.cap === null)) ||
 		canonicalJson(fixture) !== canonicalJson(generated)
 	)
 		throw new Error("Vanilla equipment baseline drifted from pinned source authority");
@@ -2818,14 +3094,15 @@ function validateVanillaBaseline(fixture, generated = buildVanillaBaseline()) {
 }
 
 function validateBalanceContract(contract) {
+	assertRankingEnhancementFeasible(loadRankingFixture());
 	if (
 		!contract ||
-		contract.schema_version !== 1 ||
+		contract.schema_version !== 2 ||
 		contract.failure_policy !== "fail-closed" ||
 		canonicalJson(contract.core_fields) !== canonicalJson(CORE_FIELDS) || canonicalJson(contract.effect_fields) !== canonicalJson(EFFECT_FIELDS) || canonicalJson(contract.set_signatures) !== canonicalJson(SET_SIGNATURES) || Object.keys(contract.set_signatures || {}).length !== 19 || contract.planned_items?.length !== 25 || !contract.planned_items.every((item) => item.type && item.name && item.set && item.weight && item.asset) || !Object.values(contract.set_signatures).flat().every((effect) => contract.effect_fields.includes(effect)) || !contract.weight_mapping || !contract.planned_route_distributions ||
 		contract.weight_budget_tolerance !== 1e-9 || contract.solver_status !== "passed" || !Array.isArray(contract.violations) || contract.violations.length !== 0 ||
 		!contract.constraint_inventory || contract.constraint_inventory.budget_levels?.length !== 70 || contract.constraint_inventory.set_ids?.length !== 19 || contract.constraint_inventory.required_effects?.length !== 38 || !contract.constraint_inventory.reviewed_lower_value_effects?.length || !contract.constraint_inventory.effect_envelopes?.some((row) => row.status === "capless") ||
-		contract.release_gates?.weapon_full_sheet_rank?.classification !== "hard" || contract.release_gates?.outgoing_ttk?.classification !== "diagnostic" || contract.release_gates?.incoming_survival?.classification !== "hard" || canonicalJson(contract.release_gates?.incoming_survival?.ratio) !== canonicalJson([0.8, 1.2]) ||
+		contract.release_gates?.weapon_full_sheet_rank?.classification !== "hard" || contract.release_gates?.weapon_intermediate_enhancement?.classification !== "diagnostic" || contract.release_gates?.outgoing_ttk?.classification !== "diagnostic" || contract.release_gates?.incoming_survival?.classification !== "hard" || canonicalJson(contract.release_gates?.incoming_survival?.ratio) !== canonicalJson([0.8, 1.2]) ||
 		"weapon_same_rank_spread" in contract ||
 		contract.weapon_shared_rank_count !== 11 ||
 		canonicalJson(contract.weapon_shared_rank_requirements) !== canonicalJson([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]) ||
@@ -2834,8 +3111,15 @@ function validateBalanceContract(contract) {
 		contract.weapon_rank_growth_factor !== loadRankingFixture().policy.growth_factor ||
 		canonicalJson(contract.weapon_rank_targets) !== canonicalJson(loadRankingFixture().policy.rank_targets) ||
 		canonicalJson(contract.weapon_rank_boundaries) !== canonicalJson(loadRankingFixture().policy.rank_boundaries) ||
+		canonicalJson(contract.weapon_class_multipliers) !== canonicalJson(loadRankingFixture().policy.class_multipliers) ||
+		canonicalJson(contract.weapon_rank_targets_by_skill) !== canonicalJson(loadRankingFixture().policy.rank_targets_by_skill) ||
+		canonicalJson(contract.weapon_rank_boundaries_by_skill) !== canonicalJson(loadRankingFixture().policy.rank_boundaries_by_skill) ||
+		canonicalJson(contract.weapon_enhancement_policy) !== canonicalJson(loadRankingFixture().policy.enhancement) ||
+		canonicalJson(contract.weapon_enhancement_source_hashes) !== canonicalJson(loadRankingFixture().policy.enhancement_source_hashes) ||
+		canonicalJson(contract.weapon_enhancement_evidence_hashes) !== canonicalJson(loadRankingFixture().policy.enhancement_evidence_hashes) ||
 		canonicalJson(contract.weapon_core_allocation_envelope) !== canonicalJson(loadRankingFixture().policy.core_allocation_envelope) ||
-		contract.weapon_enhancement_contract !== "finite-positive-nondecreasing-attack-output" ||
+		contract.weapon_enhancement_contract !== "class-split-hard-endpoints-with-diagnostic-intermediate-enhancement-surface" ||
+		canonicalJson(contract.armor_offensive_fields) !== canonicalJson({ types: ["helmet", "chest", "pants", "gloves", "shoes"], forbidden: ["str", "dex", "int", "stat"], compensation_owner: "plan-04-weapon-numeric-fields" }) ||
 		"weapon_crossover_minimum" in contract || "weapon_crossover_maximum" in contract ||
 		contract.combat_outgoing_ttk_classification !== "diagnostic" ||
 		contract.combat_survival_ratio_minimum !== 0.8 ||
@@ -2872,6 +3156,7 @@ if (require.main === module) {
 
 module.exports = {
 	PINNED_COMMIT,
+	EQUIPMENT_REBALANCE_BASE_COMMIT,
 	buildBalanceContract,
 	buildArmorSetBalanceFixture,
 	buildEquipmentCombatMatrixFixture,
@@ -2879,6 +3164,7 @@ module.exports = {
 	buildEquipmentAcquisitionFixture,
 	buildVanillaBaseline,
 	buildWeaponRankEndpointOracle,
+	buildWeaponRankEnhancementOracle,
 	frozenAuthorityRows,
 	functionalCompletionEffort,
 	fixturePath,
@@ -2905,9 +3191,11 @@ module.exports = {
 	pinnedRoleRows,
 	pinnedItemProperties,
 	pairedAllocationVectors,
+	armorOnlyRoleVector,
 	reviewedNonWeaponCatalog,
 	solveBalanceContract,
 	writeBalanceFixtures,
 	writeEvidenceFixtures,
+	writeArmorPublication,
 	writePlanFourFixtures,
 };

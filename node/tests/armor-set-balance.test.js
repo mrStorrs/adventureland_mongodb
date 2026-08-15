@@ -10,7 +10,7 @@ const vm = require("node:vm");
 const { calculateStats, dexCrit } = require("../game/stats");
 const { DEX_CRIT_CALIBRATION } = require("../game/stat_calibration");
 const { extractSourceBlock } = require("./source-extract");
-const { assertCanonicalArmorCrossWeightRounding, assertNoStrictDomination, buildArmorSetBalanceFixture, buildVanillaBaseline, validateArmorSetBalanceFixture } = require("../tools/equipment-balance");
+const { armorOnlyRoleVector, assertCanonicalArmorCrossWeightRounding, assertNoStrictDomination, buildArmorSetBalanceFixture, buildVanillaBaseline, validateArmorSetBalanceFixture } = require("../tools/equipment-balance");
 
 const root = path.resolve(__dirname, "../..");
 const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/armor-set-balance.json"), "utf8"));
@@ -153,7 +153,7 @@ function independentArmorSlotAllocations(baseline, level, destinations, weights,
 		{ id: "medium", weight: "medium", variant: "int" },
 		{ id: "light", weight: "light", variant: "int" },
 		{ id: "light_dex", weight: "light", variant: "dex" },
-	].map((profile) => ({ ...profile, vector: roleVector(baseline, profile.weight, level, profile.variant) }));
+	].map((profile) => ({ ...profile, vector: armorOnlyRoleVector(baseline, profile.weight, level, profile.variant) }));
 	const allocations = Object.fromEntries(profiles.map((profile) => [profile.id, independentLargestRemainder(profile.vector, destinations, weights, totalWeight, profile.id === selectedId ? tieId : String)]));
 	if (!selectedId) return { allocations: Object.fromEntries(Object.entries(allocations).map(([profileId, allocation]) => [profileId, allocation.allocations])) };
 	const selected = profiles.find((profile) => profile.id === selectedId);
@@ -179,10 +179,10 @@ function assertRuntimeCumulativeOutput(catalog, publishedSets, setId, row, slots
 	assert.equal(withBonus.crit, expectedCrit, `${label}:crit`);
 }
 
-test("reviewed base armor and cape rows replace legacy power without changing enhancements", () => {
+test("reviewed base armor and cape rows publish offense-free armor enhancements", () => {
 	const catalog = loadProperties();
 	const beforePublication = loadCatalogBeforeBasePublication();
-	assert.equal(fixture.schema_version, 1);
+	assert.equal(fixture.schema_version, 2);
 	assert.doesNotThrow(() => validateArmorSetBalanceFixture(fixture));
 	assert.equal(`${JSON.stringify(buildArmorSetBalanceFixture(), null, "\t")}\n`, fs.readFileSync(path.join(__dirname, "fixtures/armor-set-balance.json"), "utf8"));
 	assert.equal(Object.keys(fixture.items).length, 138);
@@ -197,9 +197,14 @@ test("reviewed base armor and cape rows replace legacy power without changing en
 		assert.equal(item.for, undefined, `${itemId} has no Fortitude`);
 		assert.equal(item.stat, undefined, `${itemId} has no legacy generic stat`);
 		assert.equal(item.extra_stat, undefined, `${itemId} has no legacy extra stat`);
-		assert.deepEqual(canonicalEnhancement(beforePublication.items[itemId]), row.enhancement, `${itemId} before enhancement object`);
+		assert.deepEqual(canonicalEnhancement(beforePublication.items[itemId]), row.source_enhancement, `${itemId} source enhancement object`);
 		assert.deepEqual(canonicalEnhancement(item), row.enhancement, `${itemId} final enhancement object`);
 		assert.equal(enhancementHash(item), row.enhancement_hash, `${itemId} enhancement hash`);
+		if (["helmet", "chest", "pants", "gloves", "shoes"].includes(row.type)) {
+			for (const field of ["str", "dex", "int"]) assert.equal(Number(item[field] || 0), 0, `${itemId}:${field}`);
+			for (const kind of ["upgrade", "compound"])
+				for (const field of ["stat", "str", "dex", "int"]) assert.equal(Number(item[kind]?.[field] || 0), 0, `${itemId}:${kind}:${field}`);
+		}
 	}
 	for (const [setId, details] of Object.entries(acquisitionFixture.ladders.armor_set_details)) {
 		const rank = acquisitionFixture.ladders.armor_sets[fixture.sets[setId].weight].find((row) => row.set_id === setId);
@@ -267,7 +272,8 @@ test("reviewed budgets, distributions, threshold shares, and alternatives remain
 	const baseline = buildVanillaBaseline();
 	const unitRounding = Math.max(...coreFields.map((field) => 1 / fixture.derivation.normalization_denominators[field]));
 	const crossWeightRoundingTolerance = 2 * coreFields.reduce((total, field) => total + 1 / fixture.derivation.normalization_denominators[field], 0);
-	assert.equal(fixture.derivation.cross_weight_rounding.tolerance, crossWeightRoundingTolerance, "derived cross-weight rounding tolerance");
+	assert.equal(fixture.derivation.cross_weight_rounding.legacy_tolerance, crossWeightRoundingTolerance, "recorded obsolete cross-weight rounding tolerance");
+	assert.equal(fixture.derivation.cross_weight_rounding.status, "non-gating-after-offensive-armor-removal");
 	let observedCrossWeightSpread = 0;
 	for (let level = 1; level <= 70; level += 1) {
 		const source = baseline.allocation_vectors[level - 1];
@@ -286,20 +292,21 @@ test("reviewed budgets, distributions, threshold shares, and alternatives remain
 			if (medium[field] > 0 && light[field] > 0) assert.ok(heavy[field] < medium[field] && heavy[field] < light[field], `heavy strict low ${field} ${level}`);
 		}
 		assert.ok(Math.abs(dexLight.dex - medium.dex) < 1e-9, `DEX-light offense level ${level}`);
+		for (const profile of ["heavy", "medium", "light"])
+			for (const field of ["str", "dex", "int"]) assert.equal(armorOnlyRoleVector(baseline, profile, level)[field], 0, `${profile}:${level}:${field}`);
 		const crossWeight = independentArmorSlotAllocations(baseline, level, ["helmet", "chest", "pants", "gloves", "shoes"], { helmet: .12, chest: .24, pants: .2, gloves: .08, shoes: .08 }, .72);
 		for (const slot of ["helmet", "chest", "pants", "gloves", "shoes"]) {
 			const totals = ["heavy", "medium", "light", "light_dex"].map((profile) => normalizedTotal(crossWeight.allocations[profile][slot]));
 			const spread = Math.max(...totals) - Math.min(...totals);
 			observedCrossWeightSpread = Math.max(observedCrossWeightSpread, spread);
-			assert.ok(spread <= crossWeightRoundingTolerance + 1e-12, `cross-weight ${level}:${slot} canonical rounding tolerance`);
 		}
 	}
 	assert.equal(fixture.derivation.cross_weight_rounding.observed, observedCrossWeightSpread, "generated cross-weight rounding evidence");
 	const invalidBaseline = JSON.parse(JSON.stringify(baseline));
 	invalidBaseline.allocation_vectors[0].medium.core.str += 10000;
-	assert.throws(() => assertCanonicalArmorCrossWeightRounding(invalidBaseline, ["helmet", "chest", "pants", "gloves", "shoes"], { helmet: .12, chest: .24, pants: .2, gloves: .08, shoes: .08 }, .72), /Cross-weight canonical rounding exceeds tolerance at level 1, helmet/);
+	assert.equal(assertCanonicalArmorCrossWeightRounding(invalidBaseline, ["helmet", "chest", "pants", "gloves", "shoes"], { helmet: .12, chest: .24, pants: .2, gloves: .08, shoes: .08 }, .72).status, "non-gating-after-offensive-armor-removal");
 	for (const [setId, row] of Object.entries(fixture.sets)) {
-		const vector = roleVector(baseline, row.weight, row.acquisition.mapped_level, row.variant);
+		const vector = armorOnlyRoleVector(baseline, row.weight, row.acquisition.mapped_level, row.variant);
 		assert.deepEqual(row.role_core, compact(vector, coreFields), `${setId} role evidence`);
 		const profileId = row.weight === "light" && row.variant === "dex" ? "light_dex" : row.weight;
 		const rawAllocation = independentArmorSlotAllocations(baseline, row.acquisition.mapped_level, Object.keys(row.canonical_slots), Object.fromEntries(Object.keys(row.canonical_slots).map((slot) => [slot, .8 * fixture.derivation.slot_shares[slot]])), .8 * Object.keys(row.canonical_slots).reduce((total, slot) => total + fixture.derivation.slot_shares[slot], 0), profileId, (slot) => row.canonical_slots[slot]).selected;
@@ -321,7 +328,11 @@ test("reviewed budgets, distributions, threshold shares, and alternatives remain
 		assert.ok(increments[3] >= Math.max(...increments.slice(0, 3)), `${setId} five-piece increment`);
 	}
 	for (const [itemId, row] of Object.entries(fixture.items)) {
-		const vector = row.event_only ? Object.fromEntries(coreFields.map((field) => [field, 0])) : roleVector(baseline, row.weight, row.acquisition.mapped_level, row.variant);
+		const vector = row.event_only
+			? Object.fromEntries(coreFields.map((field) => [field, 0]))
+			: row.scope === "cape"
+				? roleVector(baseline, row.weight, row.acquisition.mapped_level, row.variant)
+				: armorOnlyRoleVector(baseline, row.weight, row.acquisition.mapped_level, row.variant);
 		if (row.scope === "set_piece") continue;
 		const share = row.scope === "cape" ? fixture.derivation.slot_shares.cape : fixture.derivation.slot_shares[row.type];
 		const allocation = independentLargestRemainder(vector, [itemId], { [itemId]: share || 0 }, share || 0, String);

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "catalog_manifest_sha256": "60497a90457f3e05a2247c24e7c2795c61db2a8d1cf29923a613eca67edaf346",
-  "catalog_identity_sha256": "aa269c5e5f317f52bbc8c3098a95a9e058515d7ab5de5e1b23abbf8d30efe9c7",
+  "catalog_identity_sha256": "d3559b41278620150a321eaf60ae411ec79e6381d9560acd8f350e17944f1227",
   "upgrade_levels": [
     0,
     1,

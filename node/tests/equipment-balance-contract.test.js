@@ -179,6 +179,7 @@ test("balance contract maps boundaries and rejects a relaxed constraint", () => 
 	assert.equal("weapon_crossover_maximum" in contract, false);
 	assert.equal(contract.solver_status, "passed");
 	assert.equal(contract.release_gates.weapon_full_sheet_rank.classification, "hard");
+	assert.deepEqual(contract.release_gates.weapon_intermediate_enhancement, { classification: "diagnostic", evidence_fixture: "weapon-acquisition-ranking.json", constraints: ["target", "actual", "signed_error", "contributions"] });
 	assert.equal(contract.release_gates.outgoing_ttk.classification, "diagnostic");
 	assert.deepEqual(contract.release_gates.incoming_survival, { classification: "hard", evidence_fixture: "equipment-combat-matrix.json", ratio: [0.8, 1.2] });
 	assert.deepEqual(contract.violations, []);

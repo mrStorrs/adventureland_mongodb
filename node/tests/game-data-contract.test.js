@@ -246,14 +246,25 @@ test("item normalization is independent, non-mutating, and precedence-safe", () 
 	assert.equal(normalized.wbook0.wtype, "book");
 	assert.equal(normalized.wbookhs.int, 16);
 	assert.equal(normalized.wbookhs.dex, undefined);
-	assert.equal(normalized.wbookhs.compound.int, 0);
-	assert.equal(normalized.wbookhs.compound.dex, undefined);
+	assert.equal(normalized.wbookhs.upgrade.int, 0);
+	assert.equal(normalized.wbookhs.upgrade.dex, undefined);
+	assert.equal(normalized.wbookhs.compound, undefined);
+	for (const bookId of Object.keys(rawItems).filter((itemId) => itemId.startsWith("wbook"))) {
+		assert.ok(normalized[bookId].upgrade, bookId);
+		assert.equal(normalized[bookId].compound, undefined, bookId);
+	}
 	assert.equal(normalized.blade.class, undefined);
 	assert.deepEqual(plain(normalized.fury.requirements), requirements.fury);
 	assert.doesNotThrow(() =>
 		validateItemRequirements(normalized, requirements, data.skills, buildWeaponOwners(data.skills)),
 	);
 	assert.deepEqual(plain(normalized.stealthcape.requirements), requirements.stealthcape);
+	const conflictingBooks = plain(rawItems);
+	conflictingBooks.wbook0.upgrade = {};
+	assert.throws(
+		() => normalizeItems(conflictingBooks, requirements),
+		(error) => error.code === "invalid_game_data" && error.item === "wbook0" && /conflicting enhancement kinds/.test(error.message),
+	);
 });
 
 test("raw non-weapon sources and reviewed acquisition assignments independently produce final requirements", () => {
@@ -386,7 +397,7 @@ test("progression validators reject every special-contract regression with diagn
 		(error) => error.code === "invalid_game_data" && /appearance/.test(error.message),
 	);
 	const badBookScaling = plain(data.items);
-	badBookScaling.wbookhs.compound.int = -1;
+	badBookScaling.wbookhs.upgrade.int = -1;
 	assert.throws(
 		() => validateItemRequirements(badBookScaling, plain(data.item_requirements), data.skills, ownerMap),
 		(error) => error.code === "invalid_game_data" && error.item === "wbookhs",
@@ -414,13 +425,13 @@ test("progression validators reject every special-contract regression with diagn
 	for (const [field, value] of [
 		["int", -1],
 		["dex", 16],
-		["compound", { int: -1 }],
+		["upgrade", { int: -1 }],
+		["compound", { int: 1 }],
 		["damage_type", "physical"],
 		["projectile", "magic"],
 	]) {
 		const badBook = plain(data.items);
-		if (field === "compound") badBook.wbookhs.compound = value;
-		else badBook.wbookhs[field] = value;
+		badBook.wbookhs[field] = value;
 		assert.throws(
 			() => validateItemRequirements(badBook, plain(data.item_requirements), data.skills, ownerMap),
 			(error) => error.code === "invalid_game_data" && error.item === "wbookhs",
@@ -502,8 +513,9 @@ test("every equippable item has an explicit requirement and armor publishes grou
 	assert.ok(data.items.vsword.upgrade);
 	assert.equal(data.items.vsword.tier, 3.25);
 	assert.deepEqual(plain(data.item_requirements.vsword), [{ skill: "warrior", level: 99 }]);
-	assert.ok(data.items.wbookhs.compound);
-	assert.equal(data.items.wbookhs.compound.int, 6);
+	assert.ok(data.items.wbookhs.upgrade);
+	assert.equal(data.items.wbookhs.upgrade.int, 6);
+	assert.equal(data.items.wbookhs.compound, undefined);
 	assert.deepEqual(plain(data.item_requirements.wbookhs), [{ skill: "priest", level: 99 }]);
 	const independentRequirementMatrix = {
 		helmet: [{ any_skill: ["ranger", "rogue"], level: 13 }],
@@ -963,12 +975,14 @@ test("Priest books and starter appearance data use the new ownership boundary", 
 	for (const id of bookIds) {
 		assert.equal(data.items[id].type, "weapon");
 		assert.equal(data.items[id].wtype, "book");
+		assert.ok(data.items[id].upgrade, `${id}:upgrade`);
+		assert.equal(data.items[id].compound, undefined, `${id}:compound`);
 		assert.equal(data.item_requirements[id][0].skill, "priest");
 		assert.equal(data.item_requirements[id][0].level, ranking.weapons.find((row) => row.weapon_id === id).assigned_requirement);
 	}
 	assert.equal(data.items.wbookhs.int, ranking.weapons.find((row) => row.weapon_id === "wbookhs").solved_int);
 	assert.equal(data.items.wbookhs.dex, undefined);
-	assert.equal(data.items.wbookhs.compound.int, 6);
+	assert.equal(data.items.wbookhs.upgrade.int, 6);
 	assert.deepEqual(plain(data.character.starter.slots), {});
 });
 
@@ -982,7 +996,7 @@ test("loading real design data twice is idempotent", () => {
 	assert.deepEqual(plain(second.character), plain(first.character));
 });
 
-test("reviewed armor publication matches the static balance fixture and preserves enhancements", () => {
+test("reviewed armor publication matches the static balance fixture and removes armor offense", () => {
 	const raw = loadRaw();
 	const fixture = loadArmorSetBalanceFixture();
 	const fields = [...fixture.derivation.core_fields, ...fixture.derivation.effect_fields];
@@ -992,11 +1006,17 @@ test("reviewed armor publication matches the static balance fixture and preserve
 	const hash = (definition) => crypto.createHash("sha256").update(JSON.stringify(enhancement(definition))).digest("hex");
 	assert.deepEqual(Object.keys(raw.base_nonweapon_progression).sort(), Object.keys(fixture.items).sort());
 	for (const [itemId, row] of Object.entries(fixture.items)) {
-		assert.deepEqual(plain(raw.base_nonweapon_progression[itemId]), row.base_core, itemId);
+		const { upgrade, compound, ...publishedBase } = plain(raw.base_nonweapon_progression[itemId]);
+		assert.deepEqual(publishedBase, row.base_core, itemId);
 		assert.deepEqual(compact(raw.items[itemId]), row.base_core, `${itemId} published core`);
 		assert.equal(raw.items[itemId].for, undefined, `${itemId} Fortitude`);
 		assert.deepEqual(enhancement(raw.items[itemId]), row.enhancement, `${itemId} enhancement object`);
 		assert.equal(hash(raw.items[itemId]), row.enhancement_hash, `${itemId} enhancement hash`);
+		if (["helmet", "chest", "pants", "gloves", "shoes"].includes(row.type)) {
+			for (const field of ["str", "dex", "int"]) assert.equal(Number(raw.items[itemId][field] || 0), 0, `${itemId}:${field}`);
+			for (const kind of ["upgrade", "compound"])
+				for (const field of ["stat", "str", "dex", "int"]) assert.equal(Number(raw.items[itemId][kind]?.[field] || 0), 0, `${itemId}:${kind}:${field}`);
+		}
 	}
 	for (const [setId, row] of Object.entries(fixture.sets)) {
 		assert.equal(raw.sets[setId][1], undefined, `${setId} one-piece bonus`);

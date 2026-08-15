@@ -2,10 +2,24 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 const { WEAPON_PROFILES } = require("../game/active_skill");
 const { calculateStats } = require("../game/stats");
 const { isCompatibleOffhand } = require("../game/equipment");
+const { normalizeItems } = require("../game/skill_domain");
+const {
+	compactContributionEvidence,
+	contributionGroupHashes,
+	createContributionCatalog,
+	expandContributionEvidence,
+	validateContributionCatalog,
+} = require("./contribution-evidence");
 const { loadPropertyCalculators } = require("./weapon-progression-parity");
+const {
+	COMPOUND_STEP_WEIGHTS,
+	UPGRADE_STEP_WEIGHTS,
+	cumulativeEnhancementWeight,
+} = require("./enhancement-steps");
 const acquisition = require("./acquisition-ranking");
 const {
 	FORBIDDEN_DROP_TABLES,
@@ -20,6 +34,7 @@ const {
 	roundEvidence,
 	routeOverrideMap,
 	fixtureSha256: sha256,
+	sha256: canonicalSha256,
 	stableJson,
 	sourceGraph,
 	validateAvailabilityOverrides,
@@ -27,12 +42,33 @@ const {
 
 const RANKING_FIXTURE_PATH = path.resolve(__dirname, "../tests/fixtures/weapon-acquisition-ranking.json");
 const VANILLA_BASELINE_FIXTURE_PATH = path.resolve(__dirname, "../tests/fixtures/vanilla-equipment-baseline.json");
+const ARMOR_BALANCE_FIXTURE_PATH = path.resolve(__dirname, "../tests/fixtures/armor-set-balance.json");
+const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const COMBAT_SKILLS = Object.freeze(["warrior", "paladin", "mage", "priest", "ranger", "rogue"]);
 const EXCLUDED_WEAPON_IDS = Object.freeze(["axe3", "bow4", "staff2", "staff3", "staff4"]);
 const SHARED_RANK_REQUIREMENTS = Object.freeze([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]);
 const REFERENCE_LEVELS = Object.freeze(SHARED_RANK_REQUIREMENTS.map((_, index) => Math.round(1 + 69 * index / (SHARED_RANK_REQUIREMENTS.length - 1))));
+const CLASS_MULTIPLIERS = Object.freeze({ warrior: 1, paladin: .9, priest: .9, ranger: 1.1, rogue: 1.1, mage: 1.1 });
+const UPGRADE_LEVELS = Object.freeze(Array.from({ length: 13 }, (_, level) => level));
+const COMPOUND_LEVELS = Object.freeze(Array.from({ length: 11 }, (_, level) => level));
+const CONTRIBUTION_FIELDS = Object.freeze([
+	"str", "dex", "int", "vit", "hp", "mp", "armor", "resistance",
+	"attack", "frequency", "output", "crit", "range", "apiercing", "rpiercing",
+	"lifesteal", "manasteal", "evasion", "reflection", "dreturn", "mp_reduction",
+	"pnresistance", "firesistance", "fzresistance", "phresistance", "stresistance",
+]);
 const PLACEHOLDER_BOOK_RANKS = Object.freeze({ wbook2: 2, wbook3: 3, wbook4: 4, wbook5: 5, wbook6: 7, wbook7: 8, wbook8: 9, wbook9: 10 });
 const PLACEHOLDER_WEAPON_IDS = Object.freeze(Object.keys(PLACEHOLDER_BOOK_RANKS));
+const PRIEST_BOOK_IDS = Object.freeze(["wbook0", "wbook2", "wbook3", "wbook4", "wbook5", "wbook1", "wbook6", "wbook7", "wbook8", "wbook9", "wbookhs"]);
+const PROTECTED_WEAPON_IDENTITY_SHA256 = "0ff4bf81a682a65cea95be330aab698d6fef9ecda48913368daac9faf3317675";
+const WEAPON_OWNED_BASE_FIELDS = Object.freeze(["attack", "str", "int", "dex", "progression"]);
+const ARMOR_PUBLICATION_BASE_FIELDS = Object.freeze([
+	"str", "dex", "int", "vit", "hp", "mp", "armor", "resistance", "crit", "frequency", "speed", "range",
+	"apiercing", "rpiercing", "lifesteal", "manasteal", "evasion", "reflection", "dreturn", "mp_reduction",
+	"pnresistance", "firesistance", "fzresistance", "phresistance", "stresistance", "for", "stat", "extra_stat",
+]);
+const PROTECTED_NONWEAPON_IDENTITY_SHA256 = "2d7fcbfcaaf2e4cc476d827d472d7bc5ca1023a97224f61237415fda2da81bc4";
+const OFFENSIVE_ARMOR_FIELDS = Object.freeze(["str", "dex", "int"]);
 const RETAINED_WEAPON_COUNT = 75;
 const VISIBLE_WEAPON_COUNT = RETAINED_WEAPON_COUNT + PLACEHOLDER_WEAPON_IDS.length;
 const CATALOG_WEAPON_COUNT = VISIBLE_WEAPON_COUNT + EXCLUDED_WEAPON_IDS.length;
@@ -44,7 +80,7 @@ function loadRankingFixture(filename = RANKING_FIXTURE_PATH) {
 	const fixture = JSON.parse(fs.readFileSync(filename, "utf8"));
 	if (
 		!fixture ||
-		![2, 3, 4].includes(fixture.schema_version) ||
+		![2, 3, 4, 5].includes(fixture.schema_version) ||
 		!fixture.policy ||
 		!Array.isArray(fixture.availability_overrides) ||
 		!fixture.counts ||
@@ -115,9 +151,84 @@ function baselineWeaponDps(data, calculators, weaponId) {
 
 function loadVanillaBaseline(filename = VANILLA_BASELINE_FIXTURE_PATH) {
 	const baseline = JSON.parse(fs.readFileSync(filename, "utf8"));
-	if (!baseline || baseline.schema_version !== 1 || !Array.isArray(baseline.role_rows) || !baseline.weapon_rank_endpoint_oracle?.start?.base_dps || !baseline.weapon_rank_endpoint_oracle?.end?.base_dps)
+	if (!baseline || ![1, 2].includes(baseline.schema_version) || !Array.isArray(baseline.role_rows) || !baseline.weapon_rank_endpoint_oracle?.start?.base_dps || !baseline.weapon_rank_endpoint_oracle?.end?.base_dps)
 		throw new Error("Vanilla full-sheet rank endpoint fixture is invalid");
 	return baseline;
+}
+
+function compactContributionProperties(properties) {
+	return Object.fromEntries(CONTRIBUTION_FIELDS
+		.map((field) => [field, roundEvidence(Number(properties?.[field] || 0))])
+		.filter(([, value]) => value !== 0));
+}
+
+function contributionGroup(rows) {
+	const items = rows.map(({ slot, instance, properties }) => ({
+		slot,
+		item_id: instance.name,
+		level: Number(instance.level || 0),
+		stat_type: instance.stat_type || null,
+		properties: compactContributionProperties(properties),
+	}));
+	const totals = {};
+	for (const item of items)
+		for (const [field, value] of Object.entries(item.properties)) totals[field] = roundEvidence(Number(totals[field] || 0) + value);
+	return { items, totals: compactContributionProperties(totals) };
+}
+
+function rebalancedContributionEvidence({ slots, items, sets, getItemProperties, mainhandDefinition, equipmentSlots, frozenSlots, skill, referenceLevel }) {
+	const rows = Object.entries(slots).map(([slot, instance]) => ({
+		slot,
+		instance,
+		properties: getItemProperties(instance, items[instance.name]),
+	}));
+	const select = (predicate) => contributionGroup(rows.filter(predicate));
+	const groups = {
+		class: select((row) => row.slot === "class_core"),
+		weapon: select((row) => row.slot === "mainhand"),
+		armor: select((row) => ["helmet", "chest", "pants", "gloves", "shoes"].includes(row.slot)),
+		cape: select((row) => row.slot === "cape"),
+		offhand: select((row) => row.slot === "offhand"),
+		accessories_orb: select((row) => frozenSlots.has(row.slot)),
+		profile: {
+			items: [{ slot: "profile", item_id: mainhandDefinition.wtype, level: 0, stat_type: null, properties: compactContributionProperties(WEAPON_PROFILES[mainhandDefinition.wtype]) }],
+			totals: compactContributionProperties(WEAPON_PROFILES[mainhandDefinition.wtype]),
+		},
+	};
+	const setCounts = {};
+	for (const slot of ["helmet", "chest", "pants", "gloves", "shoes"]) {
+		const instance = slots[slot];
+		const definition = instance && items[instance.name];
+		if (!definition?.set || !sets?.[definition.set]) continue;
+		const members = sets[definition.set].bonus_items?.[slot];
+		if (!Array.isArray(members) || !members.includes(instance.name)) continue;
+		setCounts[definition.set] = (setCounts[definition.set] || 0) + 1;
+	}
+	const setRows = Object.entries(setCounts).map(([setId, count]) => ({
+		slot: "set",
+		instance: { name: setId, level: count },
+		properties: sets[setId]?.[count] || {},
+	}));
+	groups.set = contributionGroup(setRows);
+	const groupHashes = Object.fromEntries(Object.entries(groups).map(([group, value]) => [group, canonicalSha256(value)]));
+	const loadout = Object.entries(slots)
+		.filter(([slot]) => slot !== "class_core")
+		.map(([slot, instance]) => ({ slot, item_id: instance.name, level: Number(instance.level || 0), stat_type: instance.stat_type || null }))
+		.sort((left, right) => left.slot.localeCompare(right.slot));
+	const ungroupedSlots = rows
+		.filter((row) => row.slot !== "class_core" && row.slot !== "mainhand" && !equipmentSlots.has(row.slot) && !frozenSlots.has(row.slot))
+		.map((row) => row.slot);
+	if (ungroupedSlots.length) throw new Error(`Unclassified contribution slots for ${skill}:${referenceLevel}: ${ungroupedSlots.join(", ")}`);
+	return {
+		fields: [...CONTRIBUTION_FIELDS],
+		groups,
+		group_hashes: groupHashes,
+		set_counts: setCounts,
+		set_sha256: canonicalSha256({ counts: setCounts, contribution: groups.set }),
+		loadout,
+		loadout_sha256: canonicalSha256(loadout),
+		contributions_sha256: canonicalSha256(groups),
+	};
 }
 
 function classCoreItem(core, skill) {
@@ -133,30 +244,6 @@ function classCoreItem(core, skill) {
 		armor: core.armor,
 		resistance: core.resistance,
 	};
-}
-
-function enhancementStepMultiplier(kind, level) {
-	if (kind === "upgrade") {
-		if (level === 7 || level === 11 || level === 12) return 1.25;
-		if (level === 8) return 1.5;
-		if (level === 9) return 2;
-		if (level === 10) return 3;
-		return 1;
-	}
-	if (kind === "compound") {
-		if (level === 5) return 1.25;
-		if (level === 6) return 1.5;
-		if (level === 7) return 2;
-		if (level >= 8) return 3;
-		return 1;
-	}
-	return 0;
-}
-
-function cumulativeEnhancementMultiplier(kind, level) {
-	let total = 0;
-	for (let current = 1; current <= level; current += 1) total += enhancementStepMultiplier(kind, current);
-	return total;
 }
 
 function fullSheetContext(data, calculators, baseline, weapon) {
@@ -182,28 +269,48 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 		...Object.fromEntries(frozenEntries),
 		class_core: { name: "__class_core", level: 0 },
 	};
+	const equipmentSlots = new Set(equipmentEntries.map(([slot]) => slot));
+	const frozenSlots = new Set(frozenEntries.map(([slot]) => slot));
 	const definition = data.items[weapon.weapon_id];
 	const enhancementKind = definition.compound ? "compound" : definition.upgrade ? "upgrade" : null;
 	const cache = new Map();
-	const evaluateState = (level, attack, attackGrowth, allocation, { offhand = undefined } = {}) => {
+	const evaluateConfiguredState = (level, attack, attackGrowth, allocation, { offhand = undefined, upgradeLevel = null, compoundLevel = null } = {}) => {
 		const offhandKey = offhand === undefined ? "canonical" : offhand === null ? "none" : `${offhand.name}:${offhand.level || 0}:${offhand.stat_type || ""}`;
-		const key = `${level}:${attack}:${attackGrowth}:${allocation.str}:${allocation.int}:${allocation.dex}:${offhandKey}`;
+		const key = `${level}:${upgradeLevel}:${compoundLevel}:${attack}:${attackGrowth}:${allocation.str}:${allocation.int}:${allocation.dex}:${offhandKey}`;
 		if (cache.has(key)) return cache.get(key);
 		const getItemProperties = (instance, definition) => {
 			if (instance.name === "__class_core") return definition;
 			const properties = calculators.current.calculate_item_properties(instance);
 			if (instance.name !== weapon.weapon_id) return properties;
-			const multiplier = cumulativeEnhancementMultiplier(enhancementKind, Number(instance.level || 0));
+			const multiplier = cumulativeEnhancementWeight(enhancementKind, Number(instance.level || 0));
 			return {
 				...properties,
 				attack: Math.round(attack + attackGrowth * multiplier),
 				...Object.fromEntries(["str", "int", "dex"].map((field) => [field, Number(properties[field] || 0) - Number(definition[field] || 0) + allocation[field]])),
 			};
 		};
-		const slots = { mainhand: { ...mainhand, level }, ...fixedSlots };
+		const enhancedFixedSlots = Object.fromEntries(Object.entries(fixedSlots).map(([slot, instance]) => {
+			if (instance.name === "__class_core") return [slot, instance];
+			const fixedDefinition = data.items[instance.name];
+			if (upgradeLevel !== null && fixedDefinition?.upgrade) return [slot, { ...instance, level: upgradeLevel }];
+			if (compoundLevel !== null && fixedDefinition?.compound) return [slot, { ...instance, level: compoundLevel }];
+			return [slot, instance];
+		}));
+		const slots = { mainhand: { ...mainhand, level }, ...enhancedFixedSlots };
 		if (offhand === null) delete slots.offhand;
 		else if (offhand !== undefined) slots.offhand = offhand;
 		const sheet = calculateStats({ slots, items, sets: data.sets, getItemProperties });
+		const contributions = rebalancedContributionEvidence({
+			slots,
+			items,
+			sets: data.sets,
+			getItemProperties,
+			mainhandDefinition: definition,
+			equipmentSlots,
+			frozenSlots,
+			skill: weapon.skill,
+			referenceLevel,
+		});
 		const candidate = {
 			attack,
 			str: allocation.str,
@@ -216,12 +323,21 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 			sheet_str: sheet.str,
 			sheet_int: sheet.int,
 			sheet_dex: sheet.dex,
+			contributions,
 		};
 		Object.defineProperty(candidate, "sheet", { value: sheet, enumerable: false });
 		cache.set(key, candidate);
 		return candidate;
 	};
 	const sourceGrowth = Number(definition[enhancementKind]?.attack || 0);
+	const evaluateState = (level, attack, attackGrowth, allocation, options = {}) => evaluateConfiguredState(level, attack, attackGrowth, allocation, options);
+	const evaluateEnhancementState = (upgradeLevel, compoundLevel, attack, attackGrowth, allocation, options = {}) => evaluateConfiguredState(
+		enhancementKind === "compound" ? compoundLevel : upgradeLevel,
+		attack,
+		attackGrowth,
+		allocation,
+		{ ...options, upgradeLevel, compoundLevel },
+	);
 	const evaluate = (attack, allocation) => evaluateState(0, attack, sourceGrowth, allocation);
 	return {
 		reference_level: referenceLevel,
@@ -233,6 +349,8 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 		hand_attack_factor: definition.wtype === "stars" && compatibleOffhand && data.items[compatibleOffhand[1].name]?.wtype !== "stars" ? 1 / 3 : 1,
 		evaluate,
 		evaluateState,
+		evaluateEnhancementState,
+		enhancement_kind: enhancementKind,
 	};
 }
 
@@ -650,14 +768,15 @@ function retainedAcquisitionProjection(weapons) {
 
 function rankTargetValues(baseline) {
 	const endpoints = clone(baseline.weapon_rank_endpoint_oracle);
-	const minimum = Number(endpoints.start.base_dps);
-	const maximum = Number(endpoints.end.base_dps);
-	if (!(minimum > 0) || !(maximum > minimum)) throw new Error("Full-sheet rank endpoints are invalid");
+	const minimum = 50;
+	const maximum = 450;
 	const growth = Math.pow(maximum / minimum, 1 / (SHARED_RANK_REQUIREMENTS.length - 1));
 	const values = SHARED_RANK_REQUIREMENTS.map((_, index) =>
 		index === 0 ? minimum : index === SHARED_RANK_REQUIREMENTS.length - 1 ? maximum : roundEvidence(minimum * Math.pow(growth, index)),
 	);
 	const boundaries = values.slice(0, -1).map((value, index) => roundEvidence(Math.sqrt(value * values[index + 1])));
+	const rankTargetsBySkill = Object.fromEntries(COMBAT_SKILLS.map((skill) => [skill, values.map((value) => roundEvidence(value * CLASS_MULTIPLIERS[skill]))]));
+	const rankBoundariesBySkill = Object.fromEntries(COMBAT_SKILLS.map((skill) => [skill, boundaries.map((value) => roundEvidence(value * CLASS_MULTIPLIERS[skill]))]));
 	const offensiveCoreTotal = (endpoint) => ["str", "dex", "int"].reduce((sum, field) => sum + Number(endpoint.sheet?.[field] || 0), 0);
 	const coreMinimum = offensiveCoreTotal(endpoints.start);
 	const coreMaximum = offensiveCoreTotal(endpoints.end);
@@ -672,9 +791,36 @@ function rankTargetValues(baseline) {
 	);
 	return {
 		endpoints,
-		growth_factor: roundEvidence(growth),
+		warrior_rank_start: minimum,
+		warrior_rank_end: maximum,
+		growth_factor: growth,
 		values,
 		boundaries,
+		rank_targets_by_skill: rankTargetsBySkill,
+		rank_boundaries_by_skill: rankBoundariesBySkill,
+		class_multipliers: clone(CLASS_MULTIPLIERS),
+		enhancement: {
+			upgrade_levels: [...UPGRADE_LEVELS],
+			compound_levels: [...COMPOUND_LEVELS],
+			hard_publication_states: [
+				{ upgrade_level: 0, compound_level: 0, role: "base" },
+				{ upgrade_level: 12, compound_level: 10, role: "fully_enhanced" },
+			],
+			diagnostic_state_count_per_rank: UPGRADE_LEVELS.length * COMPOUND_LEVELS.length - 2,
+			intermediate_target_distance_gate: false,
+			upgrade_step_weights: [...UPGRADE_STEP_WEIGHTS],
+			compound_step_weights: [...COMPOUND_STEP_WEIGHTS],
+			cumulative_upgrade_weight: cumulativeEnhancementWeight("upgrade", 12),
+			cumulative_compound_weight: cumulativeEnhancementWeight("compound", 10),
+			fully_enhanced_targets: {
+				paladin: { rank_1: 292.107184015, rank_11: 4618.2147526 },
+				priest: { rank_1: 292.107184015, rank_11: 4618.2147526 },
+				warrior: { rank_1: 324.563537794, rank_11: 5131.34972512 },
+				ranger: { rank_1: 357.019891573, rank_11: 5644.48469763 },
+				rogue: { rank_1: 357.019891573, rank_11: 5644.48469763 },
+				mage: { rank_1: 357.019891573, rank_11: 5644.48469763 },
+			},
+		},
 		core_allocation_envelope: {
 			formula: "floor(start_offensive_core * (end_offensive_core / start_offensive_core) ^ ((rank - 1) / 10))",
 			fields: ["str", "dex", "int"],
@@ -716,84 +862,338 @@ function assignSharedRanks(rows) {
 	return ranked;
 }
 
-function enhancementStates(context, row, attackGrowth) {
+function enhancementWarriorTargets(baseline, targetPolicy) {
+	if (!Array.isArray(baseline.weapon_rank_enhancement_oracle) || baseline.weapon_rank_enhancement_oracle.length !== 11)
+		throw new Error("Pinned Warrior enhancement oracle is incomplete");
+	return baseline.weapon_rank_enhancement_oracle.map((oracle, index) => ({
+		shared_rank: index + 1,
+		reference_level: REFERENCE_LEVELS[index],
+		mainhand_id: oracle.mainhand_id,
+		pinned_base_dps: oracle.base_dps,
+		states: oracle.states.map((state) => {
+			let target = roundEvidence(targetPolicy.values[index] * state.amplification);
+			if (state.upgrade_level === 12 && state.compound_level === 10 && index === 0) target = 324.563537794;
+			if (state.upgrade_level === 12 && state.compound_level === 10 && index === 10) target = 5131.34972512;
+			return {
+				upgrade_level: state.upgrade_level,
+				compound_level: state.compound_level,
+				pinned_dps: state.pinned_dps,
+				amplification: state.amplification,
+				target_dps: target,
+				pinned_contribution_hashes: contributionGroupHashes(state.contributions, baseline.enhancement_contribution_catalog),
+				pinned_contributions_sha256: state.contributions.contributions_sha256,
+				pinned_set_sha256: state.contributions.set_sha256,
+				pinned_loadout_sha256: state.contributions.loadout_sha256,
+			};
+		}),
+	}));
+}
+
+function unrepresentableTargetError(id, target, lower = null, upper = null) {
+	const error = new Error(`Unrepresentable weapon target ${id}: target=${target}; lower=${lower?.dps ?? "none"}; upper=${upper?.dps ?? "none"}`);
+	error.code = "weapon_target_unrepresentable";
+	error.class_rank_state = id;
+	error.target = target;
+	error.lower = lower;
+	error.upper = upper;
+	error.signed_error = lower && upper
+		? (Math.abs(lower.dps - target) <= Math.abs(upper.dps - target) ? lower.dps : upper.dps) - target
+		: null;
+	return error;
+}
+
+function solveNearestSheetTarget({ id, target, evaluate, minimum = 0 }) {
+	if (!(Number.isFinite(target) && target > 0) || typeof evaluate !== "function") throw unrepresentableTargetError(id, target);
+	const checked = (candidate) => {
+		const state = evaluate(candidate);
+		if (!state || !(Number.isFinite(state.dps) && state.dps > 0)) throw unrepresentableTargetError(id, target);
+		return { candidate, ...state };
+	};
+	let lower = checked(Math.max(0, Math.ceil(minimum)));
+	if (lower.dps >= target) return { lower, upper: lower, chosen: lower };
+	let upperCandidate = Math.max(lower.candidate + 1, lower.candidate * 2 || 1);
+	let upper = checked(upperCandidate);
+	for (let attempt = 0; attempt < 64 && upper.dps < target; attempt += 1) {
+		if (upper.candidate > Number.MAX_SAFE_INTEGER / 2) throw unrepresentableTargetError(id, target, lower, upper);
+		lower = upper;
+		upperCandidate *= 2;
+		upper = checked(upperCandidate);
+	}
+	if (upper.dps < target) throw unrepresentableTargetError(id, target, lower, upper);
+	while (lower.candidate + 1 < upper.candidate) {
+		const middle = checked(lower.candidate + Math.floor((upper.candidate - lower.candidate) / 2));
+		if (middle.dps >= target) upper = middle;
+		else lower = middle;
+	}
+	const distance = (state) => Math.abs(Math.log(state.dps / target));
+	const chosen = distance(lower) <= distance(upper) ? lower : upper;
+	return { lower, upper, chosen };
+}
+
+function enhancementCandidate(context, row, cumulativeWeight, enhancedAttack, upgradeLevel, compoundLevel) {
+	const growth = roundEvidence((enhancedAttack - row.solved_attack) / cumulativeWeight);
 	const allocation = { str: row.solved_str, int: row.solved_int, dex: row.solved_dex };
-	return Array.from({ length: 6 }, (_, level) => context.evaluateState(level, row.solved_attack, attackGrowth, allocation));
+	const state = context.evaluateEnhancementState(upgradeLevel, compoundLevel, row.solved_attack, growth, allocation);
+	return { enhanced_attack: enhancedAttack, attack_growth: growth, dps: state.dps, hit_damage: state.sheet_attack, attacks_per_second: state.sheet_frequency };
 }
 
-function enhancementStatesPass(states) {
-	return states.every((state) => Number.isFinite(state.dps) && state.dps > 0) &&
-		states.every((state, index) => index === 0 || state.dps + 1e-12 >= states[index - 1].dps);
-}
-
-function minimumPassingAttackGrowth(context, row, proposedGrowth) {
-	const proposedStates = enhancementStates(context, row, proposedGrowth);
-	if (enhancementStatesPass(proposedStates)) return { growth: roundEvidence(proposedGrowth), adjusted: false, states: proposedStates };
-	let lower = proposedGrowth;
-	let upper = Math.max(1, proposedGrowth * 2);
-	for (let attempts = 0; attempts < 64 && !enhancementStatesPass(enhancementStates(context, row, upper)); attempts += 1) upper *= 2;
-	if (!enhancementStatesPass(enhancementStates(context, row, upper))) throw new Error(`No finite nondecreasing +0 through +5 attack growth for ${row.weapon_id}`);
-	for (let attempt = 0; attempt < 80; attempt += 1) {
-		const midpoint = (lower + upper) / 2;
-		if (enhancementStatesPass(enhancementStates(context, row, midpoint))) upper = midpoint;
-		else lower = midpoint;
-	}
-	let growth = roundEvidence(upper + Math.max(1e-10, Math.abs(upper) * 1e-10));
-	let states = enhancementStates(context, row, growth);
-	for (let attempt = 0; attempt < 16 && !enhancementStatesPass(states); attempt += 1) {
-		growth = roundEvidence(growth + Math.max(1e-9, Math.abs(growth) * 1e-9));
-		states = enhancementStates(context, row, growth);
-	}
-	if (!enhancementStatesPass(states)) throw new Error(`Rounded +0 through +5 attack growth failed for ${row.weapon_id}`);
-	return { growth, adjusted: true, states };
-}
-
-function attachEnhancementGrowth(rows, data, pinnedWeapons, calculators, baseline) {
-	const retainedPriestRatios = rows
-		.filter((row) => row.origin === "retained" && row.skill === "priest")
-		.map((row) => {
-			const pinned = pinnedWeapons.get(row.weapon_id);
-			const definition = data.items[row.weapon_id];
-			const kind = pinned.enhancement_kind || (definition.compound ? "compound" : definition.upgrade ? "upgrade" : null);
-			const baseAttack = Number(pinned.pre_regeneration_attack ?? pinned.solved_attack ?? definition.attack);
-			const growth = Number(pinned.pre_regeneration_attack_growth ?? definition[kind]?.attack ?? 0);
-			return baseAttack > 0 ? growth / baseAttack : 0;
-		})
-		.sort((left, right) => left - right);
-	const medianPriestRatio = retainedPriestRatios[Math.floor(retainedPriestRatios.length / 2)];
+function attachEnhancementGrowth(rows, data, pinnedWeapons, calculators, baseline, warriorTargets) {
 	for (const row of rows) {
 		const pinned = pinnedWeapons.get(row.weapon_id) || {};
 		const definition = data.items[row.weapon_id];
-		const enhancementKind = pinned.enhancement_kind || (definition.compound ? "compound" : definition.upgrade ? "upgrade" : null);
+		const enhancementKind = row.skill === "priest" ? "upgrade" : pinned.enhancement_kind || (definition.compound ? "compound" : definition.upgrade ? "upgrade" : null);
 		if (!enhancementKind) throw new Error(`Weapon ${row.weapon_id} has no enhancement kind`);
 		row.enhancement_kind = enhancementKind;
-		if (row.origin === "retained") {
-			row.pre_regeneration_attack = Number(pinned.pre_regeneration_attack ?? pinned.solved_attack ?? definition.attack);
-			row.pre_regeneration_attack_growth = Number(pinned.pre_regeneration_attack_growth ?? definition[enhancementKind]?.attack ?? 0);
-			row.attack_scale = roundEvidence(row.solved_attack / row.pre_regeneration_attack);
-			row.solved_attack_growth = roundEvidence(row.pre_regeneration_attack_growth * row.solved_attack / row.pre_regeneration_attack);
-		} else {
-			row.attack_scale = null;
-			row.solved_attack_growth = roundEvidence(row.solved_attack * medianPriestRatio);
-		}
-		if (!(row.solved_attack_growth >= 0) || !Number.isFinite(row.solved_attack_growth))
-			throw new Error(`Weapon ${row.weapon_id} has invalid enhancement attack growth`);
+		row.pre_regeneration_attack = row.origin === "retained" ? Number(pinned.pre_regeneration_attack ?? pinned.solved_attack ?? definition.attack) : null;
+		row.pre_regeneration_attack_growth = row.origin === "retained" ? Number(pinned.pre_regeneration_attack_growth ?? definition[enhancementKind]?.attack ?? 0) : null;
+		row.attack_scale = row.origin === "retained" ? roundEvidence(row.solved_attack / row.pre_regeneration_attack) : null;
 		const context = fullSheetContext(data, calculators, baseline, row);
-		const solved = minimumPassingAttackGrowth(context, row, row.solved_attack_growth);
-		row.pre_monotonic_attack_growth = row.solved_attack_growth;
-		row.solved_attack_growth = solved.growth;
-		row.attack_growth_adjusted_for_monotonicity = solved.adjusted;
-		row.enhancement_states = solved.states.map((state, level) => ({
-			level,
+		const cumulativeWeight = cumulativeEnhancementWeight(enhancementKind, enhancementKind === "compound" ? 10 : 12);
+		const warriorMaximum = warriorTargets[row.shared_rank - 1].states.at(-1).target_dps;
+		const target = roundEvidence(warriorMaximum * CLASS_MULTIPLIERS[row.skill]);
+		const id = `${row.skill}:rank-${row.shared_rank}:${row.weapon_id}:+12/+10`;
+		const solved = solveNearestSheetTarget({
+			id,
+			target,
+			minimum: row.solved_attack,
+			evaluate: (enhancedAttack) => enhancementCandidate(context, row, cumulativeWeight, enhancedAttack, 12, 10),
+		});
+		row.pre_monotonic_attack_growth = row.pre_regeneration_attack_growth;
+		row.solved_attack_growth = solved.chosen.attack_growth;
+		row.attack_growth_adjusted_for_monotonicity = row.pre_regeneration_attack_growth !== row.solved_attack_growth;
+		row.enhancement_quantization = {
+			target,
+			state: { upgrade_level: 12, compound_level: 10 },
+			lower: clone(solved.lower),
+			upper: clone(solved.upper),
+			chosen: clone(solved.chosen),
+			signed_error: solved.chosen.dps - target,
+		};
+		const levels = enhancementKind === "compound" ? COMPOUND_LEVELS : UPGRADE_LEVELS;
+		const states = levels.map((level) => context.evaluateState(level, row.solved_attack, row.solved_attack_growth, { str: row.solved_str, int: row.solved_int, dex: row.solved_dex }));
+		if (!states.every((state, index) => Number.isFinite(state.dps) && state.dps > 0 && (!index || state.dps + 1e-12 >= states[index - 1].dps)))
+			throw unrepresentableTargetError(`${row.skill}:rank-${row.shared_rank}:${row.weapon_id}:enhancement-monotonicity`, target);
+		row.enhancement_states = states.map((state, index) => ({
+			level: levels[index],
 			hit_damage: state.sheet_attack,
 			attacks_per_second: state.sheet_frequency,
 			base_dps: state.dps,
 		}));
 	}
-	return roundEvidence(medianPriestRatio);
 }
 
-function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE_PATH), data = loadSourceData(), baseline = loadVanillaBaseline(), allowFixtureMigration = false } = {}) {
+function buildEnhancementFullSheetRows(rows, data, calculators, baseline, warriorTargets) {
+	const contributionCatalogBuilder = createContributionCatalog(CONTRIBUTION_FIELDS);
+	const fullSheetRows = rows
+		.filter((row) => row.role === "progression")
+		.map((row) => {
+			const context = fullSheetContext(data, calculators, baseline, row);
+			const allocation = { str: row.solved_str, int: row.solved_int, dex: row.solved_dex };
+			const warriorStates = warriorTargets[row.shared_rank - 1].states;
+			return {
+				id: `${row.skill}:rank-${row.shared_rank}`,
+				skill: row.skill,
+				class_multiplier: CLASS_MULTIPLIERS[row.skill],
+				shared_rank: row.shared_rank,
+				reference_level: row.reference_level,
+				weapon_id: row.weapon_id,
+				enhancement_kind: row.enhancement_kind,
+				pinned_warrior_reference: {
+					mainhand_id: warriorTargets[row.shared_rank - 1].mainhand_id,
+					base_dps: warriorTargets[row.shared_rank - 1].pinned_base_dps,
+				},
+				rebalanced_contributions: {
+					class_core: clone(row.full_sheet_context.class_core),
+					nonweapon_plus_class_at_zero_weapon_allocation: clone(row.full_sheet_context.zero_allocation_current_sheet),
+					armor_ids: clone(row.full_sheet_context.armor_ids),
+					cape_id: row.full_sheet_context.cape_id,
+					frozen_accessory_ids: clone(row.full_sheet_context.frozen_accessory_ids),
+					weapon_owned_base: { attack: row.solved_attack, str: row.solved_str, int: row.solved_int, dex: row.solved_dex },
+					weapon_owned_enhancement: { kind: row.enhancement_kind, attack: row.solved_attack_growth },
+					armor_offensive_fields: { str: 0, dex: 0, int: 0 },
+				},
+				states: warriorStates.map((targetState) => {
+					const actual = context.evaluateEnhancementState(targetState.upgrade_level, targetState.compound_level, row.solved_attack, row.solved_attack_growth, allocation);
+					const targetDps = roundEvidence(targetState.target_dps * CLASS_MULTIPLIERS[row.skill]);
+					const signedRelativeError = roundEvidence(actual.dps / targetDps - 1);
+					const isBase = targetState.upgrade_level === 0 && targetState.compound_level === 0;
+					const isMaximum = targetState.upgrade_level === 12 && targetState.compound_level === 10;
+					let quantization = null;
+					if (isBase) {
+						quantization = {
+							field: "base_attack_core",
+							target: targetDps,
+							domain: clone(row.quantization.domain),
+							rank_band: clone(row.rank_band),
+							lower: clone(row.quantization.lower),
+							upper: clone(row.quantization.upper),
+							chosen: clone(row.quantization.chosen),
+						};
+					} else if (isMaximum) {
+						quantization = {
+							field: `${row.enhancement_kind}.attack`,
+							target: targetDps,
+							lower: clone(row.enhancement_quantization.lower),
+							upper: clone(row.enhancement_quantization.upper),
+							chosen: clone(row.enhancement_quantization.chosen),
+						};
+					}
+					return {
+						upgrade_level: targetState.upgrade_level,
+						compound_level: targetState.compound_level,
+						pinned_warrior_dps: targetState.pinned_dps,
+						warrior_amplification: targetState.amplification,
+						warrior_target_dps: targetState.target_dps,
+						target_dps: targetDps,
+						actual_sheet_attack: actual.sheet_attack,
+						actual_sheet_frequency: actual.sheet_frequency,
+						actual_dps: actual.dps,
+						signed_error: actual.dps - targetDps,
+						signed_relative_error: signedRelativeError,
+						absolute_relative_error: Math.abs(signedRelativeError),
+						publication_state: isBase ? "base" : isMaximum ? "fully_enhanced" : "intermediate",
+						release_gate: isBase || isMaximum ? "hard" : "diagnostic",
+						...(isBase || isMaximum ? {} : { diagnostic_reason: "unchanged_vanilla_enhancement_surface" }),
+						pinned_contribution_hashes: clone(targetState.pinned_contribution_hashes),
+						pinned_contributions_sha256: targetState.pinned_contributions_sha256,
+						pinned_set_sha256: targetState.pinned_set_sha256,
+						pinned_loadout_sha256: targetState.pinned_loadout_sha256,
+						rebalanced_contributions: compactContributionEvidence(actual.contributions, contributionCatalogBuilder),
+						quantization,
+					};
+				}),
+			};
+		})
+		.sort((left, right) => left.skill.localeCompare(right.skill) || left.shared_rank - right.shared_rank);
+	return { full_sheet_rows: fullSheetRows, contribution_catalog: contributionCatalogBuilder.finalize() };
+}
+
+function enhancementFeasibilityReport(rows, contributionCatalog) {
+	const hardEndpointViolations = [];
+	const targetMultiplierViolations = [];
+	const invalidOutputViolations = [];
+	const monotonicityViolations = [];
+	const evidenceViolations = [];
+	let hardStates = 0;
+	let diagnosticStates = 0;
+	const evidenceTolerance = 1e-8;
+	const logDistance = (dps, target) => Math.abs(Math.log(dps / target));
+	validateContributionCatalog(contributionCatalog);
+	for (const row of rows) {
+		const states = new Map();
+		for (const state of row.states) {
+			const id = `${row.id}:+${state.upgrade_level}/+${state.compound_level}`;
+			states.set(`${state.upgrade_level}:${state.compound_level}`, state);
+			const expectedTarget = roundEvidence(state.warrior_target_dps * row.class_multiplier);
+			if (state.target_dps !== expectedTarget) targetMultiplierViolations.push({ id, expected: expectedTarget, actual: state.target_dps });
+			const expectedSignedError = state.actual_dps - state.target_dps;
+			const expectedSignedRelativeError = roundEvidence(state.actual_dps / state.target_dps - 1);
+			if (
+				![state.target_dps, state.actual_dps, state.actual_sheet_attack, state.actual_sheet_frequency, state.signed_error, state.signed_relative_error, state.absolute_relative_error].every(Number.isFinite) ||
+				state.target_dps <= 0 || state.actual_dps <= 0 || state.actual_sheet_frequency <= 0 ||
+				state.signed_error !== expectedSignedError || state.signed_relative_error !== expectedSignedRelativeError || state.absolute_relative_error !== Math.abs(expectedSignedRelativeError)
+			) invalidOutputViolations.push({ id, target: state.target_dps, actual_dps: state.actual_dps });
+			try {
+				expandContributionEvidence(state.rebalanced_contributions, contributionCatalog, { validateCatalog: false });
+			} catch (error) {
+				evidenceViolations.push({ id, message: error.message });
+			}
+			const isBase = state.upgrade_level === 0 && state.compound_level === 0;
+			const isMaximum = state.upgrade_level === 12 && state.compound_level === 10;
+			if (isBase || isMaximum) {
+				hardStates += 1;
+				const quantization = state.quantization;
+				const candidates = [quantization?.lower, quantization?.upper].filter((candidate) => Number.isFinite(candidate?.dps) && candidate.dps > 0);
+				const lower = candidates.filter((candidate) => candidate.dps <= state.target_dps).sort((left, right) => right.dps - left.dps)[0] || null;
+				const upper = candidates.filter((candidate) => candidate.dps >= state.target_dps).sort((left, right) => left.dps - right.dps)[0] || null;
+				const rankBand = isBase ? quantization?.rank_band : null;
+				const legalCandidates = candidates.filter((candidate) => !rankBand || (
+					(rankBand.lower_inclusive ? candidate.dps >= rankBand.lower - 1e-12 : candidate.dps > rankBand.lower + 1e-12) &&
+					(rankBand.upper_inclusive ? candidate.dps <= rankBand.upper + 1e-12 : candidate.dps < rankBand.upper - 1e-12)
+				));
+				const nearest = legalCandidates.slice().sort((left, right) => logDistance(left.dps, state.target_dps) - logDistance(right.dps, state.target_dps))[0] || null;
+				if (
+					state.release_gate !== "hard" || state.publication_state !== (isBase ? "base" : "fully_enhanced") ||
+					quantization?.target !== state.target_dps || !quantization?.chosen ||
+					Math.abs(Number(quantization.chosen.dps) - state.actual_dps) > evidenceTolerance ||
+					!nearest || Math.abs(Number(nearest.dps) - state.actual_dps) > evidenceTolerance
+				) hardEndpointViolations.push({ id, target: state.target_dps, lower, upper, actual_dps: state.actual_dps, signed_error: state.signed_error });
+			} else {
+				diagnosticStates += 1;
+				if (state.release_gate !== "diagnostic" || state.publication_state !== "intermediate" || state.quantization !== null || state.diagnostic_reason !== "unchanged_vanilla_enhancement_surface")
+					evidenceViolations.push({ id, message: "Intermediate enhancement state is not classified as diagnostic" });
+			}
+		}
+		for (let upgradeLevel = 0; upgradeLevel <= 12; upgradeLevel += 1) {
+			for (let compoundLevel = 0; compoundLevel <= 10; compoundLevel += 1) {
+				const state = states.get(`${upgradeLevel}:${compoundLevel}`);
+				if (!state) {
+					evidenceViolations.push({ id: `${row.id}:+${upgradeLevel}/+${compoundLevel}`, message: "Enhancement state is missing" });
+					continue;
+				}
+				const previousUpgrade = states.get(`${upgradeLevel - 1}:${compoundLevel}`);
+				const previousCompound = states.get(`${upgradeLevel}:${compoundLevel - 1}`);
+				if (previousUpgrade && state.actual_dps + 1e-12 < previousUpgrade.actual_dps)
+					monotonicityViolations.push({ id: `${row.id}:+${upgradeLevel}/+${compoundLevel}`, axis: "upgrade", previous_dps: previousUpgrade.actual_dps, actual_dps: state.actual_dps });
+				if (previousCompound && state.actual_dps + 1e-12 < previousCompound.actual_dps)
+					monotonicityViolations.push({ id: `${row.id}:+${upgradeLevel}/+${compoundLevel}`, axis: "compound", previous_dps: previousCompound.actual_dps, actual_dps: state.actual_dps });
+			}
+		}
+	}
+	const failures = hardEndpointViolations.length + targetMultiplierViolations.length + invalidOutputViolations.length + monotonicityViolations.length + evidenceViolations.length;
+	return {
+		states: rows.reduce((sum, row) => sum + row.states.length, 0),
+		hard_states: hardStates,
+		diagnostic_states: diagnosticStates,
+		hard_endpoint_violations: hardEndpointViolations,
+		target_multiplier_violations: targetMultiplierViolations,
+		invalid_output_violations: invalidOutputViolations,
+		monotonicity_violations: monotonicityViolations,
+		evidence_violations: evidenceViolations,
+		status: failures ? "failed" : "passed",
+	};
+}
+
+function compactEnhancementFeasibility(report) {
+	return {
+		status: report.status,
+		states: report.states,
+		hard_states: report.hard_states,
+		diagnostic_states: report.diagnostic_states,
+		hard_endpoint_violations: report.hard_endpoint_violations.length,
+		target_multiplier_violations: report.target_multiplier_violations.length,
+		invalid_output_violations: report.invalid_output_violations.length,
+		monotonicity_violations: report.monotonicity_violations.length,
+		evidence_violations: report.evidence_violations.length,
+	};
+}
+
+function assertEnhancementFeasibility(report) {
+	if (report?.status === "passed") return true;
+	const hardEndpoint = report?.hard_endpoint_violations?.[0];
+	if (hardEndpoint) {
+		const error = unrepresentableTargetError(hardEndpoint.id, hardEndpoint.target, hardEndpoint.lower, hardEndpoint.upper);
+		error.signed_error = hardEndpoint.signed_error;
+		error.feasibility_summary = compactEnhancementFeasibility(report);
+		throw error;
+	}
+	const monotonicity = report?.monotonicity_violations?.[0];
+	const invalidOutput = report?.invalid_output_violations?.[0];
+	const targetMultiplier = report?.target_multiplier_violations?.[0];
+	const evidence = report?.evidence_violations?.[0];
+	const violation = monotonicity || invalidOutput || targetMultiplier || evidence || { id: "unknown-enhancement-state" };
+	const error = new Error(`Weapon enhancement feasibility failed for ${violation.id}`);
+	error.code = monotonicity ? "weapon_enhancement_nonmonotonic"
+		: invalidOutput ? "weapon_enhancement_invalid_output"
+			: targetMultiplier ? "weapon_target_multiplier_drift"
+				: "weapon_enhancement_evidence_invalid";
+	error.class_rank_state = violation.id;
+	error.violation = violation;
+	error.feasibility_summary = compactEnhancementFeasibility(report);
+	throw error;
+}
+
+function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE_PATH), data = loadSourceData(), baseline = loadVanillaBaseline(), allowFixtureMigration = false, allowInfeasibleEvidence = false } = {}) {
 	if (stableJson(evidence.policy.combat_skills) !== stableJson(COMBAT_SKILLS)) throw new Error("Ranking policy combat skills drifted");
 	if (stableJson(evidence.policy.forbidden_drop_tables) !== stableJson(FORBIDDEN_DROP_TABLES))
 		throw new Error("Ranking policy forbidden drop tables drifted");
@@ -888,13 +1288,23 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 	const allocated = [];
 	for (const skill of COMBAT_SKILLS) {
 		const ranked = sharedRows.filter((weapon) => weapon.skill === skill);
+		const skillTargetPolicy = {
+			...targetPolicy,
+			values: targetPolicy.rank_targets_by_skill[skill],
+			boundaries: targetPolicy.rank_boundaries_by_skill[skill],
+		};
 		allocated.push(...allocateSkillBudgets(data, calculators, baseline, ranked, {
 			requirements: SHARED_RANK_REQUIREMENTS,
-			targetPolicy,
+			targetPolicy: skillTargetPolicy,
 		}));
 	}
 	allocated.sort((left, right) => left.skill.localeCompare(right.skill) || left.rank - right.rank || left.selected_effort - right.selected_effort || left.weapon_id.localeCompare(right.weapon_id));
-	const medianPriestAttackGrowthRatio = attachEnhancementGrowth(allocated, data, pinnedWeapons, calculators, baseline);
+	const warriorEnhancementTargets = enhancementWarriorTargets(baseline, targetPolicy);
+	attachEnhancementGrowth(allocated, data, pinnedWeapons, calculators, baseline, warriorEnhancementTargets);
+	const enhancementEvidence = buildEnhancementFullSheetRows(allocated, data, calculators, baseline, warriorEnhancementTargets);
+	const enhancementFullSheetRows = enhancementEvidence.full_sheet_rows;
+	const enhancementFeasibility = enhancementFeasibilityReport(enhancementFullSheetRows, enhancementEvidence.contribution_catalog);
+	if (!allowInfeasibleEvidence) assertEnhancementFeasibility(enhancementFeasibility);
 
 	const exclusions = clone(evidence.exclusions);
 	for (const excluded of exclusions) {
@@ -996,7 +1406,7 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 	const retainedRouteIdentityManifest = routeIdentityManifest.filter((row) => row.role === "dependency" || !PLACEHOLDER_WEAPON_IDS.includes(row.item_id));
 	const retainedProjection = retainedAcquisitionProjection(compactWeapons);
 	const generated = {
-		schema_version: 4,
+		schema_version: 5,
 		policy: {
 			combat_skills: [...COMBAT_SKILLS],
 			forbidden_drop_tables: [...FORBIDDEN_DROP_TABLES],
@@ -1006,11 +1416,18 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 			shared_rank_requirements: [...SHARED_RANK_REQUIREMENTS],
 			reference_levels: [...REFERENCE_LEVELS],
 			full_sheet_endpoints: targetPolicy.endpoints,
+			warrior_rank_start: targetPolicy.warrior_rank_start,
+			warrior_rank_end: targetPolicy.warrior_rank_end,
 			growth_factor: targetPolicy.growth_factor,
 			rank_targets: targetPolicy.values,
 			rank_boundaries: targetPolicy.boundaries,
+			rank_targets_by_skill: clone(targetPolicy.rank_targets_by_skill),
+			rank_boundaries_by_skill: clone(targetPolicy.rank_boundaries_by_skill),
+			class_multipliers: clone(targetPolicy.class_multipliers),
+			enhancement: clone(targetPolicy.enhancement),
 			core_allocation_envelope: clone(targetPolicy.core_allocation_envelope),
-			priest_placeholder_attack_growth_ratio: medianPriestAttackGrowthRatio,
+			enhancement_source_hashes: clone(baseline.source_hashes),
+			enhancement_evidence_hashes: clone(baseline.evidence_hashes),
 			neutral_assumptions: clone(evidence.policy.neutral_assumptions),
 			formulas: FORMULAS,
 			normalization_medians: medians,
@@ -1031,6 +1448,9 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 			route_graph_sha256: routeGraphSha256,
 			retained_route_identity_manifest_sha256: sha256(retainedRouteIdentityManifest),
 			retained_route_graph_sha256: retainedRouteGraphSha256,
+			protected_weapon_identity_sha256: PROTECTED_WEAPON_IDENTITY_SHA256,
+			enhancement_contribution_catalog_sha256: enhancementEvidence.contribution_catalog.catalog_sha256,
+			enhancement_full_sheet_contributions_sha256: sha256(enhancementFullSheetRows.map((row) => row.states.map((state) => state.rebalanced_contributions.contributions_sha256))),
 		},
 		catalog_manifest: clone(catalog),
 		exclusions,
@@ -1038,6 +1458,10 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 		dependency_route_results: dependencyRouteResults,
 		route_sources: routeSources,
 		weapons: compactWeapons,
+		enhancement_warrior_targets: warriorEnhancementTargets,
+		enhancement_full_sheet_rows: enhancementFullSheetRows,
+		enhancement_contribution_catalog: enhancementEvidence.contribution_catalog,
+		enhancement_feasibility: compactEnhancementFeasibility(enhancementFeasibility),
 	};
 	const preAmendmentChecks = {
 		eligible_requirement_multisets_sha256: evidence.pre_amendment_hashes?.eligible_requirement_multisets_sha256 || evidence.hashes.eligible_requirement_multisets_sha256,
@@ -1052,7 +1476,7 @@ function buildAcquisitionRanking({ evidence = loadRankingFixture(RANKING_FIXTURE
 	} else {
 		for (const field of ["retained_catalog_identity_sha256", "retained_acquisition_projection_sha256", "retained_selected_dependency_routes_sha256", "retained_route_identity_manifest_sha256", "retained_route_graph_sha256"])
 			if (generated.hashes[field] !== evidence.hashes[field]) throw new Error(`Ranking fixture retained ${field} drifted`);
-		if (!allowFixtureMigration && evidence.schema_version === 4)
+		if (!allowFixtureMigration && [4, 5].includes(evidence.schema_version))
 			for (const field of ["catalog_manifest_sha256", "acquisition_inputs_sha256", "route_identity_manifest_sha256", "route_graph_sha256"])
 				if (generated.hashes[field] !== evidence.hashes[field]) throw new Error(`Ranking fixture pinned ${field} drifted`);
 	}
@@ -1092,7 +1516,7 @@ function compactRankingFixture(generated) {
 	});
 
 	return {
-		schema_version: 4,
+		schema_version: 5,
 		policy: clone(generated.policy),
 		pre_amendment_hashes: clone(generated.pre_amendment_hashes),
 		source_artifact_hashes: clone(generated.source_artifact_hashes),
@@ -1114,19 +1538,304 @@ function compactRankingFixture(generated) {
 			(left, right) => left.item_id.localeCompare(right.item_id) || left.route_id.localeCompare(right.route_id),
 		),
 		weapons,
+		enhancement_warrior_targets: clone(generated.enhancement_warrior_targets),
+		enhancement_full_sheet_rows: clone(generated.enhancement_full_sheet_rows),
+		enhancement_contribution_catalog: clone(generated.enhancement_contribution_catalog),
+		enhancement_feasibility: clone(generated.enhancement_feasibility),
 	};
 }
 
 function validateRankingFixture(fixture, generated = buildAcquisitionRanking({ evidence: fixture })) {
 	const { application } = generated;
 	if (!application) throw new Error("Generated ranking is missing application status");
-	if (fixture.schema_version !== 4 || stableJson(fixture) !== stableJson(compactRankingFixture(generated)))
+	if (fixture.enhancement_feasibility?.status !== "passed" || generated.enhancement_feasibility?.status !== "passed")
+		assertEnhancementFeasibility(enhancementFeasibilityReport(generated.enhancement_full_sheet_rows, generated.enhancement_contribution_catalog));
+	validateContributionCatalog(fixture.enhancement_contribution_catalog);
+	if (
+		fixture.hashes?.enhancement_contribution_catalog_sha256 !== fixture.enhancement_contribution_catalog.catalog_sha256 ||
+		fixture.hashes?.enhancement_full_sheet_contributions_sha256 !== sha256(fixture.enhancement_full_sheet_rows.map((row) => row.states.map((state) => state.rebalanced_contributions?.contributions_sha256)))
+	) throw new Error("Weapon enhancement contribution hashes drifted");
+	for (const row of fixture.enhancement_full_sheet_rows)
+		for (const state of row.states) expandContributionEvidence(state.rebalanced_contributions, fixture.enhancement_contribution_catalog, { validateCatalog: false });
+	if (fixture.schema_version !== 5 || stableJson(fixture) !== stableJson(compactRankingFixture(generated)))
 		throw new Error("Weapon acquisition ranking fixture drifted from deterministic generation");
 	return true;
 }
 
+function publicationCatalogFromSource(source, filename = "design/items.js") {
+	const context = {
+		console: { log() {}, error() {} },
+		Math,
+		min: Math.min,
+		max: Math.max,
+		ceil: Math.ceil,
+		round: Math.round,
+		multipliers: { shells_to_gold: 1 },
+	};
+	vm.createContext(context);
+	vm.runInContext(String(source), context, { filename, timeout: 1000 });
+	if (!context.items || !context.sets || !context.base_nonweapon_progression || !context.armor_set_incremental_bonuses) {
+		const error = new Error("Equipment publication source did not define items, sets, and reviewed nonweapon publication maps");
+		error.code = "equipment_publication_source_invalid";
+		throw error;
+	}
+	return {
+		items: clone(context.items),
+		sets: clone(context.sets),
+		nonweapon_publication: clone(context.base_nonweapon_progression),
+		set_publication: clone(context.armor_set_incremental_bonuses),
+	};
+}
+
+function protectedWeaponIdentityProjection(items, weaponIds) {
+	return [...weaponIds].sort().map((weaponId) => {
+		const definition = items[weaponId] ? clone(items[weaponId]) : null;
+		if (!definition) return { weapon_id: weaponId, definition: null };
+		for (const field of WEAPON_OWNED_BASE_FIELDS) delete definition[field];
+		for (const kind of ["upgrade", "compound"])
+			if (definition[kind]) delete definition[kind].attack;
+		return { weapon_id: weaponId, definition };
+	});
+}
+
+function armorPublicationProjection(publication, authority) {
+	const items = Object.fromEntries(Object.entries(authority.items)
+		.map(([itemId]) => {
+			const definition = publication.items[itemId] || {};
+			return [itemId, {
+				base_core: Object.fromEntries(ARMOR_PUBLICATION_BASE_FIELDS
+					.filter((field) => Object.hasOwn(definition, field))
+					.map((field) => [field, definition[field]])),
+				enhancement: {
+					compound: definition.compound || null,
+					upgrade: definition.upgrade || null,
+				},
+			}];
+		}));
+	const sets = Object.fromEntries(Object.keys(authority.sets).sort().map((setId) => [setId, Object.fromEntries(
+		Object.keys(publication.sets[setId] || {})
+			.filter((threshold) => /^\d+$/.test(threshold))
+			.sort((left, right) => Number(left) - Number(right))
+			.map((threshold) => [threshold, publication.sets[setId][threshold]]),
+	)]));
+	return { items, sets };
+}
+
+function armorAuthorityProjection(authority) {
+	return {
+		items: Object.fromEntries(Object.entries(authority.items)
+			.map(([itemId, row]) => [itemId, { base_core: row.base_core, enhancement: row.enhancement }])),
+		sets: Object.fromEntries(Object.entries(authority.sets).map(([setId, row]) => [setId, row.increments])),
+	};
+}
+
+function armorAuthorityPublicationMaps(authority) {
+	return {
+		items: Object.fromEntries(Object.entries(authority.items).map(([itemId, row]) => [itemId, {
+			...row.base_core,
+			...(row.enhancement.upgrade ? { upgrade: row.enhancement.upgrade } : {}),
+			...(row.enhancement.compound ? { compound: row.enhancement.compound } : {}),
+		}])),
+		sets: Object.fromEntries(Object.entries(authority.sets).map(([setId, row]) => [setId, row.increments])),
+	};
+}
+
+function protectedNonweaponIdentityProjection(items, itemIds) {
+	return [...itemIds].sort().map((itemId) => {
+		const definition = items[itemId] ? clone(items[itemId]) : null;
+		if (!definition) return { item_id: itemId, definition: null };
+		for (const field of ARMOR_PUBLICATION_BASE_FIELDS) delete definition[field];
+		delete definition.upgrade;
+		delete definition.compound;
+		return { item_id: itemId, definition };
+	});
+}
+
+function validatePublicationSourceSemantics(ranking, publication) {
+	for (const bookId of PRIEST_BOOK_IDS) {
+		const definition = publication.items[bookId];
+		if (!definition?.upgrade || definition.compound !== undefined) {
+			const error = new Error(`Priest book ${bookId} raw publication must use upgrade without compound`);
+			error.code = "priest_book_publication_identity_drift";
+			throw error;
+		}
+	}
+	const weaponIds = (ranking.weapons || []).map((weapon) => weapon.weapon_id);
+	if (
+		ranking.hashes?.protected_weapon_identity_sha256 !== PROTECTED_WEAPON_IDENTITY_SHA256 ||
+		canonicalSha256(protectedWeaponIdentityProjection(publication.items, weaponIds)) !== PROTECTED_WEAPON_IDENTITY_SHA256
+	) {
+		const error = new Error("Weapon publication protected identity drifted from pinned authority");
+		error.code = "weapon_publication_identity_drift";
+		throw error;
+	}
+	const armorAuthority = JSON.parse(fs.readFileSync(ARMOR_BALANCE_FIXTURE_PATH, "utf8"));
+	const authorityMaps = armorAuthorityPublicationMaps(armorAuthority);
+	if (
+		canonicalSha256(publication.nonweapon_publication) !== canonicalSha256(authorityMaps.items) ||
+		canonicalSha256(publication.set_publication) !== canonicalSha256(authorityMaps.sets) ||
+		canonicalSha256(armorPublicationProjection(publication, armorAuthority)) !== canonicalSha256(armorAuthorityProjection(armorAuthority)) ||
+		canonicalSha256(protectedNonweaponIdentityProjection(publication.items, Object.keys(armorAuthority.items))) !== PROTECTED_NONWEAPON_IDENTITY_SHA256
+	) {
+		const error = new Error("Armor publication source drifted from deterministic offense-free authority");
+		error.code = "armor_publication_source_drift";
+		throw error;
+	}
+}
+
+function assertOffenseFreeArmorContributions(ranking) {
+	for (const row of ranking.enhancement_full_sheet_rows) {
+		for (const state of row.states) {
+			const evidence = expandContributionEvidence(state.rebalanced_contributions, ranking.enhancement_contribution_catalog, { validateCatalog: false });
+			for (const field of OFFENSIVE_ARMOR_FIELDS) {
+				if (Number(evidence.groups.armor.totals[field] || 0) !== 0) {
+					const error = new Error(`Weapon ranking publication armor contribution contains ${field}: ${row.id}:+${state.upgrade_level}/+${state.compound_level}`);
+					error.code = "weapon_publication_armor_offense";
+					error.class_rank_state = `${row.id}:+${state.upgrade_level}/+${state.compound_level}`;
+					error.field = field;
+					throw error;
+				}
+			}
+		}
+	}
+}
+
+function validateRankingPublicationBundle(ranking, { publication = null } = {}) {
+	if (!ranking || !Array.isArray(ranking.enhancement_full_sheet_rows) || !ranking.enhancement_contribution_catalog) {
+		const error = new Error("Weapon ranking publication bundle is incomplete");
+		error.code = "weapon_publication_bundle_invalid";
+		throw error;
+	}
+	publication ||= publicationCatalogFromSource(
+		fs.readFileSync(path.resolve(REPOSITORY_ROOT, "design/items.js"), "utf8"),
+		path.resolve(REPOSITORY_ROOT, "design/items.js"),
+	);
+	validatePublicationSourceSemantics(ranking, publication);
+	if (stableJson(ranking.policy?.class_multipliers) !== stableJson(CLASS_MULTIPLIERS)) {
+		const error = new Error("Weapon ranking publication bundle drifted: class multipliers changed");
+		error.code = "weapon_publication_bundle_invalid";
+		throw error;
+	}
+	const sourceData = loadSourceData();
+	let normalizedItems;
+	try {
+		normalizedItems = normalizeItems(publication.items, sourceData.itemRequirements);
+	} catch (cause) {
+		const error = new Error(`Weapon publication normalized identity is invalid: ${cause.message}`);
+		error.code = "weapon_publication_identity_drift";
+		error.cause = cause;
+		throw error;
+	}
+	const currentCatalog = new Map(catalogRows({ ...sourceData, items: normalizedItems }).map((row) => [row.weapon_id, row]));
+	const manifest = new Map((ranking.catalog_manifest || []).map((row) => [row.weapon_id, row]));
+	for (const weapon of ranking.weapons || []) {
+		const current = currentCatalog.get(weapon.weapon_id);
+		const pinned = manifest.get(weapon.weapon_id);
+		if (
+			!current || !pinned ||
+			["skill", "weapon_type", "damage_type"].some((field) => weapon[field] !== pinned[field] || pinned[field] !== current[field]) ||
+			(weapon.skill === "priest" && (weapon.weapon_type !== "book" || weapon.enhancement_kind !== "upgrade"))
+		) {
+			const error = new Error(`Weapon ranking publication bundle drifted: ${weapon.weapon_id} identity changed`);
+			error.code = "weapon_publication_bundle_invalid";
+			throw error;
+		}
+	}
+	const expectedSourceArtifacts = [...new Set((ranking.availability_overrides || []).map((override) => override.source_artifact))].sort();
+	const suppliedSourceArtifacts = Object.keys(ranking.source_artifact_hashes || {}).sort();
+	if (stableJson(suppliedSourceArtifacts) !== stableJson(expectedSourceArtifacts)) {
+		const error = new Error("Weapon ranking publication bundle drifted: acquisition source artifact set changed");
+		error.code = "weapon_publication_bundle_invalid";
+		throw error;
+	}
+	for (const sourceArtifact of expectedSourceArtifacts) {
+		const absoluteSource = path.resolve(REPOSITORY_ROOT, sourceArtifact);
+		if (
+			!absoluteSource.startsWith(`${REPOSITORY_ROOT}${path.sep}`) ||
+			!fs.existsSync(absoluteSource) ||
+			sha256(fs.readFileSync(absoluteSource, "utf8")) !== ranking.source_artifact_hashes[sourceArtifact]
+		) {
+			const error = new Error(`Weapon ranking publication bundle drifted: ${sourceArtifact} source hash changed`);
+			error.code = "weapon_publication_bundle_invalid";
+			throw error;
+		}
+	}
+	const baseline = loadVanillaBaseline();
+	if (
+		stableJson(ranking.policy?.enhancement_source_hashes) !== stableJson(baseline.source_hashes) ||
+		stableJson(ranking.policy?.enhancement_evidence_hashes) !== stableJson(baseline.evidence_hashes)
+	) {
+		const error = new Error("Weapon ranking publication bundle drifted: pinned enhancement hashes changed");
+		error.code = "weapon_publication_bundle_invalid";
+		throw error;
+	}
+	let report;
+	try {
+		report = enhancementFeasibilityReport(ranking.enhancement_full_sheet_rows, ranking.enhancement_contribution_catalog);
+	} catch (cause) {
+		const error = new Error(`Weapon ranking publication enhancement evidence is invalid: ${cause.message}`);
+		error.code = "weapon_enhancement_evidence_invalid";
+		error.cause = cause;
+		throw error;
+	}
+	assertEnhancementFeasibility(report);
+	assertOffenseFreeArmorContributions(ranking);
+	if (stableJson(ranking.enhancement_feasibility) !== stableJson(compactEnhancementFeasibility(report))) {
+		const error = new Error("Weapon ranking publication feasibility summary drifted");
+		error.code = "weapon_publication_summary_drift";
+		throw error;
+	}
+	const expectedContributionHash = sha256(
+		ranking.enhancement_full_sheet_rows.map((row) => row.states.map((state) => state.rebalanced_contributions?.contributions_sha256)),
+	);
+	if (
+		ranking.hashes?.enhancement_contribution_catalog_sha256 !== ranking.enhancement_contribution_catalog.catalog_sha256 ||
+		ranking.hashes?.enhancement_full_sheet_contributions_sha256 !== expectedContributionHash
+	) {
+		const error = new Error("Weapon ranking publication contribution hashes drifted");
+		error.code = "weapon_publication_hash_drift";
+		throw error;
+	}
+	let fixture;
+	try {
+		fixture = ranking.application ? compactRankingFixture(ranking) : clone(ranking);
+		validateRankingFixture(fixture);
+	} catch (cause) {
+		if (cause.code) throw cause;
+		const error = new Error(`Weapon ranking publication bundle drifted: ${cause.message}`);
+		error.code = "weapon_publication_bundle_invalid";
+		error.cause = cause;
+		throw error;
+	}
+	return true;
+}
+
 function markdownReport(fixture) {
-	const lines = ["# Weapon acquisition ranking", "", `Weapons: ${fixture.weapons.length}`, `Exclusions: ${fixture.exclusions.length}`, ""];
+	const lines = [
+		"# Weapon acquisition ranking",
+		"",
+		`Weapons: ${fixture.weapons.length}`,
+		`Exclusions: ${fixture.exclusions.length}`,
+		"",
+		"## Locked eleven-rank full-sheet targets",
+		"",
+		"| Rank | Reference level | Paladin / Priest | Warrior | Ranger / Rogue / Mage | Pinned Warrior weapon |",
+		"|---:|---:|---:|---:|---:|---|",
+	];
+	for (let index = 0; index < fixture.policy.shared_rank_count; index += 1) {
+		const source = fixture.enhancement_warrior_targets?.[index];
+		lines.push(`| ${index + 1} | ${fixture.policy.reference_levels[index]} | ${fixture.policy.rank_targets_by_skill.paladin[index]} | ${fixture.policy.rank_targets_by_skill.warrior[index]} | ${fixture.policy.rank_targets_by_skill.ranger[index]} | ${source?.mainhand_id || "n/a"} |`);
+	}
+	lines.push(
+		"",
+		"Enhancement evidence covers upgrade +0 through +12 and compound +0 through +10.",
+		"",
+		"| Fully enhanced endpoint | Paladin / Priest | Warrior | Ranger / Rogue / Mage |",
+		"|---|---:|---:|---:|",
+		`| Rank 1 | ${fixture.policy.enhancement.fully_enhanced_targets.paladin.rank_1} | ${fixture.policy.enhancement.fully_enhanced_targets.warrior.rank_1} | ${fixture.policy.enhancement.fully_enhanced_targets.ranger.rank_1} |`,
+		`| Rank 11 | ${fixture.policy.enhancement.fully_enhanced_targets.paladin.rank_11} | ${fixture.policy.enhancement.fully_enhanced_targets.warrior.rank_11} | ${fixture.policy.enhancement.fully_enhanced_targets.ranger.rank_11} |`,
+		"",
+	);
 	for (const skill of fixture.policy.combat_skills) {
 		lines.push(`## ${skill}`, "", "| Shared rank | Role | Weapon | Effort | Route | Requirement | Target DPS | Solved attack | Solved DPS |", "|---:|---|---|---:|---|---:|---:|---:|---:|");
 		for (const weapon of fixture.weapons.filter((row) => row.skill === skill))
@@ -1160,9 +1869,11 @@ function markdownReport(fixture) {
 function writeRankingPublication(generated, {
 	itemsFilename = path.resolve(__dirname, "../../design/items.js"),
 	requirementsFilename = path.resolve(__dirname, "../../design/item_requirements.js"),
+	read = fs.readFileSync,
 	write = fs.writeFileSync,
 } = {}) {
-	let itemsSource = fs.readFileSync(itemsFilename, "utf8");
+	let itemsSource = read(itemsFilename, "utf8");
+	validateRankingPublicationBundle(generated, { publication: publicationCatalogFromSource(itemsSource, itemsFilename) });
 	const mapMatch = itemsSource.match(/var weapon_progression = (\{[\s\S]*?\});\nvar weapon_progression_base_fields/);
 	if (!mapMatch) throw new Error("Weapon publication map is missing");
 	const publication = JSON.parse(mapMatch[1]);
@@ -1185,11 +1896,12 @@ function writeRankingPublication(generated, {
 			base_dps: row.solved_dps,
 			selected_effort: row.selected_effort,
 		};
+		delete entry[row.enhancement_kind === "upgrade" ? "compound" : "upgrade"];
 		entry[row.enhancement_kind] = { attack: row.solved_attack_growth };
 	}
 	itemsSource = itemsSource.replace(mapMatch[0], `var weapon_progression = ${JSON.stringify(publication, null, 2)};\nvar weapon_progression_base_fields`);
 
-	let requirementsSource = fs.readFileSync(requirementsFilename, "utf8");
+	let requirementsSource = read(requirementsFilename, "utf8");
 	const requirements = Object.fromEntries(generated.weapons.slice().sort((left, right) => left.weapon_id.localeCompare(right.weapon_id)).map((row) => [row.weapon_id, row.assigned_requirement]));
 	const requirementsPattern = /var acquisition_ranked_weapon_requirements=\{[^\n]*\};/;
 	if (!requirementsPattern.test(requirementsSource)) throw new Error("Weapon requirement publication map is missing");
@@ -1234,6 +1946,7 @@ if (require.main === module) {
 module.exports = {
 	...acquisition,
 	COMBAT_SKILLS,
+	CLASS_MULTIPLIERS,
 	EXCLUDED_WEAPON_IDS,
 	FORBIDDEN_DROP_TABLES,
 	PLACEHOLDER_BOOK_RANKS,
@@ -1241,20 +1954,28 @@ module.exports = {
 	RANKING_FIXTURE_PATH,
 	SHARED_RANK_REQUIREMENTS,
 	REFERENCE_LEVELS,
+	UPGRADE_LEVELS,
+	COMPOUND_LEVELS,
 	assertAcyclicSourceGraph,
 	assignSemanticRanks,
 	buildAcquisitionRanking,
 	buildProductionAcquisitionResolver,
 	compactRankingFixture,
+	compactEnhancementFeasibility,
 	fullSheetContext,
+	enhancementFeasibilityReport,
+	assertEnhancementFeasibility,
 	loadRankingFixture,
 	loadVanillaBaseline,
 	loadSourceData,
+	solveNearestSheetTarget,
 	main,
 	markdownReport,
+	publicationCatalogFromSource,
 	solveRankedDpsCandidates,
 	stableJson,
 	validateAllocatedRows,
 	validateRankingFixture,
+	validateRankingPublicationBundle,
 	writeRankingPublication,
 };

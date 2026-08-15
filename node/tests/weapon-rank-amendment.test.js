@@ -20,7 +20,7 @@ const placeholderBooks = ["wbook2", "wbook3", "wbook4", "wbook5", "wbook6", "wbo
 test("corrected weapon fixture regenerates exactly with 75 retained weapons and eight Priest placeholders", () => {
 	const generated = buildAcquisitionRanking({ evidence: fixture });
 	assert.deepEqual(compactRankingFixture(generated), fixture);
-	assert.equal(fixture.schema_version, 4);
+	assert.equal(fixture.schema_version, 5);
 	assert.equal(fixture.counts.retained_weapons, 75);
 	assert.equal(fixture.counts.placeholder_weapons, 8);
 	assert.equal(fixture.counts.weapons, 83);
@@ -64,14 +64,14 @@ test("every combat skill publishes exactly eleven acquisition-monotone shared ra
 test("full-sheet endpoints include pinned class and equipment stats", () => {
 	assert.deepEqual(fixture.policy.full_sheet_endpoints, baseline.weapon_rank_endpoint_oracle);
 	const { start, end } = fixture.policy.full_sheet_endpoints;
-	assert.equal(start.selection, "lowest-valid-level-1-starter");
-	assert.equal(start.skill, "priest");
-	assert.equal(start.mainhand_id, "wbook0");
+	assert.equal(start.selection, "level-1-warrior-starter");
+	assert.equal(start.skill, "warrior");
+	assert.equal(start.mainhand_id, "blade");
 	assert.equal(start.offhand_id, "wshield");
 	assert.equal(start.reference_level, 1);
-	assert.equal(start.sheet.attack, 24);
-	assert.equal(start.sheet.frequency, 0.434862441928);
-	assert.equal(start.base_dps, 10.4366986063);
+	assert.equal(start.sheet.attack, 89);
+	assert.equal(start.sheet.frequency, 0.568696767325);
+	assert.equal(start.base_dps, 50.6140122919);
 	assert.equal(end.selection, "highest-valid-level-70-warrior-mainhand");
 	assert.equal(end.skill, "warrior");
 	assert.equal(end.mainhand_id, "scythe");
@@ -110,18 +110,18 @@ test("full-sheet endpoints include pinned class and equipment stats", () => {
 	assert.ok(end.base_dps > start.base_dps);
 });
 
-test("rank targets interpolate geometrically between exact full-sheet endpoints", () => {
+test("rank targets interpolate geometrically between the locked 50 and 450 targets", () => {
 	const { start, end } = fixture.policy.full_sheet_endpoints;
 	const targets = fixture.policy.rank_targets;
 	const boundaries = fixture.policy.rank_boundaries;
-	const growth = Math.pow(end.base_dps / start.base_dps, 1 / 10);
+	const growth = Math.pow(9, 1 / 10);
 	assert.equal(targets.length, 11);
 	assert.equal(boundaries.length, 10);
-	assert.equal(targets[0], start.base_dps);
-	assert.equal(targets[10], end.base_dps);
-	assert.equal(fixture.policy.growth_factor, Number(growth.toPrecision(12)));
+	assert.equal(targets[0], 50);
+	assert.equal(targets[10], 450);
+	assert.equal(fixture.policy.growth_factor, growth);
 	for (let index = 0; index < targets.length; index += 1) {
-		const expected = start.base_dps * Math.pow(growth, index);
+		const expected = 50 * Math.pow(growth, index);
 		assert.ok(Math.abs(targets[index] / expected - 1) < 1e-10, `rank-${index + 1}`);
 		if (index) assert.ok(Math.abs(targets[index] / targets[index - 1] / growth - 1) < 1e-10, `growth-${index}`);
 	}
@@ -130,7 +130,7 @@ test("rank targets interpolate geometrically between exact full-sheet endpoints"
 	const envelope = fixture.policy.core_allocation_envelope;
 	const offensiveCoreTotal = (endpoint) => ["str", "dex", "int"].reduce((sum, field) => sum + endpoint.sheet[field], 0);
 	assert.deepEqual(envelope.endpoints, { start: offensiveCoreTotal(start), end: offensiveCoreTotal(end) });
-	assert.deepEqual(envelope.endpoints, { start: 72, end: 260 });
+	assert.deepEqual(envelope.endpoints, { start: 65, end: 260 });
 	assert.equal(envelope.ceilings.length, 11);
 	assert.equal(envelope.exact_values.length, 11);
 	const coreGrowth = Math.pow(envelope.endpoints.end / envelope.endpoints.start, 1 / 10);
@@ -143,8 +143,9 @@ test("rank targets interpolate geometrically between exact full-sheet endpoints"
 });
 
 test("every weapon is the nearest legal full-sheet candidate inside a strictly separated rank band", () => {
-	const { rank_targets: targets, rank_boundaries: boundaries } = fixture.policy;
 	for (const row of fixture.weapons) {
+		const targets = fixture.policy.rank_targets_by_skill[row.skill];
+		const boundaries = fixture.policy.rank_boundaries_by_skill[row.skill];
 		const lower = row.shared_rank === 1 ? targets[0] : boundaries[row.shared_rank - 2];
 		const upper = row.shared_rank === 11 ? targets[10] : boundaries[row.shared_rank - 1];
 		assert.equal(row.assigned_dps_target, targets[row.shared_rank - 1], row.weapon_id);
@@ -157,7 +158,7 @@ test("every weapon is the nearest legal full-sheet candidate inside a strictly s
 		const ceiling = fixture.policy.core_allocation_envelope.ceilings[row.shared_rank - 1];
 		assert.equal(row.quantization.domain.core_envelope.ceiling, ceiling, row.weapon_id);
 		assert.equal(row.quantization.domain.core_envelope.exact_value, fixture.policy.core_allocation_envelope.exact_values[row.shared_rank - 1], row.weapon_id);
-		assert.deepEqual(row.quantization.domain.core_envelope.endpoints, { start: 72, end: 260 }, row.weapon_id);
+		assert.deepEqual(row.quantization.domain.core_envelope.endpoints, { start: 65, end: 260 }, row.weapon_id);
 		assert.ok(row.solved_str + row.solved_int + row.solved_dex <= ceiling, `${row.weapon_id} core ceiling`);
 		assert.match(row.quantization.domain.allocation_proof, /every nonnegative.*endpoint-derived total-core ceiling/i, row.weapon_id);
 		assert.match(row.quantization.domain.attack_proof, /every legal allocation.*exact target bracket/i, row.weapon_id);

@@ -154,7 +154,11 @@ Standalone armor and capes are independent sidegrades. Combat offhands
 ranked base values and grouped highest-compatible-skill requirements; legal
 one-hand, dual-wield, two-hand, and offhand layouts are checked together so an
 easier option cannot strictly dominate a harder one. Jewelry and orbs remain
-outside this rebalance, and non-weapon enhancement growth is preserved.
+outside this rebalance. Rebalanced armor and set properties contribute no
+offensive `STR`, `DEX`, or `INT` at base or supported enhancement states; the
+removed vanilla offensive contribution is compensated exclusively through
+Plan 04-owned weapon numeric fields. Combat and item-property formulas remain
+unchanged.
 
 The server and Guide evaluate grouped requirements such as “Highest Warrior or
 Paladin Lv. 50” consistently. Existing stored items need no migration or
@@ -172,21 +176,35 @@ items are labeled sidegrades. Acquisition route and effort remain independent
 of the regenerated numeric fields.
 
 Weapon Base DPS is calculated from the neutral full sheet at the rank's pinned
-reference level. The lowest valid level-1 starter sheet and the highest valid
-level-70 Warrior retained-mainhand sheet are the endpoints, with geometric
-interpolation between them and deterministic integer quantization. Class,
-armor, cape, compatible offhand, and frozen accessory contributions are part of
-that sheet; active abilities, rotations, buffs, mitigation, and random rolls
-are excluded. Enhancement levels do not change a weapon's rank, and retained
-identity, cadence, range, projectile, special effects, and non-attack
-enhancement fields remain intact. Effective range uses the profile base plus
-the item's additive range exactly once.
+reference level. Every combat class has exactly eleven ranks. Warrior's `+0`
+full-sheet targets follow one geometric line from 50 DPS at rank 1 to 450 DPS at
+rank 11 (`50 * 9^((rank - 1) / 10)`); Paladin and Priest target `0.90×` the
+corresponding Warrior value, while Ranger, Rogue, and Mage target `1.10×` it.
+The class, armor, cape, compatible offhand, and frozen-accessory context remains
+in the sheet oracle, but rebalanced armor contributes no offensive `STR`, `DEX`,
+or `INT`; compensation is exclusively in Plan 04-owned weapon base/core and
+attack-growth fields. Active abilities, rotations, buffs, mitigation, and
+random rolls are excluded.
 
-The eight Priest placeholders are visible permanent magical books normalized to
-the existing `book`/`pmagic` contract and reuse existing book assets. The Guide
-shows each weapon's shared rank, historical rank, progression role, reference
-level, Hit Damage, Attacks / Sec, and Base DPS; it does not present historical
-acquisition rank as current power.
+Rank power is measured at `(+0,+0)`. The base state and the fully enhanced
+`(+12 upgrade,+10 compound)` state are hard publication gates for every class
+and rank. All other supported upgrade/compound combinations are fully
+evidenced diagnostics: each records its target, actual sheet result, signed and
+absolute error, and contribution data, and must remain finite, positive, and
+monotonic along both enhancement axes. Intermediate states do not have to hit
+their targets exactly or provide an independent target bracket. Enhancement
+levels do not change a weapon's rank; retained identity, cadence, range,
+projectile, special effects, and non-attack enhancement fields remain intact.
+Effective range uses the profile base plus the item's additive range exactly
+once.
+
+All eleven Priest books (`wbook0`, `wbook1`, `wbook2`–`wbook9`, and `wbookhs`)
+are visible magical `book`/`pmagic` weapons that use the game's upgrade/enchant
+path through `+12` and have no `compound` object. Eight are placeholders that
+reuse existing book assets; their non-attack enhancement fields remain intact.
+The Guide shows each weapon's shared rank, historical rank, progression role,
+reference level, Hit Damage, Attacks / Sec, and Base DPS; it does not present
+historical acquisition rank as current power.
 
 In the in-game Guide → Items view, visible weapons are grouped under Warrior,
 Paladin, Mage, Priest, Ranger, and Rogue in combat-profile order. Each group is

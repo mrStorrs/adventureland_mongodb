@@ -4,9 +4,15 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
-const { buildEquipmentCombatMatrixFixture, validateEquipmentCombatMatrixFixture } = require("../tools/equipment-balance");
+const {
+	EQUIPMENT_REBALANCE_BASE_COMMIT,
+	buildEquipmentCombatMatrixFixture,
+	frozenAuthorityRows,
+	validateEquipmentCombatMatrixFixture,
+} = require("../tools/equipment-balance");
 const { loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
 
+const root = path.resolve(__dirname, "../..");
 let checked;
 let generated;
 
@@ -31,13 +37,59 @@ test("the checked-in combat matrix stays compact enough to ship", () => {
 
 test("combat matrix freezes every read-only authority before evaluating rows", () => {
 	const fixture = matrixFixture();
-	assert.equal(fixture.frozen_authorities.length, 7);
+	assert.equal(fixture.frozen_authorities.length, 12);
 	for (const row of fixture.frozen_authorities) {
 		assert.equal(row.matches, true, row.authority_id);
+		if (row.authority_id === "node/game/skill_domain.js") assert.equal(row.expected_ref, `sha256:${row.expected_sha256}`);
+		else assert.equal(row.expected_ref, EQUIPMENT_REBALANCE_BASE_COMMIT, row.authority_id);
 		assert.equal(row.current_sha256, row.expected_sha256, row.authority_id);
 		assert.match(row.current_sha256, /^[0-9a-f]{64}$/, row.authority_id);
 	}
 	assert.equal(fixture.hashes.whole_monster_sha256, fixture.hashes.current_whole_monster_sha256);
+});
+
+test("every frozen authority rejects a targeted source mutation", () => {
+	const cleanRows = frozenAuthorityRows();
+	assert.equal(cleanRows.length, 12);
+	const expectedRefs = new Map(cleanRows.map((row) => [row.authority_id, row.expected_ref]));
+	for (const row of cleanRows) {
+		if (row.authority_id === "node/game/skill_domain.js") assert.equal(row.expected_ref, `sha256:${row.expected_sha256}`);
+		else assert.equal(row.expected_ref, EQUIPMENT_REBALANCE_BASE_COMMIT, row.authority_id);
+		assert.equal(row.matches, true, row.authority_id);
+		assert.equal(row.current_sha256, row.expected_sha256, row.authority_id);
+	}
+	const fullFiles = [
+		"design/abilities.js",
+		"design/character.js",
+		"design/upgrades.js",
+		"js/old_common_functions.js",
+		"node/game/active_skill.js",
+		"node/game/skill_domain.js",
+		"node/tools/progression-benchmark.js",
+		"node/tests/fixtures/progression-benchmark-routes.json",
+		"node/tests/fixtures/progression-benchmark-targets.json",
+	];
+	const overrides = Object.fromEntries(fullFiles.map((filename) => [
+		filename,
+		`${fs.readFileSync(path.join(root, filename), "utf8")}\n// frozen-authority mutation\n`,
+	]));
+	for (const [filename, marker] of [
+		["node/server.js", "function commence_attack"],
+		["node/game/stats.js", "function baseStats"],
+	]) {
+		const source = fs.readFileSync(path.join(root, filename), "utf8");
+		overrides[filename] = source.replace(marker, `${marker}\n// frozen-authority mutation`);
+	}
+	overrides["design/items.js"] = `${fs.readFileSync(path.join(root, "design/items.js"), "utf8")}\nitems.cring.str=(items.cring.str||0)+1;\n`;
+
+	const rows = frozenAuthorityRows({ currentSourceOverrides: overrides });
+	assert.equal(rows.length, 12);
+	assert.deepEqual(rows.map((row) => row.authority_id), frozenAuthorityRows().map((row) => row.authority_id));
+	for (const row of rows) {
+		assert.equal(row.expected_ref, expectedRefs.get(row.authority_id), row.authority_id);
+		assert.equal(row.matches, false, row.authority_id);
+		assert.notEqual(row.current_sha256, row.expected_sha256, row.authority_id);
+	}
 });
 
 test("combat matrix covers all mobs, diagnostic reasons, canonical loadouts, and weapons", () => {

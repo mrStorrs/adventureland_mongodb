@@ -1,5 +1,5 @@
 {
-	"schema_version": 1,
+	"schema_version": 2,
 	"core_fields": [
 		"str",
 		"dex",
@@ -975,26 +975,26 @@
 	],
 	"weapon_full_sheet_endpoints": {
 		"start": {
-			"selection": "lowest-valid-level-1-starter",
-			"id": "priest:1:wbook0+wshield",
-			"skill": "priest",
+			"selection": "level-1-warrior-starter",
+			"id": "warrior:1:blade+wshield",
+			"skill": "warrior",
 			"reference_level": 1,
-			"mainhand_id": "wbook0",
+			"mainhand_id": "blade",
 			"offhand_id": "wshield",
 			"class_core": {
-				"armor": 4,
-				"dex": 3,
-				"hp": 305,
-				"int": 11,
-				"mp": 470,
-				"resistance": 16,
-				"str": 2,
+				"armor": 31,
+				"dex": 2,
+				"hp": 624,
+				"int": 2,
+				"mp": 55,
+				"resistance": 4,
+				"str": 11,
 				"vit": 4
 			},
 			"weapon_core": {
 				"str": 0,
 				"dex": 0,
-				"int": 6,
+				"int": 0,
 				"vit": 0,
 				"hp": 0,
 				"mp": 0,
@@ -1003,7 +1003,7 @@
 				"crit": 0,
 				"frequency": 0,
 				"speed": 0,
-				"range": 0,
+				"range": 5,
 				"apiercing": 0,
 				"rpiercing": 0,
 				"lifesteal": 0,
@@ -1019,50 +1019,66 @@
 				"stresistance": 0
 			},
 			"equipment_core": {
-				"str": 0,
+				"str": 8,
 				"dex": 34,
-				"int": 16,
+				"int": 8,
 				"vit": 5,
 				"hp": 0,
 				"mp": 0,
-				"armor": 55,
-				"resistance": 21
+				"armor": 64,
+				"resistance": 31
 			},
 			"set_counts": {},
 			"sheet": {
-				"attack": 24,
-				"frequency": 0.434862441928,
-				"str": 2,
-				"dex": 37,
-				"int": 33
+				"attack": 89,
+				"frequency": 0.568696767325,
+				"str": 19,
+				"dex": 36,
+				"int": 10
 			},
 			"legacy_formula": {
 				"attack": {
-					"class_base": 30,
-					"item_attack": 5,
-					"primary_multiplier": 1.65,
-					"item_scaled": 8.25,
-					"raw_item_and_profile": 0,
-					"priest_multiplier": 1.6,
-					"pre_output": 61.2,
-					"output_percent": 40,
-					"rounded": 24
+					"class_base": 60,
+					"item_attack": 15,
+					"primary_multiplier": 0.95,
+					"item_scaled": 14.25,
+					"raw_item_and_profile": 15,
+					"priest_multiplier": 1,
+					"pre_output": 89.25,
+					"output_percent": 100,
+					"rounded": 89
 				},
 				"frequency": {
-					"class_base": 0.35,
+					"class_base": 0.5,
 					"item_and_profile": 0,
 					"level": 0.00609756097561,
-					"dex": 0.0578125,
-					"int": 0.0209523809524,
-					"total": 0.434862441928
+					"dex": 0.05625,
+					"int": 0.00634920634921,
+					"total": 0.568696767325
 				}
 			},
-			"base_dps": 10.4366986063,
+			"contributions": {
+				"group_refs": [
+					0,
+					1,
+					2,
+					3,
+					4,
+					5,
+					6,
+					7
+				],
+				"set_counts": {},
+				"set_sha256": "307caef8b40cd683dc08ee4d92d1f07e8b244e0ec10d599e7d94f9b3dbb79dca",
+				"loadout_sha256": "eb5f26ab81dd97a08d491f989eee1a4325143576aa01f01ca300957cc6372219",
+				"contributions_sha256": "b356105902ae68ae7dfa9a4a4fabe88a96559c1f2916fd653ad204e248a82dba"
+			},
+			"base_dps": 50.6140122919,
 			"source_items": {
-				"mainhand": "wbook0",
+				"mainhand": "blade",
 				"offhand": "wshield",
 				"armor": [
-					"partyhat"
+					"phelmet"
 				],
 				"cape": "horsecape",
 				"frozen_accessories": [
@@ -1082,6 +1098,10 @@
 				"design/upgrades.js": "c1a99cf4853cdc057cde649134a5f5c878668506",
 				"js/old_common_functions.js": "a4836c14aae59e67dedc6687b82dc174440f5350",
 				"node/server.js": "30f040b307727a6d2a64b5b6ecd61b6fe775a5ce"
+			},
+			"enhancement_state": {
+				"upgrade_level": 0,
+				"compound_level": 0
 			}
 		},
 		"end": {
@@ -1170,6 +1190,25 @@
 					"total": 0.94535109369
 				}
 			},
+			"contributions": {
+				"group_refs": [
+					8,
+					9,
+					10,
+					11,
+					7,
+					5,
+					12,
+					13
+				],
+				"set_counts": {
+					"vampires": 1,
+					"wt4": 5
+				},
+				"set_sha256": "6b276cf54952a5f728e51d2b8cf895c1b26cf10534124abcb2909c1265ea87c4",
+				"loadout_sha256": "929e8f8d59f52a54681908d64920d038c970a68a8599d217fd190cc67b12739a",
+				"contributions_sha256": "d5155ddfe4fabe03add65b05450c66f22d59e2f7cbc244510f240af56dde7cf3"
+			},
 			"base_dps": 451.877822784,
 			"source_items": {
 				"mainhand": "scythe",
@@ -1199,39 +1238,319 @@
 				"design/upgrades.js": "c1a99cf4853cdc057cde649134a5f5c878668506",
 				"js/old_common_functions.js": "a4836c14aae59e67dedc6687b82dc174440f5350",
 				"node/server.js": "30f040b307727a6d2a64b5b6ecd61b6fe775a5ce"
+			},
+			"enhancement_state": {
+				"upgrade_level": 0,
+				"compound_level": 0
 			}
 		},
 		"candidate_counts": {
-			"start": 6,
+			"start": 1,
 			"end": 15
 		}
 	},
-	"weapon_rank_growth_factor": 1.45762493355,
+	"weapon_rank_growth_factor": 1.2457309396155174,
 	"weapon_rank_targets": [
-		10.4366986063,
-		15.2127921125,
-		22.1745450922,
-		32.3221698165,
-		47.1136006311,
-		68.6739589893,
-		100.100874909,
-		145.909531137,
-		212.681370629,
-		310.00966873,
-		451.877822784
+		50,
+		62.2865469808,
+		77.5922786958,
+		96.6591022466,
+		120.411234264,
+		150,
+		186.859640942,
+		232.776836087,
+		289.97730674,
+		361.233702792,
+		450
 	],
 	"weapon_rank_boundaries": [
-		12.6004494459,
-		18.3667292863,
-		26.7718025556,
-		39.0232469211,
-		56.8812577004,
-		82.9115394761,
-		120.853927219,
-		176.159697633,
-		256.774767557,
-		374.281303497
+		55.8061587017,
+		69.5194585158,
+		86.6025403785,
+		107.883463999,
+		134.393768976,
+		167.418476105,
+		208.558375547,
+		259.807621135,
+		323.650391996,
+		403.181306928
 	],
+	"weapon_class_multipliers": {
+		"warrior": 1,
+		"paladin": 0.9,
+		"priest": 0.9,
+		"ranger": 1.1,
+		"rogue": 1.1,
+		"mage": 1.1
+	},
+	"weapon_rank_targets_by_skill": {
+		"warrior": [
+			50,
+			62.2865469808,
+			77.5922786958,
+			96.6591022466,
+			120.411234264,
+			150,
+			186.859640942,
+			232.776836087,
+			289.97730674,
+			361.233702792,
+			450
+		],
+		"paladin": [
+			45,
+			56.0578922827,
+			69.8330508262,
+			86.9931920219,
+			108.370110838,
+			135,
+			168.173676848,
+			209.499152478,
+			260.979576066,
+			325.110332513,
+			405
+		],
+		"mage": [
+			55,
+			68.5152016789,
+			85.3515065654,
+			106.325012471,
+			132.45235769,
+			165,
+			205.545605036,
+			256.054519696,
+			318.975037414,
+			397.357073071,
+			495
+		],
+		"priest": [
+			45,
+			56.0578922827,
+			69.8330508262,
+			86.9931920219,
+			108.370110838,
+			135,
+			168.173676848,
+			209.499152478,
+			260.979576066,
+			325.110332513,
+			405
+		],
+		"ranger": [
+			55,
+			68.5152016789,
+			85.3515065654,
+			106.325012471,
+			132.45235769,
+			165,
+			205.545605036,
+			256.054519696,
+			318.975037414,
+			397.357073071,
+			495
+		],
+		"rogue": [
+			55,
+			68.5152016789,
+			85.3515065654,
+			106.325012471,
+			132.45235769,
+			165,
+			205.545605036,
+			256.054519696,
+			318.975037414,
+			397.357073071,
+			495
+		]
+	},
+	"weapon_rank_boundaries_by_skill": {
+		"warrior": [
+			55.8061587017,
+			69.5194585158,
+			86.6025403785,
+			107.883463999,
+			134.393768976,
+			167.418476105,
+			208.558375547,
+			259.807621135,
+			323.650391996,
+			403.181306928
+		],
+		"paladin": [
+			50.2255428315,
+			62.5675126642,
+			77.9422863406,
+			97.0951175991,
+			120.954392078,
+			150.676628494,
+			187.702537992,
+			233.826859021,
+			291.285352796,
+			362.863176235
+		],
+		"mage": [
+			61.3867745719,
+			76.4714043674,
+			95.2627944164,
+			118.671810399,
+			147.833145874,
+			184.160323715,
+			229.414213102,
+			285.788383248,
+			356.015431196,
+			443.499437621
+		],
+		"priest": [
+			50.2255428315,
+			62.5675126642,
+			77.9422863406,
+			97.0951175991,
+			120.954392078,
+			150.676628494,
+			187.702537992,
+			233.826859021,
+			291.285352796,
+			362.863176235
+		],
+		"ranger": [
+			61.3867745719,
+			76.4714043674,
+			95.2627944164,
+			118.671810399,
+			147.833145874,
+			184.160323715,
+			229.414213102,
+			285.788383248,
+			356.015431196,
+			443.499437621
+		],
+		"rogue": [
+			61.3867745719,
+			76.4714043674,
+			95.2627944164,
+			118.671810399,
+			147.833145874,
+			184.160323715,
+			229.414213102,
+			285.788383248,
+			356.015431196,
+			443.499437621
+		]
+	},
+	"weapon_enhancement_policy": {
+		"upgrade_levels": [
+			0,
+			1,
+			2,
+			3,
+			4,
+			5,
+			6,
+			7,
+			8,
+			9,
+			10,
+			11,
+			12
+		],
+		"compound_levels": [
+			0,
+			1,
+			2,
+			3,
+			4,
+			5,
+			6,
+			7,
+			8,
+			9,
+			10
+		],
+		"hard_publication_states": [
+			{
+				"upgrade_level": 0,
+				"compound_level": 0,
+				"role": "base"
+			},
+			{
+				"upgrade_level": 12,
+				"compound_level": 10,
+				"role": "fully_enhanced"
+			}
+		],
+		"diagnostic_state_count_per_rank": 141,
+		"intermediate_target_distance_gate": false,
+		"upgrade_step_weights": [
+			0,
+			1,
+			1,
+			1,
+			1,
+			1,
+			1,
+			1.25,
+			1.5,
+			2,
+			3,
+			1.25,
+			1.25
+		],
+		"compound_step_weights": [
+			0,
+			1,
+			1,
+			1,
+			1,
+			1.25,
+			1.5,
+			2,
+			3,
+			3,
+			3
+		],
+		"cumulative_upgrade_weight": 16.25,
+		"cumulative_compound_weight": 17.75,
+		"fully_enhanced_targets": {
+			"paladin": {
+				"rank_1": 292.107184015,
+				"rank_11": 4618.2147526
+			},
+			"priest": {
+				"rank_1": 292.107184015,
+				"rank_11": 4618.2147526
+			},
+			"warrior": {
+				"rank_1": 324.563537794,
+				"rank_11": 5131.34972512
+			},
+			"ranger": {
+				"rank_1": 357.019891573,
+				"rank_11": 5644.48469763
+			},
+			"rogue": {
+				"rank_1": 357.019891573,
+				"rank_11": 5644.48469763
+			},
+			"mage": {
+				"rank_1": 357.019891573,
+				"rank_11": 5644.48469763
+			}
+		}
+	},
+	"weapon_enhancement_source_hashes": {
+		"design/classes.js": "788fbc38d1d684ff67c31cf2d3d51aba83e22022",
+		"design/items.js": "37e10f03315274fb027d9560c45f99dae918c84f",
+		"design/monsters.js": "220f039ef600c13281737d878c829d0b197ce5b8",
+		"design/upgrades.js": "c1a99cf4853cdc057cde649134a5f5c878668506",
+		"js/old_common_functions.js": "a4836c14aae59e67dedc6687b82dc174440f5350",
+		"node/server.js": "30f040b307727a6d2a64b5b6ecd61b6fe775a5ce"
+	},
+	"weapon_enhancement_evidence_hashes": {
+		"pinned_set_catalog_sha256": "330d2677bc5740406599074fe1232a3455fe3ab405a4709bbd814e7cb895ab46",
+		"frozen_loadout_policy_sha256": "020696b2504febf322531e9ab34035710516e36aa2ca3c1336a438cbbae8496a",
+		"enhancement_contribution_catalog_sha256": "54540618f1252345ca7aa49f0e716c4f288d63af6db734db75bbb8b92ad5ae46",
+		"weapon_rank_enhancement_contributions_sha256": "d9da00a705d9be31975337e0a94c82ca018d759326c387284fde48dc4e21550a"
+	},
 	"weapon_core_allocation_envelope": {
 		"formula": "floor(start_offensive_core * (end_offensive_core / start_offensive_core) ^ ((rank - 1) / 10))",
 		"fields": [
@@ -1240,39 +1559,55 @@
 			"int"
 		],
 		"endpoints": {
-			"start": 72,
+			"start": 65,
 			"end": 260
 		},
-		"growth_factor": 1.13700947856,
+		"growth_factor": 1.148698355,
 		"exact_values": [
-			72,
-			81.8646824565,
-			93.0809199125,
-			105.833888214,
-			120.334134052,
-			136.821051012,
-			155.566831867,
-			176.880962383,
-			201.115330807,
-			228.670037411,
+			65,
+			74.6653930748,
+			85.7680142002,
+			98.5215768232,
+			113.171573228,
+			130,
+			149.33078615,
+			171.5360284,
+			197.043153646,
+			226.343146457,
 			260
 		],
 		"ceilings": [
-			72,
-			81,
-			93,
-			105,
-			120,
-			136,
-			155,
-			176,
-			201,
-			228,
+			65,
+			74,
+			85,
+			98,
+			113,
+			130,
+			149,
+			171,
+			197,
+			226,
 			260
 		],
 		"integerization": "exact endpoints; floor interior ranks"
 	},
-	"weapon_enhancement_contract": "finite-positive-nondecreasing-attack-output",
+	"weapon_enhancement_contract": "class-split-hard-endpoints-with-diagnostic-intermediate-enhancement-surface",
+	"armor_offensive_fields": {
+		"types": [
+			"helmet",
+			"chest",
+			"pants",
+			"gloves",
+			"shoes"
+		],
+		"forbidden": [
+			"str",
+			"dex",
+			"int",
+			"stat"
+		],
+		"compensation_owner": "plan-04-weapon-numeric-fields"
+	},
 	"combat_outgoing_ttk_classification": "diagnostic",
 	"combat_survival_ratio_minimum": 0.8,
 	"combat_survival_ratio_maximum": 1.2,
@@ -1287,6 +1622,16 @@
 				"quantization",
 				"adjacent_band_separation",
 				"enhancement_monotonicity"
+			]
+		},
+		"weapon_intermediate_enhancement": {
+			"classification": "diagnostic",
+			"evidence_fixture": "weapon-acquisition-ranking.json",
+			"constraints": [
+				"target",
+				"actual",
+				"signed_error",
+				"contributions"
 			]
 		},
 		"legal_hand_layout": {

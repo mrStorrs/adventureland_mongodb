@@ -106,13 +106,14 @@ function renderRankedWeaponInfo(level) {
 	return context.modalHtml;
 }
 
-test("item guide base DPS matches the one-weapon combat calculation through +5", () => {
+test("item guide base DPS matches the one-weapon combat calculation through each full enhancement range", () => {
 	const data = loadBenchmarkData();
 	const calculators = loadPropertyCalculators(data);
 	const guideWeaponMetrics = loadGuideMetrics(data.skills);
 	for (const [weaponId, definition] of Object.entries(data.items)) {
 		if (definition.type !== "weapon" || !definition.wtype) continue;
-		for (let level = 0; level <= 5; level += 1) {
+		const maximumLevel = definition.compound ? 10 : definition.upgrade ? 12 : 0;
+		for (let level = 0; level <= maximumLevel; level += 1) {
 			const properties = calculators.current.calculate_item_properties({ name: weaponId, level });
 			const expected = calculateStats({
 				slots: { mainhand: { name: weaponId, level } },
@@ -139,8 +140,8 @@ test("item guide labels its player-facing hit damage, attack speed, and base DPS
 	assert.match(source, /"Full-Sheet Base DPS"/);
 });
 
-test("ranked item details calculate +0 through +5 metrics from the actual enhanced properties", () => {
-	for (let level = 0; level <= 5; level += 1) {
+test("ranked item details calculate +0 through +12 metrics from the actual enhanced properties", () => {
+	for (let level = 0; level <= 12; level += 1) {
 		const html = renderRankedWeaponInfo(level);
 		const hitDamage = Math.round((10 + level * 2) * (20 + level) / 20);
 		assert.match(html, new RegExp(`<metric name="Hit Damage">${hitDamage}<\\/metric>`), `+${level} hit damage`);

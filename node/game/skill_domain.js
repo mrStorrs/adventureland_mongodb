@@ -276,6 +276,11 @@ function normalizeItems(items, itemRequirements) {
 	const normalized = JSON.parse(JSON.stringify(items));
 	for (const bookId of ["wbook0", "wbook2", "wbook3", "wbook4", "wbook5", "wbook1", "wbook6", "wbook7", "wbook8", "wbook9", "wbookhs"]) {
 		if (!own(normalized, bookId)) throw fail("invalid_game_data", `Missing Priest book ${bookId}`, { item: bookId });
+		if (normalized[bookId].compound) {
+			if (normalized[bookId].upgrade) throw fail("invalid_game_data", `Priest book ${bookId} has conflicting enhancement kinds`, { item: bookId });
+			normalized[bookId].upgrade = normalized[bookId].compound;
+			delete normalized[bookId].compound;
+		}
 		normalized[bookId].type = "weapon";
 		normalized[bookId].wtype = "book";
 		normalized[bookId].damage_type = "magical";
@@ -285,9 +290,9 @@ function normalizeItems(items, itemRequirements) {
 				if (normalized[bookId].int === undefined) normalized[bookId].int = normalized[bookId].dex;
 				delete normalized[bookId].dex;
 			}
-			if (normalized[bookId].compound && normalized[bookId].compound.dex !== undefined) {
-				if (normalized[bookId].compound.int === undefined) normalized[bookId].compound.int = normalized[bookId].compound.dex;
-				delete normalized[bookId].compound.dex;
+			if (normalized[bookId].upgrade && normalized[bookId].upgrade.dex !== undefined) {
+				if (normalized[bookId].upgrade.int === undefined) normalized[bookId].upgrade.int = normalized[bookId].upgrade.dex;
+				delete normalized[bookId].upgrade.dex;
 			}
 		}
 	}
@@ -329,12 +334,13 @@ function validateItemRequirements(items, itemRequirements, registry, weaponOwner
 			book.wtype !== "book" ||
 			book.damage_type !== "magical" ||
 			book.projectile !== "pmagic" ||
+			!book.upgrade ||
+			book.compound !== undefined ||
 			(bookId === "wbookhs" &&
 				(!Number.isSafeInteger(book.int) || book.int < 0 ||
 					book.dex !== undefined ||
-					!book.compound ||
-					!Number.isSafeInteger(book.compound.int) || book.compound.int < 0 ||
-					book.compound.dex !== undefined))
+					!Number.isSafeInteger(book.upgrade.int) || book.upgrade.int < 0 ||
+					book.upgrade.dex !== undefined))
 		) {
 			throw fail("invalid_game_data", `Priest book ${bookId} is not a normalized main-hand weapon`, { item: bookId });
 		}

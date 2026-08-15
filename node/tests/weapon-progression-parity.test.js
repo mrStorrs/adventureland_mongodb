@@ -99,7 +99,7 @@ test("parity output is deterministic and reports per-row current-versus-legacy d
 	}
 });
 
-test("represented weapons retain their protected identity and finite +0 through +5 properties", () => {
+test("represented weapons retain their protected identity and finite full-range properties", () => {
 	const report = buildParityReport({ fixturePath: PARITY_FIXTURE_PATH, legacyBaselinePath: LEGACY_BASELINE_PATH });
 	const calculators = loadPropertyCalculators(report.data);
 	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
@@ -116,7 +116,8 @@ test("represented weapons retain their protected identity and finite +0 through 
 			assert.equal(Number(definition.int || 0), solved.solved_int, `${row.weapon_id} INT`);
 			assert.equal(Number(definition.dex || 0), solved.solved_dex, `${row.weapon_id} DEX`);
 		}
-		for (let upgradeLevel = 0; upgradeLevel <= 5; upgradeLevel += 1) {
+		const maximumLevel = definition.compound ? 10 : definition.upgrade ? 12 : 0;
+		for (let upgradeLevel = 0; upgradeLevel <= maximumLevel; upgradeLevel += 1) {
 			const properties = calculators.current.calculate_item_properties({ name: row.weapon_id, level: upgradeLevel });
 			for (const [property, value] of Object.entries(properties)) {
 				if (typeof value === "number") assert.ok(Number.isFinite(value), `${row.weapon_id}+${upgradeLevel} ${property}`);

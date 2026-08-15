@@ -160,15 +160,15 @@ test("catalog fixtures preserve starter identities and publish role profiles", (
 	assert.equal(items.blade.vit, undefined);
 	assert.equal(items.blade.for, undefined);
 	assert.ok(items.axe3.attack > items.blade.attack);
-	assert.equal(items.wbookhs.compound.dex, 6);
-	assert.equal(items.wbookhs.compound.int, undefined);
+	assert.equal(items.wbookhs.upgrade.dex, 6);
+	assert.equal(items.wbookhs.upgrade.int, undefined);
+	assert.equal(items.wbookhs.compound, undefined);
 	assert.equal(items.oozingterror.vit, -30);
 	assert.equal(items.daggerofthedead.vit, -6);
 	assert.equal(items.vstaff.armor, 120);
 	assert.ok(items.helmet.armor > (items.tshirt0.armor || 0));
-	assert.ok(items.tshirt0.int > 0);
-	assert.ok(items.tshirt1.dex > 0);
-	assert.ok(items.tshirt2.str > 0);
+	for (const itemId of ["tshirt0", "tshirt1", "tshirt2"])
+		for (const field of ["str", "dex", "int"]) assert.equal(Number(items[itemId][field] || 0), 0, `${itemId}:${field}`);
 	for (const target of weaponRanking.weapons) {
 		const definition = items[target.weapon_id];
 		assert.equal(definition.attack, target.solved_attack, `${target.weapon_id}:attack`);
@@ -218,7 +218,7 @@ test("the recorded catalog loadout calibrates the DEX crit ceiling", () => {
 		(total, item) => total + catalog.properties(item).crit,
 		0,
 	);
-	assert.equal(calculateDexCritCalibration(catalog.items, catalog.properties), 788);
+	assert.equal(calculateDexCritCalibration(catalog.items, catalog.properties), 740);
 	assert.equal(rawCrit, 9.625);
 	assert.equal(dexCrit(DEX_CRIT_CALIBRATION, DEX_CRIT_CALIBRATION), 80);
 });

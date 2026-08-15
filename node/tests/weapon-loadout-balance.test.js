@@ -86,8 +86,9 @@ test("offhand weapons never add range and published Priest books keep the book p
 	}
 });
 
-test("shared-rank weapon evidence covers every rank, weapon, and +0 through +5 state", () => {
+test("shared-rank weapon evidence covers every rank and full enhancement range", () => {
 	const fixture = loadoutFixture();
+	assert.equal(fixture.schema_version, 2);
 	assert.deepEqual(fixture.policy.shared_rank_requirements, [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]);
 	assert.deepEqual(fixture.policy.reference_levels, [1, 8, 15, 22, 29, 36, 42, 49, 56, 63, 70]);
 	assert.deepEqual(fixture.policy.rank_targets, ranking.policy.rank_targets);
@@ -104,13 +105,17 @@ test("shared-rank weapon evidence covers every rank, weapon, and +0 through +5 s
 	assert.equal(fixture.rank_bands.reduce((sum, row) => sum + row.sidegrade_count, 0), 17);
 	for (const row of fixture.rank_bands) {
 		assert.equal(row.progression_count, 6, `rank-${row.shared_rank} progression anchors`);
-		assert.ok(row.minimum >= row.lower_boundary - 1e-12, `rank-${row.shared_rank} lower boundary`);
-		assert.ok(row.maximum <= row.upper_boundary + 1e-12, `rank-${row.shared_rank} upper boundary`);
+		for (const skill of ranking.policy.combat_skills) {
+			const values = ranking.weapons.filter((weapon) => weapon.skill === skill && weapon.shared_rank === row.shared_rank).map((weapon) => weapon.solved_dps);
+			assert.ok(Math.min(...values) >= row.boundaries_by_skill[skill].lower - 1e-12, `${skill}:rank-${row.shared_rank} lower boundary`);
+			assert.ok(Math.max(...values) <= row.boundaries_by_skill[skill].upper + 1e-12, `${skill}:rank-${row.shared_rank} upper boundary`);
+		}
 	}
-	assert.equal(fixture.weapon_states.length, 498);
+	assert.equal(fixture.weapon_states.length, 1079);
 	for (const weapon of ranking.weapons) {
 		const states = fixture.weapon_states.filter((row) => row.weapon_id === weapon.weapon_id);
-		assert.deepEqual(states.map((row) => row.level), [0, 1, 2, 3, 4, 5], weapon.weapon_id);
+		const maximum = weapon.enhancement_kind === "compound" ? 10 : 12;
+		assert.deepEqual(states.map((row) => row.level), Array.from({ length: maximum + 1 }, (_, level) => level), weapon.weapon_id);
 		assert.ok(states.every((row) => Number.isFinite(row.attack_property) && row.attack_property > 0 && Number.isFinite(row.base_dps) && row.base_dps > 0), weapon.weapon_id);
 		for (let index = 1; index < states.length; index += 1)
 			assert.ok(states[index].base_dps >= states[index - 1].base_dps, `${weapon.weapon_id}+${states[index].level} Base DPS must be nondecreasing`);

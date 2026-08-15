@@ -340,13 +340,14 @@ test("complete combat catalog classifies 75 retained weapons, eight Priest place
 	assert.doesNotThrow(() => validateRankingFixture(evidence, generated));
 });
 
-test("the checked-in fixture stays compact while the exhaustive route graph is regenerated", () => {
+test("the checked-in fixture embeds enhancement evidence while the exhaustive route graph is regenerated", () => {
 	const { evidence, generated } = builtFixture();
 	const fixtureText = fs.readFileSync(RANKING_FIXTURE_PATH, "utf8");
 
-	assert.equal(evidence.schema_version, 4);
-	assert.ok(Buffer.byteLength(fixtureText) < 768 * 1024, "fixture must remain below 768 KiB");
-	assert.ok(fixtureText.split("\n").length < 25000, "fixture must remain below 25,000 lines");
+	assert.equal(evidence.schema_version, 5);
+	assert.ok(Buffer.byteLength(fixtureText) < 30 * 1024 * 1024, "fixture must remain below 30 MiB");
+	assert.ok(fixtureText.split("\n").length < 800000, "fixture must remain below 800,000 lines");
+	assert.equal(evidence.enhancement_full_sheet_rows.length, 66);
 	assert.equal(evidence.counts.weapon_routes, 5317);
 	assert.equal(evidence.counts.dependency_routes, 1042);
 	assert.equal(evidence.counts.route_sources, 620);
@@ -790,6 +791,8 @@ test("shared-rank allocation preserves coverage, compression, and bounded quanti
 	const { generated } = builtFixture();
 	const expectedRanks = Array.from({ length: 11 }, (_, index) => index + 1);
 	for (const skill of generated.policy.combat_skills) {
+		const targets = generated.policy.rank_targets_by_skill[skill];
+		const boundaries = generated.policy.rank_boundaries_by_skill[skill];
 		const rows = generated.weapons.filter((weapon) => weapon.skill === skill).sort((left, right) => left.rank - right.rank || left.weapon_id.localeCompare(right.weapon_id));
 		assert.deepEqual([...new Set(rows.map((row) => row.shared_rank))], expectedRanks, `${skill} shared-rank coverage`);
 		assert.deepEqual(rows.filter((row) => row.role === "progression").map((row) => row.shared_rank), expectedRanks, `${skill} progression anchors`);
@@ -798,9 +801,9 @@ test("shared-rank allocation preserves coverage, compression, and bounded quanti
 		for (const rank of [...new Set(rows.map((row) => row.rank))].sort((a, b) => a - b)) {
 			const group = rows.filter((row) => row.rank === rank);
 			assert.ok(group.every((row) => row.assigned_requirement === generated.policy.shared_rank_requirements[rank - 1]), `${skill} requirement rank ${rank}`);
-			assert.ok(group.every((row) => row.assigned_dps_target === generated.policy.rank_targets[rank - 1]), `${skill} target rank ${rank}`);
-			const lower = rank === 1 ? generated.policy.rank_targets[0] : generated.policy.rank_boundaries[rank - 2];
-			const upper = rank === generated.policy.shared_rank_count ? generated.policy.rank_targets.at(-1) : generated.policy.rank_boundaries[rank - 1];
+			assert.ok(group.every((row) => row.assigned_dps_target === targets[rank - 1]), `${skill} target rank ${rank}`);
+			const lower = rank === 1 ? targets[0] : boundaries[rank - 2];
+			const upper = rank === generated.policy.shared_rank_count ? targets.at(-1) : boundaries[rank - 1];
 			assert.ok(Math.min(...group.map((row) => row.solved_dps)) >= lower - 1e-12, `${skill} lower boundary rank ${rank}`);
 			assert.ok(Math.max(...group.map((row) => row.solved_dps)) <= upper + 1e-12, `${skill} upper boundary rank ${rank}`);
 			assert.ok(Math.min(...group.map((row) => row.assigned_requirement)) >= previous.requirement, `${skill} requirement rank ${rank}`);
@@ -817,8 +820,8 @@ test("shared-rank allocation preserves coverage, compression, and bounded quanti
 			assert.ok(retained[index].shared_rank >= retained[index - 1].shared_rank, `${skill} historical compression inversion`);
 		assert.doesNotThrow(() => validateAllocatedRows(rows));
 	}
-	assert.equal(generated.policy.rank_targets[0], generated.policy.full_sheet_endpoints.start.base_dps);
-	assert.equal(generated.policy.rank_targets.at(-1), generated.policy.full_sheet_endpoints.end.base_dps);
+	assert.equal(generated.policy.rank_targets[0], 50);
+	assert.equal(generated.policy.rank_targets.at(-1), 450);
 	for (let index = 1; index < generated.policy.rank_targets.length; index += 1)
 		assert.ok(Math.abs(generated.policy.rank_targets[index] / generated.policy.rank_targets[index - 1] - generated.policy.growth_factor) < 1e-9);
 
@@ -924,6 +927,7 @@ test("pinned requirements and attacks apply without protected-field drift", () =
 		assert.deepEqual(data.items[weaponId].progression, progressionMap[weaponId].progression, `${weaponId} published Guide progression metadata`);
 		const enhancement = progressionMap[weaponId][target.enhancement_kind];
 		assert.ok(enhancement, `${weaponId} ${target.enhancement_kind} publication`);
+		assert.equal(progressionMap[weaponId][target.enhancement_kind === "upgrade" ? "compound" : "upgrade"], undefined, `${weaponId} alternate enhancement kind`);
 		assert.deepEqual(Object.keys(enhancement), ["attack"], `${weaponId} publication owns only enhancement attack growth`);
 		assert.equal(enhancement.attack, target.solved_attack_growth, `${weaponId} attack growth`);
 		const maximumLevel = target.enhancement_kind === "compound" ? 10 : 12;
@@ -987,12 +991,12 @@ test("normal execution is read-only across production inputs and fixture writes 
 	assert.match(source, /fs\.writeFileSync\(RANKING_FIXTURE_PATH, stableJson\(pinned\)\)/);
 	assert.doesNotMatch(source, /(?:unlinkSync|renameSync|rmSync|deleteMany|dropDatabase|mongoose|mongodb)/);
 
-	const result = spawnSync(process.execPath, [tool, "--json"], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+	const result = spawnSync(process.execPath, [tool, "--json"], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
 	assert.equal(result.status, 0, result.stderr);
 	assert.equal(JSON.parse(result.stdout).weapons.length, 83);
-	const markdown = spawnSync(process.execPath, [tool], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+	const markdown = spawnSync(process.execPath, [tool], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
 	assert.equal(markdown.status, 0, markdown.stderr);
-	const repeatedMarkdown = spawnSync(process.execPath, [tool], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+	const repeatedMarkdown = spawnSync(process.execPath, [tool], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
 	assert.equal(repeatedMarkdown.status, 0, repeatedMarkdown.stderr);
 	assert.equal(repeatedMarkdown.stdout, markdown.stdout, "default Markdown bytes");
 	assert.equal(markdown.stdout, markdownReport(builtFixture().generated), "default CLI report contract");
