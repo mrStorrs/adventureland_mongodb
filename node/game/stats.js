@@ -118,7 +118,7 @@ function itemProperties(item, definition, getProperties) {
 
 function applyProfile(stats, profile, item) {
 	if (!profile) return;
-	stats.range = item.range === undefined ? profile.range : item.range;
+	stats.range = profile.range;
 	stats.projectile = item.projectile === undefined ? profile.projectile : item.projectile;
 	stats.damage_type = item.damage_type === undefined ? profile.damage_type : item.damage_type;
 	stats.frequency = profile.frequency;
@@ -131,9 +131,13 @@ function applyProfile(stats, profile, item) {
 
 function applySetProperties(stats, slots, items, sets, getProperties) {
 	const counts = {};
-	for (const item of Object.values(slots || {})) {
-		if (!item || !items[item.name] || !items[item.name].set) continue;
-		const set = items[item.name].set;
+	for (const slot of ["helmet", "chest", "pants", "gloves", "shoes"]) {
+		const item = slots && slots[slot];
+		const definition = item && items[item.name];
+		if (!definition || !definition.set || !sets || !sets[definition.set]) continue;
+		const members = sets[definition.set].bonus_items && sets[definition.set].bonus_items[slot];
+		if (!Array.isArray(members) || !members.includes(item.name)) continue;
+		const set = definition.set;
 		counts[set] = (counts[set] || 0) + 1;
 	}
 	stats.sets = counts;

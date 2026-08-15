@@ -137,19 +137,56 @@ no accuracy stat. Derived values are recomputed during the normal login and
 equipment-refresh paths, so existing item instances do not require a database
 reset or manual respec.
 
+## Acquisition-ranked equipment
+
+Base combat equipment now follows the reviewed acquisition frontier instead of
+legacy item tiers. Nineteen named armor themes are complete five-slot sets
+(helmet, chest, pants, gloves, and shoes) with Heavy, Medium, or Light weight
+identity. Weights are universally wearable and provide different stat
+tradeoffs; each theme has cumulative armor-only bonuses at two, three, four,
+and five equipped pieces. Weapons, offhands, capes, accessories, and orbs may
+keep a theme for presentation but do not increment an armor-set bonus. The
+Monster Hunter Paladin theme is included, and 25 newly filled armor slots are
+marked as placeholder artwork until dedicated art is available.
+
+Standalone armor and capes are independent sidegrades. Combat offhands
+(shields, quivers, sources, and miscellaneous hand items) use acquisition
+ranked base values and grouped highest-compatible-skill requirements; legal
+one-hand, dual-wield, two-hand, and offhand layouts are checked together so an
+easier option cannot strictly dominate a harder one. Jewelry and orbs remain
+outside this rebalance, and non-weapon enhancement growth is preserved.
+
+The server and Guide evaluate grouped requirements such as “Highest Warrior or
+Paladin Lv. 50” consistently. Existing stored items need no migration or
+respec; the reviewed requirement is enforced on a future equip or re-equip.
+
 ## Weapon progression
 
-Legal visible combat weapons for Warrior, Paladin, Mage, Priest, Ranger, and
-Rogue now use their easiest intended acquisition route to assign a semantic
-rank. Monster routes above the permanent-monster median carry an additional
-progression-access cost, so a difficult source is not treated as easy merely
-because its drop chance is better. Within each skill, harder ranks receive no
-lower requirement and no lower unenhanced Guide Base DPS; the existing
-per-skill requirement and DPS slots are redistributed rather than expanded.
-Weapon ownership, cadence, attributes,
-enhancement inputs, and +1 through +4 behavior remain unchanged, and the five
-ignored combat weapons stay unchanged. Deliberate TTK and broader weapon
-balancing are separate work.
+The visible combat catalog contains 83 weapons: the 75 retained acquisition
+decisions plus eight permanent Priest book placeholders (`wbook2` through
+`wbook9`). Warrior, Paladin, Mage, Priest, Ranger, and Rogue each expose the
+same eleven shared ranks with skill requirements from level 1 through 99.
+Historical acquisition ranks compress monotonically into those shared ranks;
+the easiest item at an occupied rank is the progression anchor and additional
+items are labeled sidegrades. Acquisition route and effort remain independent
+of the regenerated numeric fields.
+
+Weapon Base DPS is calculated from the neutral full sheet at the rank's pinned
+reference level. The lowest valid level-1 starter sheet and the highest valid
+level-70 Warrior retained-mainhand sheet are the endpoints, with geometric
+interpolation between them and deterministic integer quantization. Class,
+armor, cape, compatible offhand, and frozen accessory contributions are part of
+that sheet; active abilities, rotations, buffs, mitigation, and random rolls
+are excluded. Enhancement levels do not change a weapon's rank, and retained
+identity, cadence, range, projectile, special effects, and non-attack
+enhancement fields remain intact. Effective range uses the profile base plus
+the item's additive range exactly once.
+
+The eight Priest placeholders are visible permanent magical books normalized to
+the existing `book`/`pmagic` contract and reuse existing book assets. The Guide
+shows each weapon's shared rank, historical rank, progression role, reference
+level, Hit Damage, Attacks / Sec, and Base DPS; it does not present historical
+acquisition rank as current power.
 
 In the in-game Guide → Items view, visible weapons are grouped under Warrior,
 Paladin, Mage, Priest, Ranger, and Rogue in combat-profile order. Each group is
@@ -167,6 +204,14 @@ respec step. To inspect the deterministic diagnostic chart locally:
 ```sh
 node tools/weapon-progression-parity.js --format=markdown
 ```
+
+The checked-in equipment fixtures also cover all 129 monster definitions and
+canonical loadouts. Outgoing time-to-defeat rows are diagnostics; incoming
+ordinary-solo survival remains a hard 0.80–1.20 ratio against its pinned
+reference. Monster definitions and progression-time data are not rewritten by
+this balance pass. The former XP/time benchmark is archived under
+`node/tests/obsolete/` and is excluded from the default test suite, so its
+duration output is historical rather than a current release authority.
 
 ## Merchant enhancement progression
 

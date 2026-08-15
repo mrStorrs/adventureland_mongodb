@@ -74,6 +74,19 @@ function itemDefinition(item, items) {
 
 function requirementFailure(item, requirements, skills) {
 	for (const requirement of requirements || []) {
+		if (requirement.any_skill) {
+			const actual_by_skill = Object.fromEntries(
+				requirement.any_skill.map((skill) => [skill, Number(skills && skills[skill] && skills[skill].level) || 0]),
+			);
+			if (!Object.values(actual_by_skill).some((actual) => actual >= requirement.level)) {
+				return equipmentError(
+					"skill_level_required",
+					`Highest ${requirement.any_skill.join(" or ")} skill level ${requirement.level} is required`,
+					{ item, any_skill: requirement.any_skill, required: requirement.level, actual_by_skill },
+				);
+			}
+			continue;
+		}
 		const actual = skills && skills[requirement.skill] ? skills[requirement.skill].level : 0;
 		if (actual < requirement.level) {
 			return equipmentError(

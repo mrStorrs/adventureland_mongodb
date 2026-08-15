@@ -194,7 +194,7 @@ var drops = {
 		],
 		tiger: [
 			//every hit
-			[0.1, "tigerhelmet"],
+			[0.1, "open", "tigerarmorbox"],
 			[0.001, "tigercape"],
 			[0.001, "tigerstone"],
 			[0.01, "tigershield"],
@@ -441,7 +441,7 @@ var drops = {
 			[200, "candy1"],
 			[200, "candy1"],
 			[10, "frankypants"],
-			[1.0 / 2000, "mpxgloves"],
+			[1.0 / 2000, "open", "mpxarmorbox"],
 			[1.0 / 5000, "ukey"],
 			[1.0 / 8000, "cxjar", 1, "marmor3h"],
 		],
@@ -526,7 +526,7 @@ var drops = {
 			[1.0 / 20000, "vring"],
 			[1.0 / 2000, "vorb"],
 			[1.0 / 1000, "vcape"],
-			[1.0 / 10, "vattire"],
+			[1.0 / 10, "open", "vampirea1armorbox"],
 			[0.001, "vblood"],
 		],
 		a2: [
@@ -537,7 +537,7 @@ var drops = {
 			[0.001, "vblood"],
 		],
 		a3: [
-			[1.0 / 10, "vgloves"],
+			[1.0 / 10, "open", "vampirea3armorbox"],
 			[1.0 / 200, "vhammer"],
 			[1.0 / 200, "vhammer"],
 			[0.001, "vblood"],
@@ -939,7 +939,9 @@ var drops = {
 		//[1,"bunnyears"],
 		//[1,"pyjamas"],
 		[1, "eears"],
-		[1, "epyjamas"],
+		[1.0 / 3, "epyjamas"],
+		[1.0 / 3, "epants"],
+		[1.0 / 3, "egloves"],
 		[1, "ecape"],
 		[1, "eslippers"],
 		[0.5, "carrotsword"],
@@ -1207,10 +1209,36 @@ var drops = {
 		[0.11, "xgloves"],
 		[0.05, "xboots"],
 
-		[0.005, "fury"],
+		[0.001, "fury"],
+		[0.001, "furyarmor"],
+		[0.001, "fallen"],
+		[0.001, "furygloves"],
+		[0.001, "furyboots"],
 		[0.005, "starkillers"],
 
 		[14, "shoes1"],
+	],
+	tigerarmorbox: [
+		[1, "tigerhelmet"],
+		[1, "tigerarmor"],
+		[1, "tigerpants"],
+		[1, "tigergloves"],
+		[1, "tigerboots"],
+	],
+	vampirea1armorbox: [
+		[1, "vattire"],
+		[1, "vpants"],
+	],
+	vampirea3armorbox: [
+		[1, "vgloves"],
+		[1, "vhelmet"],
+	],
+	mpxarmorbox: [
+		[1, "mpxgloves"],
+		[1, "mpxhelmet"],
+		[1, "mpxarmor"],
+		[1, "mpxpants"],
+		[1, "mpxboots"],
 	],
 	armorx: [
 		[1, "hhelmet"], //tier3
@@ -1228,7 +1256,9 @@ var drops = {
 		[70, "open", "armorx"],
 		[20, "scroll3"],
 		[4, "cscroll3"],
-		[1, "warpvest"],
+		[1 / 3, "warpvest"],
+		[1 / 3, "legendhelmet"],
+		[1 / 3, "legendboots"],
 		[1, "scroll4"],
 	],
 	test: [
@@ -1462,7 +1492,7 @@ for (var i = 0; i < keys_to_fix.length; i++) {
 
 // Populate glitch drop table
 for (var name in items) {
-	if (!items[name]["ignore"] && !items[name]["exclusive"]) {
+	if (!items[name]["ignore"] && !items[name]["exclusive"] && !items[name]["placeholder_art"]) {
 		if (items[name]["grades"] && ((items[name]["upgrade"] && items[name]["grades"][2] < 8) || (items[name]["compound"] && items[name]["grades"][2] < 3))) {
 			drops["glitch"].push([0.1, name]);
 		} else if (items[name]["grades"] && items[name]["grades"][2] == 0) {
@@ -1480,7 +1510,7 @@ for (var name in items) {
 	if (!("g" in items[name])) {
 		console.log("drops.js: missing 'g' for", name);
 	}
-	if (!items[name]["ignore"] && !items[name]["exclusive"]) {
+	if (!items[name]["ignore"] && !items[name]["exclusive"] && !items[name]["placeholder_art"]) {
 		if ((items[name]["grades"] && ((items[name]["upgrade"] && items[name]["grades"][2] < 8) || (items[name]["compound"] && items[name]["grades"][2] < 3))) || (items[name]["g"] || 0) > 5000000) {
 			drops["lglitch"].push([0.01, name]);
 		} else if (items[name]["grades"] && items[name]["grades"][2] == 0) {

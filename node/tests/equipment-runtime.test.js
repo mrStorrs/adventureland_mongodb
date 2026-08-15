@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const { applyEquipmentTransaction } = require("../game/equipment_runtime");
+const { planEquipmentTransaction } = require("../game/equipment");
 
 function markStyleEffect(target, value) {
 	Object.defineProperty(target, "progression_style_effect", {
@@ -164,4 +165,24 @@ test("style invalidation is a no-op when the active skill does not change", () =
 	assert.deepEqual(player.s, { active: { style_bound: true, source_character_id: "source", source_skill: "warrior" } });
 	assert.deepEqual(remote.s, { active: { style_bound: true, source_character_id: "source", source_skill: "warrior" } });
 	assert.deepEqual(resent, []);
+});
+
+test("equipment runtime accepts a highest-skill armor gate and reports each failed candidate", () => {
+	const items = { pairedhelm: { type: "helmet" } };
+	const requirements = { pairedhelm: [{ any_skill: ["warrior", "paladin"], level: 2 }] };
+	const passed = planEquipmentTransaction({
+		player: { slots: {}, items: [{ name: "pairedhelm" }] },
+		item: { name: "pairedhelm" },
+		itemIndex: 0,
+		items,
+		itemRequirements: requirements,
+		skills: { warrior: { level: 1 }, paladin: { level: 2 } },
+	});
+	assert.equal(passed.slots.helmet.name, "pairedhelm");
+	assert.throws(
+		() => planEquipmentTransaction({
+			player: { slots: {}, items: [{ name: "pairedhelm" }] }, item: { name: "pairedhelm" }, itemIndex: 0, items, itemRequirements: requirements, skills: { warrior: { level: 1 } },
+		}),
+		(error) => error.code === "skill_level_required" && error.item === "pairedhelm" && error.skill === undefined && error.required === 2 && error.actual_by_skill.warrior === 1 && error.actual_by_skill.paladin === 0,
+	);
 });

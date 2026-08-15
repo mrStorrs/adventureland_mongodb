@@ -194,3 +194,20 @@ test("requirements and ability gates fail closed", () => {
 		code: "invalid_ability_catalog",
 	});
 });
+
+test("any-skill requirements are canonical, duplicate-free, and compatible with simple clauses", () => {
+	assert.doesNotThrow(() => validateRequirements("heavy", [{ any_skill: ["warrior", "paladin"], level: 42 }], registry));
+	assert.doesNotThrow(() => validateRequirements("mixed", [{ any_skill: ["warrior", "paladin"], level: 42 }, { skill: "ranger", level: 9 }], registry));
+	for (const requirements of [
+		[{ any_skill: [], level: 1 }],
+		[{ any_skill: ["paladin", "warrior"], level: 1 }],
+		[{ any_skill: ["warrior", "warrior"], level: 1 }],
+		[{ any_skill: ["warrior", "missing"], level: 1 }],
+		[{ skill: "warrior", any_skill: ["paladin"], level: 1 }],
+		[{ any_skill: ["warrior"], level: 1, class: "warrior" }],
+	]) {
+		assert.throws(() => validateRequirements("broken_any_skill", requirements, registry), {
+			code: "invalid_equipment_requirements",
+		});
+	}
+});

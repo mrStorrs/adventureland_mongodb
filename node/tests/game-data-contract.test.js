@@ -2,6 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const childProcess = require("node:child_process");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -17,8 +18,12 @@ const {
 	validateRequirements,
 } = require("../game/skill_domain");
 const { RANKING_FIXTURE_PATH, loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
+const { extractFunctionBody } = require("./source-extract");
 
 const designRoot = path.resolve(__dirname, "../../design");
+const EQUIPMENT_ACQUISITION_FIXTURE_PATH = path.join(__dirname, "fixtures/equipment-acquisition-ranking.json");
+const EQUIPMENT_BALANCE_CONTRACT_PATH = path.join(__dirname, "fixtures/equipment-balance-contract.json");
+const ARMOR_SET_BALANCE_FIXTURE_PATH = path.join(__dirname, "fixtures/armor-set-balance.json");
 
 function loadDesign(files) {
 	const context = { console, multipliers: { shells_to_gold: 1 } };
@@ -32,6 +37,24 @@ function plain(value) {
 	return JSON.parse(JSON.stringify(value));
 }
 
+function canonical(value) {
+	if (Array.isArray(value)) return value.map(canonical);
+	if (!value || typeof value !== "object") return value;
+	return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+}
+
+function canonicalHash(value) {
+	return crypto.createHash("sha256").update(JSON.stringify(canonical(plain(value)))).digest("hex");
+}
+
+function extractBuilderStatement(source, declaration, fromIndex = 0) {
+	const start = source.indexOf(declaration, fromIndex);
+	assert.notEqual(start, -1, declaration);
+	const end = source.indexOf(");", start) + 2;
+	assert.ok(end > start, declaration);
+	return source.slice(start, end);
+}
+
 function loadRaw() {
 	return loadDesign([
 		"conditions.js",
@@ -42,6 +65,28 @@ function loadRaw() {
 		"abilities.js",
 		"character.js",
 	]);
+}
+
+function loadPinnedItemsAndRequirements(commit) {
+	const context = { console, multipliers: { shells_to_gold: 1 } };
+	vm.createContext(context);
+	for (const file of ["item_requirements.js", "items.js"]) {
+		const source = childProcess.execFileSync("git", ["show", `${commit}:design/${file}`], { cwd: path.resolve(designRoot, ".."), encoding: "utf8" });
+		vm.runInContext(source, context, { filename: `pinned-${file}` });
+	}
+	return context;
+}
+
+function loadEquipmentAcquisitionFixture() {
+	return JSON.parse(fs.readFileSync(EQUIPMENT_ACQUISITION_FIXTURE_PATH, "utf8"));
+}
+
+function loadEquipmentBalanceContract() {
+	return JSON.parse(fs.readFileSync(EQUIPMENT_BALANCE_CONTRACT_PATH, "utf8"));
+}
+
+function loadArmorSetBalanceFixture() {
+	return JSON.parse(fs.readFileSync(ARMOR_SET_BALANCE_FIXTURE_PATH, "utf8"));
 }
 
 function loadAll() {
@@ -89,8 +134,8 @@ test("real design catalogs load with the canonical registry and curve", () => {
 		],
 	);
 	assert.equal(Object.keys(data.abilities).length, 105);
-	assert.equal(Object.keys(data.items).length, 529);
-	assert.equal(Object.keys(data.item_requirements).length, 287);
+	assert.equal(Object.keys(data.items).length, 562);
+	assert.equal(Object.keys(data.item_requirements).length, 320);
 	for (const skill of ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant"])
 		assert.equal(data.items.tigerhelmet[skill], undefined, `normalized item retained ${skill} modifier`);
 	assert.equal(data.character.appearances.length, 28);
@@ -189,6 +234,10 @@ test("item normalization is independent, non-mutating, and precedence-safe", () 
 		stealthcape: [{ skill: "rogue", level: 1 }],
 		rod: [{ skill: "merchant", level: 16 }],
 	};
+	for (const bookId of ["wbook2", "wbook3", "wbook4", "wbook5", "wbook6", "wbook7", "wbook8", "wbook9"]) {
+		rawItems[bookId] = { type: "source", name: bookId, compound: {} };
+		requirements[bookId] = [{ skill: "priest", level: 10 }];
+	}
 	const before = plain(rawItems);
 	const normalized = normalizeItems(rawItems, requirements);
 	assert.notStrictEqual(normalized, rawItems);
@@ -212,36 +261,20 @@ test("raw non-weapon sources and reviewed acquisition assignments independently 
 	const data = loadAll();
 	const rankedRequirements = new Map(loadRankingFixture(RANKING_FIXTURE_PATH).weapons.map((weapon) => [weapon.weapon_id, [{ skill: weapon.skill, level: weapon.assigned_requirement }]]));
 	const cases = {
-		helmetsource: ["helmet", 1, [{ skill: "warrior", level: 1 }]],
-		tierboundary20: ["xmashat", 1.5, [{ skill: "merchant", level: 20 }]],
-		tierboundary40: ["mageshood", 2, [{ skill: "mage", level: 40 }]],
-		tierboundary50: ["mrnhat", 2.25, [{ skill: "ranger", level: 50 }]],
-		tierboundary60: ["sweaterhs", 2.5, [{ skill: "merchant", level: 60 }]],
-		tierboundary70: ["mcboots", 2.75, [{ skill: "merchant", level: 70 }]],
-		tierboundary80: ["hhelmet", 3, [{ skill: "warrior", level: 80 }]],
-		tierboundary90: ["handofmidas", 3.5, [{ skill: "merchant", level: 90 }]],
-		tierboundary95: ["xhelmet", 4, [{ skill: "warrior", level: 95 }]],
+		helmetsource: ["helmet", 1, [{ any_skill: ["ranger", "rogue"], level: 13 }]],
+		tierboundary20: ["xmashat", 1.5, [{ any_skill: ["ranger", "rogue"], level: 8 }]],
+		tierboundary40: ["mageshood", 2, [{ any_skill: ["mage", "priest"], level: 40 }]],
+		tierboundary50: ["mrnhat", 2.25, [{ any_skill: ["ranger", "rogue"], level: 71 }]],
+		tierboundary60: ["sweaterhs", 2.5, [{ any_skill: ["ranger", "rogue"], level: 8 }]],
+		tierboundary70: ["mcboots", 2.75, [{ skill: "merchant", level: 71 }]],
+		tierboundary80: ["hhelmet", 3, [{ any_skill: ["warrior", "paladin"], level: 34 }]],
+		tierboundary90: ["handofmidas", 3.5, [{ any_skill: ["mage", "priest"], level: 31 }]],
+		tierboundary95: ["xhelmet", 4, [{ any_skill: ["warrior", "paladin"], level: 58 }]],
 		weaponowner: ["weaver", 1.75, rankedRequirements.get("weaver")],
-		offhandowner: ["shield", 2, [{ skill: "paladin", level: 40 }]],
+		offhandowner: ["shield", 2, [{ any_skill: ["warrior", "paladin", "priest"], level: 26 }]],
 		toolowner: ["rod", 1, [{ skill: "merchant", level: 16 }]],
-		hybrid: [
-			"fury",
-			1.5,
-			[
-				{ skill: "warrior", level: 20 },
-				{ skill: "paladin", level: 20 },
-				{ skill: "ranger", level: 20 },
-				{ skill: "rogue", level: 20 },
-			],
-		],
-		curatedhybrid: [
-			"starkillers",
-			3,
-			[
-				{ skill: "mage", level: 80 },
-				{ skill: "priest", level: 80 },
-			],
-		],
+		hybrid: ["fury", 1.5, [{ any_skill: ["warrior", "paladin"], level: 91 }]],
+		curatedhybrid: ["starkillers", 3, [{ any_skill: ["warrior", "paladin"], level: 58 }]],
 	};
 	for (const [, [itemId, tier, expected]] of Object.entries(cases)) {
 		assert.equal(raw.items[itemId].tier, tier, itemId);
@@ -326,7 +359,7 @@ test("progression validators reject every special-contract regression with diagn
 	);
 	assert.throws(
 		() => normalizeItems({ wbook0: {} }, {}),
-		(error) => error.code === "invalid_game_data" && error.item === "wbook1",
+		(error) => error.code === "invalid_game_data" && error.item === "wbook2",
 	);
 	const duplicateStarter = plain(data.character);
 	duplicateStarter.starter.weapons[0] = "mace";
@@ -353,7 +386,7 @@ test("progression validators reject every special-contract regression with diagn
 		(error) => error.code === "invalid_game_data" && /appearance/.test(error.message),
 	);
 	const badBookScaling = plain(data.items);
-	badBookScaling.wbookhs.compound.int = 1;
+	badBookScaling.wbookhs.compound.int = -1;
 	assert.throws(
 		() => validateItemRequirements(badBookScaling, plain(data.item_requirements), data.skills, ownerMap),
 		(error) => error.code === "invalid_game_data" && error.item === "wbookhs",
@@ -379,9 +412,9 @@ test("progression validators reject every special-contract regression with diagn
 		(error) => error.code === "invalid_game_data" && error.item === "helmet" && /Legacy class/.test(error.message),
 	);
 	for (const [field, value] of [
-		["int", 15],
+		["int", -1],
 		["dex", 16],
-		["compound", { int: 5 }],
+		["compound", { int: -1 }],
 		["damage_type", "physical"],
 		["projectile", "magic"],
 	]) {
@@ -395,128 +428,126 @@ test("progression validators reject every special-contract regression with diagn
 	}
 });
 
-test("every equippable item has the explicit all-of requirement snapshot", () => {
+test("every equippable item has an explicit requirement and armor publishes grouped highest-skill gates", () => {
 	const data = loadAll();
+	const fixture = loadEquipmentAcquisitionFixture();
+	const balanceContract = loadEquipmentBalanceContract();
+	const pinned = loadPinnedItemsAndRequirements("76a50408fac4a7b1df1e1906ed631ac013b1123c");
+	const requirementSource = fs.readFileSync(path.join(designRoot, "item_requirements.js"), "utf8");
+	const itemSource = fs.readFileSync(path.join(designRoot, "items.js"), "utf8");
+	assert.doesNotMatch(requirementSource, /equipment_armor_requirement_weights|equipment_set_requirement_members/);
+	assert.match(requirementSource, /function finalize_equipment_requirements\(/);
+	assert.match(itemSource, /finalize_equipment_requirements\(items,sets,item_requirements,equipment_set_requirement_levels,equipment_standalone_unlocks\);/);
 	const equippable = Object.entries(data.items).filter(([, item]) => equippableTypes.has(item.type));
-	assert.equal(equippable.length, 287);
-	const counts = {};
+	assert.equal(equippable.length, 320);
 	for (const [id, item] of equippable) {
 		assert.deepEqual(plain(item.requirements), plain(data.item_requirements[id]), id);
 		validateRequirements(id, item.requirements, data.skills);
-		const key = item.requirements.map((requirement) => requirement.skill).join("+");
-		counts[key] = (counts[key] || 0) + 1;
 	}
-	assert.deepEqual(counts, {
-		warrior: 60,
-		paladin: 30,
-		mage: 47,
-		priest: 10,
-		ranger: 38,
-		rogue: 30,
-		merchant: 36,
-		"ranger+rogue": 6,
-		"warrior+ranger": 4,
-		"warrior+paladin+ranger+rogue": 1,
-		"warrior+mage+ranger": 11,
-		"warrior+rogue": 8,
-		"mage+priest": 4,
-		"mage+ranger": 2,
-	});
-	const snapshot = Object.fromEntries(
-		Object.keys(data.item_requirements)
-			.sort()
-			.map((id) => [id, data.item_requirements[id]]),
-	);
-	assert.equal(
-		crypto.createHash("sha256").update(JSON.stringify(snapshot)).digest("hex"),
-		"cd07f41ece3dca3da415bf786b5f915597df8fe8589e3cc843f3fb003aa43e1b",
-	);
-	assert.deepEqual(
-		Object.keys(data.item_requirements)
-			.filter((id) => data.item_requirements[id].length > 1)
-			.sort(),
-		[
-			"cdragon",
-			"cring",
-			"ctristone",
-			"cyber",
-			"ecape",
-			"eears",
-			"epyjamas",
-			"eslippers",
-			"fallen",
-			"fierygloves",
-			"fury",
-			"goldenpowerglove",
-			"mbelt",
-			"mcape",
-			"orbg",
-			"oxhelmet",
-			"powerglove",
-			"ringsj",
-			"sanguine",
-			"sbelt",
-			"skullamulet",
-			"snring",
-			"starkillers",
-			"tigercape",
-			"tigerhelmet",
-			"tigerstone",
-			"tristone",
-			"vattire",
-			"vboots",
-			"vcape",
-			"vgloves",
-			"vorb",
-			"vring",
-			"warmscarf",
-			"warpvest",
-			"wingedboots",
-		],
-	);
-	assert.equal(data.items.stealthcape.tier, undefined);
-	assert.deepEqual(plain(data.item_requirements.stealthcape), [{ skill: "rogue", level: 1 }]);
-	assert.deepEqual(plain(data.item_requirements.fury), [
-		{ skill: "warrior", level: 20 },
-		{ skill: "paladin", level: 20 },
-		{ skill: "ranger", level: 20 },
-		{ skill: "rogue", level: 20 },
+	const armorTypes = new Set(["helmet", "chest", "pants", "gloves", "shoes", "cape"]);
+	const setUnlocks = new Map(Object.values(fixture.ladders.armor_sets).flat().map((row) => [row.set_id, row.unlock]));
+	const setWeights = new Map(Object.entries(fixture.ladders.armor_set_details).map(([setId, detail]) => [setId, detail.weight]));
+	const itemUnlocks = new Map([
+		...Object.values(fixture.ladders.standalone_armor).flat(),
+		...Object.values(fixture.ladders.capes).flat(),
+	].map((row) => [row.item_id, row.unlock]));
+	const eventOnlyItems = new Set([
+		...fixture.optional_event_rows.map((row) => row.item_id),
+		...fixture.excluded.map((row) => row.target),
 	]);
+	const itemWeights = new Map();
+	for (const [weight, itemIds] of Object.entries(balanceContract.weight_mapping)) {
+		for (const itemId of itemIds) itemWeights.set(itemId, weight);
+	}
+	for (const item of balanceContract.planned_items) itemWeights.set(item.item_id, item.weight);
+	const pairedSkills = {
+		heavy: ["warrior", "paladin"],
+		medium: ["ranger", "rogue"],
+		light: ["mage", "priest"],
+	};
+	for (const [id, item] of Object.entries(data.items)) {
+		if (!armorTypes.has(item.type)) continue;
+		const expectedWeight = item.set ? setWeights.get(item.set) : itemWeights.get(id);
+		assert.ok(expectedWeight, `missing reviewed weight for ${id}`);
+		assert.equal(item.armor_weight, expectedWeight, id);
+		const requirement = data.item_requirements[id][0];
+		const expectedUnlock = item.set
+			? setUnlocks.get(item.set)
+			: itemUnlocks.get(id) || (() => {
+				assert.ok(eventOnlyItems.has(id), `missing reviewed ladder row for ${id}`);
+				return Math.max(...pinned.item_requirements[id].map((clause) => clause.level || 1));
+			})();
+		assert.ok(Number.isInteger(expectedUnlock), `missing reviewed unlock for ${id}`);
+		const expectedRequirement = item.set === "mmerchant"
+			? [{ skill: "merchant", level: expectedUnlock }]
+			: [{ any_skill: pairedSkills[item.armor_weight], level: expectedUnlock }];
+		assert.deepEqual(plain(data.item_requirements[id]), expectedRequirement, id);
+	}
+	const armorRequirementSnapshot = Object.fromEntries(
+		Object.entries(data.items)
+			.filter(([, item]) => armorTypes.has(item.type))
+			.sort(([left], [right]) => left.localeCompare(right))
+			.map(([id, item]) => [id, { armor_weight: item.armor_weight, requirements: item.requirements }]),
+	);
+	assert.equal(canonicalHash(armorRequirementSnapshot), "8ddef196a5daa1555c5c6c955877abe22d794689edf7c07916a640ea7152d77a");
+	for (const [id, item] of Object.entries(data.items)) {
+		if (!["amulet", "earring", "ring", "belt", "orb"].includes(item.type)) continue;
+		assert.ok(item.requirements.every((requirement) => typeof requirement.skill === "string"), id);
+	}
+	assert.equal(data.items.stealthcape.tier, undefined);
+	assert.deepEqual(plain(data.item_requirements.stealthcape), [{ any_skill: ["ranger", "rogue"], level: 75 }]);
+	assert.deepEqual(plain(data.item_requirements.fury), [{ any_skill: ["warrior", "paladin"], level: 91 }]);
+	assert.deepEqual(plain(data.item_requirements.tigercape), [{ any_skill: ["warrior", "paladin"], level: 91 }]);
+	assert.deepEqual(plain(data.item_requirements.ecape), [{ any_skill: ["mage", "priest"], level: 50 }]);
 	assert.ok(data.items.vsword.upgrade);
 	assert.equal(data.items.vsword.tier, 3.25);
-	assert.deepEqual(plain(data.item_requirements.vsword), [{ skill: "warrior", level: 90 }]);
+	assert.deepEqual(plain(data.item_requirements.vsword), [{ skill: "warrior", level: 99 }]);
 	assert.ok(data.items.wbookhs.compound);
-	assert.equal(data.items.wbookhs.compound.int, 0);
-	assert.deepEqual(plain(data.item_requirements.wbookhs), [{ skill: "priest", level: 40 }]);
+	assert.equal(data.items.wbookhs.compound.int, 6);
+	assert.deepEqual(plain(data.item_requirements.wbookhs), [{ skill: "priest", level: 99 }]);
 	const independentRequirementMatrix = {
-		helmet: [{ skill: "warrior", level: 1 }],
+		helmet: [{ any_skill: ["ranger", "rogue"], level: 13 }],
 		spear: [{ skill: "warrior", level: 10 }],
-		xmashat: [{ skill: "merchant", level: 20 }],
-		weaver: [{ skill: "ranger", level: 80 }],
-		mageshood: [{ skill: "mage", level: 40 }],
-		mrnhat: [{ skill: "ranger", level: 50 }],
-		sweaterhs: [{ skill: "merchant", level: 60 }],
-		mcboots: [{ skill: "merchant", level: 70 }],
-		hhelmet: [{ skill: "warrior", level: 80 }],
-		handofmidas: [{ skill: "merchant", level: 90 }],
-		xhelmet: [{ skill: "warrior", level: 95 }],
-		shield: [{ skill: "paladin", level: 40 }],
-		quiver: [{ skill: "ranger", level: 1 }],
+		xmashat: [{ any_skill: ["ranger", "rogue"], level: 8 }],
+		weaver: [{ skill: "ranger", level: 90 }],
+		mageshood: [{ any_skill: ["mage", "priest"], level: 40 }],
+		mrnhat: [{ any_skill: ["ranger", "rogue"], level: 71 }],
+		sweaterhs: [{ any_skill: ["ranger", "rogue"], level: 8 }],
+		mcboots: [{ skill: "merchant", level: 71 }],
+		hhelmet: [{ any_skill: ["warrior", "paladin"], level: 34 }],
+		handofmidas: [{ any_skill: ["mage", "priest"], level: 31 }],
+		xhelmet: [{ any_skill: ["warrior", "paladin"], level: 58 }],
+		shield: [{ any_skill: ["warrior", "paladin", "priest"], level: 26 }],
+		quiver: [{ any_skill: ["ranger"], level: 1 }],
 		rod: [{ skill: "merchant", level: 16 }],
 		pickaxe: [{ skill: "merchant", level: 16 }],
-		fury: [
-			{ skill: "warrior", level: 20 },
-			{ skill: "paladin", level: 20 },
-			{ skill: "ranger", level: 20 },
-			{ skill: "rogue", level: 20 },
-		],
-		starkillers: [
-			{ skill: "mage", level: 80 },
-			{ skill: "priest", level: 80 },
-		],
+		fury: [{ any_skill: ["warrior", "paladin"], level: 91 }],
+		starkillers: [{ any_skill: ["warrior", "paladin"], level: 58 }],
+		mpalhelmet: [{ any_skill: ["warrior", "paladin"], level: 9 }],
 	};
 	for (const [itemId, expected] of Object.entries(independentRequirementMatrix)) {
 		assert.deepEqual(plain(data.item_requirements[itemId]), expected, itemId);
+	}
+});
+
+test("protected non-armor definitions retain their simple requirement semantics", () => {
+	const raw = loadRaw();
+	const pinned = loadPinnedItemsAndRequirements("76a50408fac4a7b1df1e1906ed631ac013b1123c");
+	const accessoryTypes = new Set(["amulet", "earring", "ring", "belt", "orb"]);
+	const protectedRequirements = {};
+	for (const [itemId, item] of Object.entries(raw.items).filter(([, item]) => accessoryTypes.has(item.type))) {
+		assert.deepEqual(plain(item), plain(pinned.items[itemId]), itemId);
+		assert.deepEqual(plain(raw.item_requirements[itemId]), plain(pinned.item_requirements[itemId]), itemId);
+		protectedRequirements[itemId] = raw.item_requirements[itemId];
+	}
+	assert.equal(canonicalHash(protectedRequirements), "f4de08572d4867a297d7455fc98b52b997303a24ee62fa8ec4936a3e4e5d0024");
+	const rankedWeaponIds = new Set(loadRankingFixture().weapons.map((weapon) => weapon.weapon_id));
+	for (const weapon of loadRankingFixture().weapons) {
+		assert.deepEqual(plain(raw.item_requirements[weapon.weapon_id]), [{ skill: weapon.skill, level: weapon.assigned_requirement }], weapon.weapon_id);
+	}
+	for (const [itemId, item] of Object.entries(raw.items)) {
+		if (item.type === "tool" || item.type === "weapon" && !rankedWeaponIds.has(itemId))
+			assert.deepEqual(plain(raw.item_requirements[itemId]), plain(pinned.item_requirements[itemId]), itemId);
 	}
 });
 
@@ -658,6 +689,15 @@ test("production loaders validate progression data before publishing it", () => 
 	assert.doesNotMatch(fs.readFileSync(path.join(designRoot, "../js/html.js"), "utf8"), /calculate_item_properties\([^\n]+class:/);
 	assert.equal((server.match(/const progression_data = buildProgressionData\(\{/g) || []).length, 2);
 	assert.ok(server.indexOf("buildProgressionData") < server.indexOf("G = loadProgressionPublication"));
+	const serverPaths = [
+		{ name: "init_game", body: extractFunctionBody(server, "async function init_game()") },
+		{ name: "reload_server", body: extractFunctionBody(server, "async function reload_server(to_broadcast, change)") },
+	];
+	const serverStatements = serverPaths.map(({ name, body }) => {
+		const statement = extractBuilderStatement(body, "const progression_data = buildProgressionData({");
+		assert.ok(body.indexOf(statement) < body.indexOf("G = loadProgressionPublication("), name);
+		return { name, statement };
+	});
 	const executeBuilderStatement = (statement, raw) => {
 		const context = {
 			buildProgressionData,
@@ -677,18 +717,8 @@ test("production loaders validate progression data before publishing it", () => 
 		extractBuilderStatement(main, "var progression_data = buildProgressionData({"),
 		raw,
 	);
-	const serverStatements = [...server.matchAll(/const progression_data = buildProgressionData\(\{/g)].map((match) =>
-		extractBuilderStatement(server, "const progression_data = buildProgressionData({", match.index),
-	);
-	function extractBuilderStatement(source, declaration, fromIndex) {
-		const start = source.indexOf(declaration, fromIndex || 0);
-		assert.notEqual(start, -1, declaration);
-		const end = source.indexOf(");", start) + 2;
-		assert.ok(end > start, declaration);
-		return source.slice(start, end);
-	}
-	const serverInitBuilt = executeBuilderStatement(serverStatements[0], raw);
-	const serverReloadBuilt = executeBuilderStatement(serverStatements[1], raw);
+	const serverInitBuilt = executeBuilderStatement(serverStatements[0].statement, raw);
+	const serverReloadBuilt = executeBuilderStatement(serverStatements[1].statement, raw);
 	assert.deepEqual(plain(serverInitBuilt), plain(rootBuilt));
 	assert.deepEqual(plain(serverReloadBuilt), plain(rootBuilt));
 	const data = loadAll();
@@ -774,9 +804,7 @@ test("production loaders validate progression data before publishing it", () => 
 		return source.slice(assignmentStart === -1 ? start : assignmentStart, end);
 	};
 	const mainPublicationStatement = extractPublicationStatement(main);
-	const serverPublicationStatements = [...server.matchAll(/loadProgressionPublication\(/g)].map((match) =>
-		extractPublicationStatement(server, match.index),
-	);
+	const serverPublicationStatements = serverPaths.map(({ body }) => extractPublicationStatement(body));
 	assert.equal(serverPublicationStatements.length, 2);
 	const executePublication = (statement, built) => {
 		publicationContext.progression_data = built;
@@ -821,6 +849,19 @@ test("production loaders validate progression data before publishing it", () => 
 		() => buildProgressionData(invalidSource),
 		(error) => error.code === "invalid_game_data" && error.item === "missing",
 	);
+	for (const { name, statement } of serverStatements) {
+		const malformedRequirementSource = loadRaw();
+		malformedRequirementSource.item_requirements.helmet = [{ any_skill: ["warrior", "warrior"], level: 1 }];
+		let publicationContinued = false;
+		assert.throws(
+			() => {
+				executeBuilderStatement(statement, malformedRequirementSource);
+				publicationContinued = true;
+			},
+			(error) => error.code === "invalid_equipment_requirements" && error.item === "helmet",
+		);
+		assert.equal(publicationContinued, false, name);
+	}
 	assert.throws(
 		() => loadProgressionPublication(backendReloadPublication, invalidSource),
 		(error) => error.code === "invalid_game_data",
@@ -862,7 +903,7 @@ test("the closed progression consumer inventory has no legacy skill lookups", ()
 		"docs/EXAMPLES.html",
 		"docs/directory.js",
 	];
-	const expectedProgressionRefs = { "htmls/index.html": 1, "js/html.js": 13, "js/game.js": 1 };
+	const expectedProgressionRefs = { "htmls/index.html": 1, "js/html.js": 16, "js/game.js": 1 };
 	const expectedAbilityRefs = {
 		"node/server.js": 43,
 		"node/server_functions.js": 20,
@@ -917,14 +958,17 @@ test("frozen progression items keep derived runtime metadata out of the catalog"
 
 test("Priest books and starter appearance data use the new ownership boundary", () => {
 	const data = loadAll();
-	for (const id of ["wbook0", "wbook1", "wbookhs"]) {
+	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
+	const bookIds = ["wbook0", "wbook2", "wbook3", "wbook4", "wbook5", "wbook1", "wbook6", "wbook7", "wbook8", "wbook9", "wbookhs"];
+	for (const id of bookIds) {
 		assert.equal(data.items[id].type, "weapon");
 		assert.equal(data.items[id].wtype, "book");
 		assert.equal(data.item_requirements[id][0].skill, "priest");
+		assert.equal(data.item_requirements[id][0].level, ranking.weapons.find((row) => row.weapon_id === id).assigned_requirement);
 	}
-	assert.equal(data.items.wbookhs.int, 16);
+	assert.equal(data.items.wbookhs.int, ranking.weapons.find((row) => row.weapon_id === "wbookhs").solved_int);
 	assert.equal(data.items.wbookhs.dex, undefined);
-	assert.equal(data.items.wbookhs.compound.int, 0);
+	assert.equal(data.items.wbookhs.compound.int, 6);
 	assert.deepEqual(plain(data.character.starter.slots), {});
 });
 
@@ -936,4 +980,29 @@ test("loading real design data twice is idempotent", () => {
 	assert.deepEqual(plain(second.item_requirements), plain(first.item_requirements));
 	assert.deepEqual(plain(second.items), plain(first.items));
 	assert.deepEqual(plain(second.character), plain(first.character));
+});
+
+test("reviewed armor publication matches the static balance fixture and preserves enhancements", () => {
+	const raw = loadRaw();
+	const fixture = loadArmorSetBalanceFixture();
+	const fields = [...fixture.derivation.core_fields, ...fixture.derivation.effect_fields];
+	const compact = (definition) => Object.fromEntries(fields.filter((field) => Number(definition[field] || 0) !== 0).map((field) => [field, Number(definition[field])]))
+	const canonicalize = (value) => Array.isArray(value) ? value.map(canonicalize) : !value || typeof value !== "object" ? value : Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+	const enhancement = (definition) => canonicalize({ upgrade: definition.upgrade || null, compound: definition.compound || null });
+	const hash = (definition) => crypto.createHash("sha256").update(JSON.stringify(enhancement(definition))).digest("hex");
+	assert.deepEqual(Object.keys(raw.base_nonweapon_progression).sort(), Object.keys(fixture.items).sort());
+	for (const [itemId, row] of Object.entries(fixture.items)) {
+		assert.deepEqual(plain(raw.base_nonweapon_progression[itemId]), row.base_core, itemId);
+		assert.deepEqual(compact(raw.items[itemId]), row.base_core, `${itemId} published core`);
+		assert.equal(raw.items[itemId].for, undefined, `${itemId} Fortitude`);
+		assert.deepEqual(enhancement(raw.items[itemId]), row.enhancement, `${itemId} enhancement object`);
+		assert.equal(hash(raw.items[itemId]), row.enhancement_hash, `${itemId} enhancement hash`);
+	}
+	for (const [setId, row] of Object.entries(fixture.sets)) {
+		assert.equal(raw.sets[setId][1], undefined, `${setId} one-piece bonus`);
+		for (const threshold of [2, 3, 4, 5]) {
+			assert.deepEqual(plain(raw.sets[setId][threshold]), row.increments[threshold], `${setId}:${threshold}`);
+			assert.equal(raw.sets[setId][threshold].for, undefined, `${setId}:${threshold} Fortitude`);
+		}
+	}
 });

@@ -11,6 +11,7 @@ const PARITY_FIXTURE_PATH = path.resolve(__dirname, "../tests/fixtures/weapon-pr
 const LEGACY_BASELINE_PATH = path.resolve(__dirname, "../tests/fixtures/weapon-progression-legacy-baseline.json");
 const LEGACY_REVISION = "99d1a8672438227948caf5a5f8c9d595466d8019";
 const COMBAT_SKILLS = Object.freeze(["warrior", "paladin", "mage", "priest", "ranger", "rogue"]);
+const PLACEHOLDER_WEAPON_IDS = Object.freeze(["wbook2", "wbook3", "wbook4", "wbook5", "wbook6", "wbook7", "wbook8", "wbook9"]);
 
 function loadJson(filename) {
 	return JSON.parse(fs.readFileSync(filename, "utf8"));
@@ -125,11 +126,10 @@ function catalogIdentityManifest(data) {
 		.sort((left, right) => left.weapon_id.localeCompare(right.weapon_id));
 }
 
-function validateParityFixture(fixture, data) {
+function parityCatalogManifest(data) {
 	const owners = combatWeaponOwners(data);
-	const exceptions = fixture.exceptions || {};
-	const catalogManifest = Object.entries(data.items)
-		.filter(([id, definition]) => definition.type === "weapon" && owners.has(definition.wtype))
+	return Object.entries(data.items)
+		.filter(([, definition]) => definition.type === "weapon" && owners.has(definition.wtype))
 		.map(([weapon_id, definition]) => ({
 			weapon_id,
 			weapon_type: definition.wtype,
@@ -138,10 +138,31 @@ function validateParityFixture(fixture, data) {
 			requirement_level: (data.itemRequirements[weapon_id] || [])[0]?.level,
 		}))
 		.sort((left, right) => left.weapon_id.localeCompare(right.weapon_id));
+}
+
+function buildParityCatalogFixture(fixture = loadParityFixture(), data = loadBenchmarkData()) {
+	const catalogManifest = parityCatalogManifest(data);
+	const exceptions = { ...(fixture.exceptions || {}) };
+	for (const weaponId of PLACEHOLDER_WEAPON_IDS) exceptions[weaponId] = {
+		reason: "Shared-rank Priest placeholder reuses a reviewed retained-book profile and has no vanilla identity row.",
+	};
+	return {
+		...fixture,
+		catalog_manifest_sha256: crypto.createHash("sha256").update(JSON.stringify(catalogManifest)).digest("hex"),
+		catalog_identity_sha256: crypto.createHash("sha256").update(JSON.stringify(catalogIdentityManifest(data))).digest("hex"),
+		exceptions,
+		weapons: catalogManifest,
+	};
+}
+
+function validateParityFixture(fixture, data) {
+	const owners = combatWeaponOwners(data);
+	const exceptions = fixture.exceptions || {};
+	const catalogManifest = parityCatalogManifest(data);
 	const fixtureManifest = [...fixture.weapons].sort((left, right) => left.weapon_id.localeCompare(right.weapon_id));
 	if (stableJson(fixtureManifest) !== stableJson(catalogManifest)) throw new Error("Weapon parity fixture weapon manifest drifted; review every represented weapon and exception");
 	if (fixture.catalog_manifest_sha256 !== crypto.createHash("sha256").update(JSON.stringify(catalogManifest)).digest("hex"))
-		throw new Error("Weapon parity catalog manifest drifted; review the explicit 80-weapon manifest");
+		throw new Error(`Weapon parity catalog manifest drifted; review the explicit ${catalogManifest.length}-weapon manifest`);
 	if (fixture.catalog_identity_sha256 !== crypto.createHash("sha256").update(JSON.stringify(catalogIdentityManifest(data))).digest("hex"))
 		throw new Error("Weapon parity protected catalog identity drifted");
 	const classified = new Set(currentWeaponRows(data, fixture).map((row) => row.weapon_id));
@@ -424,6 +445,13 @@ function buildParityReport({ fixturePath = PARITY_FIXTURE_PATH, legacyBaselinePa
 }
 
 function main(argv = process.argv.slice(2)) {
+	if (argv.includes("--write-catalog-fixture")) {
+		if (!argv.includes("--approved-shared-rank-migration")) throw new Error("Parity fixture writes require the approved shared-rank migration flag");
+		const fixture = buildParityCatalogFixture();
+		fs.writeFileSync(PARITY_FIXTURE_PATH, stableJson(fixture));
+		process.stdout.write(`Wrote ${PARITY_FIXTURE_PATH}\n`);
+		return;
+	}
 	const report = buildParityReport();
 	const checks = report.rows.flatMap((row) => row.measurements.flatMap((measurement) => measurement.upgrades));
 	const handoffChecks = report.handoffs.flatMap((handoff) => handoff.comparisons);
@@ -463,6 +491,7 @@ if (require.main === module) main();
 module.exports = {
 	LEGACY_BASELINE_PATH,
 	PARITY_FIXTURE_PATH,
+	buildParityCatalogFixture,
 	buildParityReport,
 	catalogIdentityManifest,
 	loadLegacyBaseline,

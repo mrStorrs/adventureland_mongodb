@@ -52,13 +52,67 @@ function renderGuideItems(items, skills) {
 	return modal;
 }
 
-test("item guide base DPS matches the one-weapon combat calculation through +4", () => {
+function renderRankedWeaponInfo(level) {
+	const source = fs.readFileSync(path.resolve(__dirname, "../../js/html.js"), "utf8");
+	const infoStart = source.indexOf("function render_item_info(");
+	const infoEnd = source.indexOf("\nfunction render_monster_info(", infoStart);
+	const helpersStart = source.indexOf("function guide_weapon_owner(");
+	const helpersEnd = source.indexOf("\nvar last_selector", helpersStart);
+	const renderStart = source.indexOf("var last_selector = \"\";");
+	const renderEnd = source.indexOf("function render_item_by_name", renderStart);
+	assert.ok(infoStart >= 0 && infoEnd > infoStart && helpersStart >= 0 && helpersEnd > helpersStart && renderStart >= 0 && renderEnd > renderStart, "item-info render path exists");
+	const ranked = {
+		type: "weapon",
+		name: "Ranked Blade",
+		skin: "ranked",
+		tier: 1,
+		wtype: "short_sword",
+		damage_type: "physical",
+		attack: 10,
+		str: 20,
+		upgrade: { attack: 2, str: 1 },
+		progression: { shared_rank: 3, role: "progression", historical_rank: 4, reference_level: 15, full_sheet_hit_damage: 999, attacks_per_second: 999, base_dps: 999 },
+	};
+	const context = {
+		G: { items: { ranked }, skills: { warrior: { kind: "combat", name: "Warrior", weapon_types: ["short_sword"] } }, titles: {}, maps: {}, craft: {}, sets: {}, abilities: {}, conditions: {} },
+		Math,
+		window: { character: null },
+		character: { skills: {} },
+		weapon_types: { short_sword: "Short Sword" },
+		offhand_types: {},
+		trade_slots: [],
+		booster_items: [],
+		colors: { attack: "attack" },
+		calculate_item_grade: () => 0,
+		calculate_item_value: () => 0,
+		calculate_item_properties: (actual) => ({ level: actual.level, attack: 10 + actual.level * 2, str: 20 + actual.level }),
+		bold_prop_line: (name, value) => `<metric name="${name}">${value}</metric>`,
+		to_pretty_float: (value) => String(value),
+		to_pretty_num: (value) => String(value),
+		in_arr: (value, values) => Array.isArray(values) && values.includes(value),
+		equipment_requirements_pass: () => true,
+		render_item_help: () => "",
+		show_modal: (html) => { context.modalHtml = html; },
+	};
+	vm.createContext(context);
+	vm.runInContext(
+		"String.prototype.toTitleCase = function () { return this.charAt(0).toUpperCase() + this.slice(1); };\n" +
+			source.slice(infoStart, infoEnd) + source.slice(helpersStart, helpersEnd) + source.slice(renderStart, renderEnd) +
+			"\nglobalThis.render_item_info_under_test=render_item_info;",
+		context,
+		{ filename: "html.js" },
+	);
+	context.render_item_info_under_test("ranked", level);
+	return context.modalHtml;
+}
+
+test("item guide base DPS matches the one-weapon combat calculation through +5", () => {
 	const data = loadBenchmarkData();
 	const calculators = loadPropertyCalculators(data);
 	const guideWeaponMetrics = loadGuideMetrics(data.skills);
 	for (const [weaponId, definition] of Object.entries(data.items)) {
 		if (definition.type !== "weapon" || !definition.wtype) continue;
-		for (let level = 0; level <= 4; level += 1) {
+		for (let level = 0; level <= 5; level += 1) {
 			const properties = calculators.current.calculate_item_properties({ name: weaponId, level });
 			const expected = calculateStats({
 				slots: { mainhand: { name: weaponId, level } },
@@ -79,6 +133,21 @@ test("item guide labels its player-facing hit damage, attack speed, and base DPS
 	assert.match(source, /"Hit Damage"/);
 	assert.match(source, /"Attacks \/ Sec"/);
 	assert.match(source, /"Base DPS"/);
+	assert.match(source, /"Shared Rank"/);
+	assert.match(source, /"Progression Role"/);
+	assert.match(source, /"Historical Rank"/);
+	assert.match(source, /"Full-Sheet Base DPS"/);
+});
+
+test("ranked item details calculate +0 through +5 metrics from the actual enhanced properties", () => {
+	for (let level = 0; level <= 5; level += 1) {
+		const html = renderRankedWeaponInfo(level);
+		const hitDamage = Math.round((10 + level * 2) * (20 + level) / 20);
+		assert.match(html, new RegExp(`<metric name="Hit Damage">${hitDamage}<\\/metric>`), `+${level} hit damage`);
+		assert.match(html, new RegExp(`<metric name="Base DPS">${hitDamage * 0.5}<\\/metric>`), `+${level} base DPS`);
+		assert.match(html, /<metric name="Shared Rank">3\/11<\/metric>/);
+		assert.doesNotMatch(html, /999|Full-Sheet Hit Damage|Full-Sheet Base DPS/, `+${level} ignores stored +0 metrics`);
+	}
 });
 
 test("item guide groups visible weapons by combat profile and base DPS", () => {
@@ -118,27 +187,25 @@ test("item guide groups visible weapons by combat profile and base DPS", () => {
 			assert.equal(guide.guide_weapon_owner(data.items[weapon.id]), group.id, weapon.id);
 			const target = ranked.find((row) => row.weapon_id === weapon.id);
 			assert.ok(target, `${weapon.id} acquisition row`);
-			assert.equal(Number(weapon.dps.toPrecision(12)), target.solved_dps, `${weapon.id} displayed solved DPS`);
+			const properties = calculators.current.calculate_item_properties({ name: weapon.id, level: 0 });
+			const expectedMetrics = guide.guide_weapon_metrics(data.items[weapon.id], properties);
+			assert.equal(Number(weapon.dps.toPrecision(12)), Number(((expectedMetrics && expectedMetrics.dps) || 0).toPrecision(12)), `${weapon.id} displayed actual +0 DPS`);
+			assert.equal(weapon.shared_rank, target.shared_rank, `${weapon.id} displayed shared rank`);
+			assert.equal(weapon.role, target.role, `${weapon.id} displayed role`);
+			assert.equal(weapon.selected_effort, target.selected_effort, `${weapon.id} displayed acquisition effort`);
 		}
 		for (const easier of ranked)
 			for (const harder of ranked)
 				if (easier.rank < harder.rank)
 					assert.ok(positions.get(easier.weapon_id) < positions.get(harder.weapon_id), `${group.id} rank ${easier.rank}->${harder.rank}`);
-		const expectedOrder = visibleWeapons
-			.filter((id) => data.skills[group.id].weapon_types.includes(data.items[id].wtype))
-			.map((id) => ({
-				id,
-				dps: guide.guide_weapon_metrics(
-					data.items[id],
-					calculators.current.calculate_item_properties({ name: id, level: 0 }),
-				).dps,
-			}))
-			.sort((left, right) => left.dps - right.dps || left.id.localeCompare(right.id))
-			.map((weapon) => weapon.id);
+		const displayedDps = new Map(group.weapons.map((weapon) => [weapon.id, weapon.dps]));
+		const expectedOrder = ranked.slice()
+			.sort((left, right) => left.shared_rank - right.shared_rank || left.selected_effort - right.selected_effort || displayedDps.get(left.weapon_id) - displayedDps.get(right.weapon_id) || left.weapon_id.localeCompare(right.weapon_id))
+			.map((weapon) => weapon.weapon_id);
 		assert.deepEqual(
 			group.weapons.map((weapon) => weapon.id),
 			expectedOrder,
-			`${group.id} is ordered by independently calculated level-0 Base DPS and item ID`,
+			`${group.id} is ordered by shared rank, acquisition effort, and stable item identity`,
 		);
 	}
 	assert.deepEqual(displayed.sort(), visibleWeapons);

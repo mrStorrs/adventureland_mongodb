@@ -14,6 +14,8 @@ const {
 } = require("../game/stat_calibration");
 
 const root = path.resolve(__dirname, "../..");
+const armorSetBalance = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/armor-set-balance.json"), "utf8"));
+const weaponRanking = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/weapon-acquisition-ranking.json"), "utf8"));
 
 function item(type, wtype, properties = {}) {
 	return { type, ...(wtype ? { wtype } : {}), ...properties };
@@ -51,6 +53,20 @@ function statsFor(items, slots, options = {}) {
 		slots,
 		...options,
 	});
+}
+
+function cumulativeSet(set) {
+	const core = {};
+	const effects = {};
+	const published = { bonus_items: set.bonus_items };
+	for (const threshold of [2, 3, 4, 5]) {
+		for (const [field, value] of Object.entries(armorSetBalance.sets[set.id].increments[threshold])) {
+			if (armorSetBalance.derivation.core_fields.includes(field)) core[field] = (core[field] || 0) + value;
+			else effects[field] = (effects[field] || 0) + value;
+		}
+		published[threshold] = { ...core, ...effects };
+	}
+	return published;
 }
 
 test("STR owns physical damage while VIT, FOR, and gear own defense", () => {
@@ -113,10 +129,11 @@ test("DEX crit, raw gear crit, and temporary crit use their separate caps", () =
 	const setCrit = statsFor(
 		{
 			blade: item("weapon", "short_sword", { attack: 10, str: 40, dex: 0, set: "critical" }),
+			helmet: item("helmet", null, { set: "critical" }),
 			armor: item("chest", null, { set: "critical", crit: 50 }),
 		},
-		{ mainhand: { name: "blade" }, chest: { name: "armor" } },
-		{ sets: { critical: { 2: { crit: 50 } } }, conditions: { curse: { crit: -5 } } },
+		{ mainhand: { name: "blade" }, helmet: { name: "helmet" }, chest: { name: "armor" } },
+		{ sets: { critical: { bonus_items: { helmet: ["helmet"], chest: ["armor"], pants: [], gloves: [], shoes: [] }, 2: { crit: 50 } } }, conditions: { curse: { crit: -5 } } },
 	);
 
 	assert.equal(capped.crit, 100);
@@ -140,32 +157,42 @@ test("weapon profiles retain their damage type and cadence metadata", () => {
 test("catalog fixtures preserve starter identities and publish role profiles", () => {
 	const items = loadItems();
 	for (const name of ["blade", "bow", "mace", "staff", "wbook0", "claw"]) assert.ok(items[name], name);
-	assert.equal(items.bow.str, 3);
-	assert.equal(items.claw.str, 4);
 	assert.equal(items.blade.vit, undefined);
 	assert.equal(items.blade.for, undefined);
-	assert.equal(items.blade.str, 11);
-	assert.equal(items.daggerofthedead.str, 16);
-	assert.equal(items.sword.str, 16);
-	assert.equal(items.axe3.str, 18);
 	assert.ok(items.axe3.attack > items.blade.attack);
-	assert.equal(items.wbookhs.compound.int, 0);
-	assert.equal(items.cupid.str > 0, true);
+	assert.equal(items.wbookhs.compound.dex, 6);
+	assert.equal(items.wbookhs.compound.int, undefined);
+	assert.equal(items.oozingterror.vit, -30);
+	assert.equal(items.daggerofthedead.vit, -6);
+	assert.equal(items.vstaff.armor, 120);
 	assert.ok(items.helmet.armor > (items.tshirt0.armor || 0));
 	assert.ok(items.tshirt0.int > 0);
 	assert.ok(items.tshirt1.dex > 0);
 	assert.ok(items.tshirt2.str > 0);
-	const physical = new Set(["short_sword", "sword", "great_sword", "axe", "spear", "scythe", "hammer", "mace", "pmace", "basher", "bow", "crossbow", "dartgun", "fist", "dagger", "stars", "rapier"]);
-	const magical = new Set(["staff", "great_staff", "wand", "wblade", "book"]);
-	for (const [name, definition] of Object.entries(items)) {
-		if (definition.type !== "weapon") continue;
-		if (physical.has(definition.wtype)) assert.ok(definition.str > 0, `${name} has STR`);
-		if (magical.has(definition.wtype)) assert.ok(definition.int > 0, `${name} has INT`);
-		if (!physical.has(definition.wtype) && !magical.has(definition.wtype)) continue;
-		for (const property of ["str", "int", "dex"])
-			assert.ok((definition[property] || 0) <= 20, `${name} keeps ${property} within the weapon budget`);
-		for (const property of ["vit", "for", "hp", "armor", "resistance"])
-			assert.equal(definition[property], undefined, `${name} does not carry ${property}`);
+	for (const target of weaponRanking.weapons) {
+		const definition = items[target.weapon_id];
+		assert.equal(definition.attack, target.solved_attack, `${target.weapon_id}:attack`);
+		assert.equal(Number(definition.str || 0), target.solved_str, `${target.weapon_id}:str`);
+		assert.equal(Number(definition.int || 0), target.solved_int, `${target.weapon_id}:int`);
+		assert.equal(Number(definition.dex || 0), target.solved_dex, `${target.weapon_id}:dex`);
+	}
+});
+
+test("reviewed armor, capes, and cumulative set bonuses flow through runtime stats", () => {
+	const items = loadItems();
+	for (const itemId of ["mpalarmor", "coat1", "tigerarmor", "angelwings", "vcape"]) {
+		const row = armorSetBalance.items[itemId];
+		for (const field of [...armorSetBalance.derivation.core_fields, ...armorSetBalance.derivation.effect_fields])
+			assert.equal(Number(items[itemId][field] || 0), Number(row.base_core[field] || 0), `${itemId}:${field}`);
+		assert.equal(items[itemId].for, undefined, `${itemId}:for`);
+	}
+	for (const setId of ["mpaladin", "rugged", "tiger"]) {
+		const balance = armorSetBalance.sets[setId];
+		const slots = Object.fromEntries(Object.entries(balance.canonical_slots).map(([slot, itemId]) => [slot, { name: itemId, level: 0 }]));
+		const published = cumulativeSet({ id: setId, bonus_items: { helmet: [balance.canonical_slots.helmet], chest: [balance.canonical_slots.chest], pants: [balance.canonical_slots.pants], gloves: [balance.canonical_slots.gloves], shoes: [balance.canonical_slots.shoes] } });
+		const stats = statsFor(items, slots, { sets: { [setId]: published } });
+		assert.deepEqual(stats.sets, { [setId]: 5 }, setId);
+		assert.equal(stats.for, 0, `${setId}:for`);
 	}
 });
 
@@ -191,8 +218,8 @@ test("the recorded catalog loadout calibrates the DEX crit ceiling", () => {
 		(total, item) => total + catalog.properties(item).crit,
 		0,
 	);
-	assert.equal(calculateDexCritCalibration(catalog.items, catalog.properties), DEX_CRIT_CALIBRATION);
-	assert.equal(rawCrit, 11.625);
+	assert.equal(calculateDexCritCalibration(catalog.items, catalog.properties), 844);
+	assert.equal(rawCrit, 9.625);
 	assert.equal(dexCrit(DEX_CRIT_CALIBRATION, DEX_CRIT_CALIBRATION), 80);
 });
 

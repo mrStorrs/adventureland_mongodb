@@ -1974,6 +1974,44 @@ function smart_smart_move(type, id) {
 	}
 }
 
+function equipment_requirement_state(requirement, skill_state) {
+	if (requirement.any_skill) {
+		var actual_by_skill = {};
+		var known = Boolean(skill_state);
+		var passed = false;
+		requirement.any_skill.forEach(function (skill) {
+			var level = (skill_state && skill_state[skill] && skill_state[skill].level) || 0;
+			actual_by_skill[skill] = level;
+			if (level >= requirement.level) passed = true;
+		});
+		return { passed: known ? passed : undefined, actual_by_skill: actual_by_skill };
+	}
+	var current = skill_state && skill_state[requirement.skill];
+	return { passed: skill_state ? Boolean(current && current.level >= requirement.level) : undefined };
+}
+
+function equipment_requirement_label(requirement) {
+	if (requirement.any_skill) {
+		return "Highest " + requirement.any_skill.map(function (skill) {
+			return (G.skills[skill] && G.skills[skill].name) || skill.toTitleCase();
+		}).join(" or ") + " Lv." + requirement.level;
+	}
+	return ((G.skills[requirement.skill] && G.skills[requirement.skill].name) || requirement.skill.toTitleCase()) + " Lv." + requirement.level;
+}
+
+function equipment_requirements_pass(requirements, skill_state) {
+	return !requirements || requirements.every(function (requirement) {
+		return equipment_requirement_state(requirement, skill_state).passed;
+	});
+}
+
+function equipment_set_bonus_groups(set) {
+	var slots = ["helmet", "chest", "pants", "gloves", "shoes"];
+	return slots.map(function (slot) {
+		return { slot: slot, items: (set.bonus_items && set.bonus_items[slot]) || [] };
+	});
+}
+
 function render_equip_info(name) {
 	var def = G.items[name],
 		html = "";
@@ -1983,14 +2021,16 @@ function render_equip_info(name) {
 		html += "<div style='border: 2px dotted gray; padding: 14px; margin: 4px'><div style='color:#DDDDDD'>Skill requirements</div>";
 		html += "<div style='color:gray'>All requirements must pass</div>";
 		def.requirements.forEach(function (requirement) {
-			var skill = G.skills[requirement.skill] || {};
-			var current = window.character && character.skills && character.skills[requirement.skill];
-			var passed = Boolean(current && current.level >= requirement.level);
+			var state = equipment_requirement_state(requirement, window.character && character.skills);
+			var label = equipment_requirement_label(requirement);
+			var passed = state.passed;
 			var color = passed ? "#36813A" : "#DD5C65";
-			html += "<div style='color:" + color + "'>" + (passed ? "PASS" : "FAIL") + " — " + (skill.name || requirement.skill.toTitleCase()) + " Lv." + requirement.level + "</div>";
+			html += "<div style='color:" + color + "'>" + (passed ? "PASS" : "FAIL") + " — " + label + "</div>";
 		});
 		html += "</div>";
 	}
+	if (def.armor_weight) html += "<div style='color:#DDDDDD'>Weight: " + def.armor_weight.toTitleCase() + "</div>";
+	if (def.placeholder_art) html += "<div style='color:#C3C3C3'>Placeholder artwork</div>";
 	html += "</div>";
 	show_modal(html, { wrap: false, hideinbackground: true });
 }
@@ -3412,6 +3452,13 @@ function guide_weapon_metrics(item, prop) {
 	return { hit_damage: hit_damage, attacks_per_second: frequency, dps: hit_damage * frequency };
 }
 
+function guide_weapon_progression_metrics(item, prop) {
+	var metrics = guide_weapon_metrics(item, prop);
+	if (!metrics || !item.progression) return metrics;
+	metrics.progression = item.progression;
+	return metrics;
+}
+
 function guide_weapon_groups(items, skills, properties_for) {
 	var groups = [],
 		by_skill = {};
@@ -3426,11 +3473,22 @@ function guide_weapon_groups(items, skills, properties_for) {
 		if (item.ignore || item.type != "weapon") continue;
 		var group = by_skill[guide_weapon_owner(item)];
 		if (!group) continue;
-		var metrics = guide_weapon_metrics(item, properties_for(id));
-		group.weapons.push({ id: id, item: item, dps: (metrics && metrics.dps) || 0 });
+		var metrics = guide_weapon_progression_metrics(item, properties_for(id));
+		group.weapons.push({
+			id: id,
+			item: item,
+			dps: (metrics && metrics.dps) || 0,
+			shared_rank: (item.progression && item.progression.shared_rank) || null,
+			role: (item.progression && item.progression.role) || null,
+			selected_effort: item.progression ? item.progression.selected_effort : null,
+		});
 	}
 	groups.forEach(function (group) {
 		group.weapons.sort(function (a, b) {
+			if (a.shared_rank != null && b.shared_rank != null && a.shared_rank != b.shared_rank) return a.shared_rank - b.shared_rank;
+			if (a.shared_rank != null && b.shared_rank == null) return -1;
+			if (a.shared_rank == null && b.shared_rank != null) return 1;
+			if (a.selected_effort != null && b.selected_effort != null && a.selected_effort != b.selected_effort) return a.selected_effort - b.selected_effort;
 			if (a.dps != b.dps) return a.dps - b.dps;
 			if (a.id < b.id) return -1;
 			if (a.id > b.id) return 1;
@@ -3489,6 +3547,8 @@ function render_item(selector, args) {
 		} else if (!args.pure) {
 			html += "<div style='color: " + color + "; display: inline-block; border-bottom: 2px dashed gray; margin-bottom: 3px' class='cbold'>" + item_name + "</div>";
 		}
+		if (item.armor_weight) html += bold_prop_line("Weight", item.armor_weight.toTitleCase(), "#C3C3C3");
+		if (item.placeholder_art) html += bold_prop_line("Art", "Placeholder artwork", "#C3C3C3");
 		if (prop.miss && item.type == "elixir") html += bold_prop_line("Alcohol", prop.miss + "%", "#7CAAF6");
 		(item.gives || []).forEach(function (prop) {
 			if (prop[0] == "hp" && prop[1] < 0) html += bold_prop_line("HP", to_pretty_num(prop[1]), colors.hp);
@@ -3526,8 +3586,14 @@ function render_item(selector, args) {
 		if (prop.dreturn) html += bold_prop_line("D.Return", to_pretty_float(prop.dreturn) + "%", "#E94959");
 		if (prop.crit) html += bold_prop_line("Crit", to_pretty_float(prop.crit) + "%", "#E52967");
 		if (prop.critdamage) html += bold_prop_line("Crit Damage", "+" + to_pretty_float(prop.critdamage) + "%", "#A8214E");
-		var guide_metrics = args.guide && item.type == "weapon" && guide_weapon_metrics(item, prop);
-		if (prop.attack) html += bold_prop_line((guide_metrics && "Hit Damage") || "Damage", (guide_metrics && guide_metrics.hit_damage) || prop.attack, colors.attack);
+		var guide_metrics = args.guide && item.type == "weapon" && guide_weapon_progression_metrics(item, prop);
+		if (guide_metrics && guide_metrics.progression) {
+			html += bold_prop_line("Shared Rank", guide_metrics.progression.shared_rank + "/11", "#C3C3C3");
+			html += bold_prop_line("Progression Role", guide_metrics.progression.role.toTitleCase(), "#C3C3C3");
+			if (guide_metrics.progression.historical_rank != null) html += bold_prop_line("Historical Rank", guide_metrics.progression.historical_rank, "#C3C3C3");
+			html += bold_prop_line("Reference Level", guide_metrics.progression.reference_level, "#C3C3C3");
+		}
+		if (prop.attack) html += bold_prop_line((guide_metrics && guide_metrics.full_sheet && "Full-Sheet Hit Damage") || (guide_metrics && "Hit Damage") || "Damage", (guide_metrics && guide_metrics.hit_damage) || prop.attack, colors.attack);
 		if (item.damage_type) {
 			if (item.damage_type == "pure") html += bold_prop_line("Type", "Pure", "#AA9B55");
 			else if (item.damage_type == "magical") html += bold_prop_line("Type", "Magical", "#8998AA");
@@ -3559,7 +3625,7 @@ function render_item(selector, args) {
 		if (prop.speed) html += bold_prop_line((item.wtype && "Run Speed") || "Speed", ((!args.monster && prop.speed > 0 && "+") || "") + prop.speed, colors.speed);
 		if (guide_metrics) html += bold_prop_line("Attacks / Sec", to_pretty_float(guide_metrics.attacks_per_second), "#3BE681");
 		else if (prop.frequency || args.monster) html += bold_prop_line("A.Speed", (prop.frequency || 1) * ((args.monster && 100) || 1), "#3BE681");
-		if (guide_metrics) html += bold_prop_line("Base DPS", to_pretty_float(guide_metrics.dps), colors.attack);
+		if (guide_metrics) html += bold_prop_line((guide_metrics.full_sheet && "Full-Sheet Base DPS") || "Base DPS", to_pretty_float(guide_metrics.dps), colors.attack);
 		if (prop.output) html += bold_prop_line("Damage Output", ((prop.output > 0 && "+") || "") + prop.output + "%", "#D93319");
 		if (prop.incdmgamp) html += bold_prop_line("Incoming Damage", prop.incdmgamp + "%", "#D93319");
 		if (prop.stun) html += bold_prop_line("Stun", prop.stun + "%", "#784224");
@@ -3620,11 +3686,11 @@ function render_item(selector, args) {
 		if (prop.requirements) {
 			html += "<div style='color:gray'>All requirements must pass</div>";
 			prop.requirements.forEach(function (requirement) {
-				var current = window.character && character.skills && character.skills[requirement.skill];
-				var passed = current && current.level >= requirement.level;
+				var state_result = equipment_requirement_state(requirement, window.character && character.skills);
+				var passed = state_result.passed;
 				var state = passed === undefined ? "CHECK" : passed ? "PASS" : "FAIL";
 				var color = state == "PASS" ? "#36813A" : state == "FAIL" ? "#DD5C65" : "gray";
-				html += bold_prop_line(state, ((G.skills[requirement.skill] && G.skills[requirement.skill].name) || requirement.skill.toTitleCase()) + " Lv." + requirement.level, color);
+				html += bold_prop_line(state, equipment_requirement_label(requirement), color);
 			});
 		}
 		if (actual && item.type == "elixir" && args.slot == "elixir") {
@@ -3743,10 +3809,7 @@ function render_item(selector, args) {
 				if (0 && parseInt(item.tier) < item.tier) t += "T" + parseInt(item.tier) + "+ " + (weapon_types[item.wtype] || offhand_types[item.wtype] || (item.wtype || item.type).toTitleCase());
 				else t += "T" + to_pretty_float(item.tier) + " " + (weapon_types[item.wtype] || offhand_types[item.wtype] || (item.wtype || item.type).toTitleCase());
 
-				if (!window.character || !item.requirements || item.requirements.every(function (requirement) {
-					var progress = character.skills && character.skills[requirement.skill];
-					return progress && progress.level >= requirement.level;
-				}))
+				if (!window.character || equipment_requirements_pass(item.requirements, character.skills))
 					color = "#56A244";
 
 				html +=
@@ -4089,14 +4152,21 @@ function render_set(name) {
 		selector = last_selector;
 	var html = "<div style='background-color: black; border: 5px solid gray; font-size: 24px; display: inline-block; padding: 20px; line-height: 24px; max-width: 280px;' class='buyitem'>";
 	html += "<div style='color: #f1c054; border-bottom: 2px dashed #C7CACA; margin-bottom: 3px' class='cbold'>" + set.name + "</div>";
-	html += "<div style='margin-left:-2px; margin-right:-2px;'>";
-	set.items.forEach(function (i) {
-		html += item_container({ skin: G.items[i].skin });
+	equipment_set_bonus_groups(set).forEach(function (group) {
+		var labels = group.items.map(function (item_id) { return G.items[item_id].name; });
+		html += "<div style='color:#8A8D8F'>Bonus " + group.slot.toTitleCase() + ": " + labels.join(" or ") + "</div>";
+		html += "<div style='margin-left:-2px; margin-right:-2px;'>";
+		group.items.forEach(function (item_id) { html += item_container({ skin: G.items[item_id].skin }); });
+		html += "</div>";
 	});
-	html += "</div>";
-	[1, 2, 3, 4, 5, 6, 7, 8].forEach(function (num) {
-		var rep = num;
-		if (num != set.items.length) rep = num + "+";
+	var counted_items = Object.values(set.bonus_items || {}).flat();
+	var non_counting = set.items.filter(function (item_id) { return !counted_items.includes(item_id); });
+	if (non_counting.length) {
+		html += "<div style='color:#8A8D8F'>Themed items (do not count toward armor bonus)</div>";
+		non_counting.forEach(function (item_id) { html += item_container({ skin: G.items[item_id].skin }); });
+	}
+	[2, 3, 4, 5].forEach(function (num) {
+		var rep = num + "+";
 		if (set[num] && Object.keys(set[num]).length)
 			html += "<div><span style='color:#8A8D8F'>[" + rep + " Equipped]</span> " + render_item("html", { pure: true, item: set[num], prop: set[num] }) + "</div>";
 	});

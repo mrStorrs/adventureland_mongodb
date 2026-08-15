@@ -35,11 +35,19 @@ function abilityResourceCost(ability, stats) {
 	return Number(ability.ratio) > 0 ? stats.max_mp : Number(ability.mp || 0);
 }
 
-function weaponStats(report, calculators, weaponId, upgradeLevel) {
+function weaponStats(report, calculators, rankingRow, upgradeLevel) {
+	const classCore = rankingRow.full_sheet_context.class_core;
+	const items = { ...report.data.items, __class_core: classCore };
 	return calculateStats({
-		slots: { mainhand: { name: weaponId, level: upgradeLevel } },
-		items: report.data.items,
-		getItemProperties: calculators.current.calculate_item_properties,
+		slots: {
+			mainhand: { name: rankingRow.weapon_id, level: upgradeLevel },
+			class_core: { name: "__class_core", level: 0 },
+		},
+		items,
+		getItemProperties: (instance, definition) =>
+			instance.name === "__class_core"
+				? definition
+				: calculators.current.calculate_item_properties(instance),
 	});
 }
 
@@ -51,6 +59,13 @@ test("combat abilities are selected or explicitly excluded and retain access, ef
 	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
 	for (const target of ranking.weapons) {
 		const row = report.rows.find((candidate) => candidate.weapon_id === target.weapon_id);
+		const exception = fixture.exceptions && fixture.exceptions[target.weapon_id];
+		if (exception) {
+			assert.equal(target.origin, "placeholder", target.weapon_id);
+			assert.ok(exception.reason, target.weapon_id);
+			assert.equal(row, undefined, target.weapon_id);
+			continue;
+		}
 		assert.ok(row, target.weapon_id);
 		assert.equal(row.current_requirement_level, target.assigned_requirement, target.weapon_id);
 	}
@@ -84,7 +99,9 @@ test("combat abilities are selected or explicitly excluded and retain access, ef
 		const result = authorizeAbility({ ability, abilityId, character, slots, items: report.data.items });
 		assert.equal(result.authorized, true, abilityId);
 		assert.equal(result.active_skill, ability.skill, abilityId);
-		const stats = weaponStats(report, calculators, weapon.weapon_id, 0);
+		const rankingRow = ranking.weapons.find((candidate) => candidate.weapon_id === weapon.weapon_id);
+		assert.ok(rankingRow, weapon.weapon_id);
+		const stats = weaponStats(report, calculators, rankingRow, 0);
 		const effect = abilityEffect(ability, semantics, stats);
 		assert.ok(Number.isFinite(effect) && effect > 0, abilityId);
 		const resourceCost = abilityResourceCost(ability, stats);
