@@ -7,6 +7,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { calculateStats, dexCrit } = require("../game/stats");
 const { WEAPON_PROFILES } = require("../game/active_skill");
+const { normalizeItems } = require("../game/skill_domain");
 const {
 	DEX_CRIT_CALIBRATION,
 	DEX_CRIT_CALIBRATION_LOADOUT,
@@ -32,6 +33,8 @@ function loadItemProperties() {
 	const context = { console, multipliers: { shells_to_gold: 1 } };
 	vm.createContext(context);
 	vm.runInContext(fs.readFileSync(path.join(root, "design/items.js"), "utf8"), context, { filename: "items.js" });
+	vm.runInContext(fs.readFileSync(path.join(root, "design/item_requirements.js"), "utf8"), context, { filename: "item_requirements.js" });
+	context.items = normalizeItems(context.items, context.item_requirements);
 	const common = fs.readFileSync(path.join(root, "js/old_common_functions.js"), "utf8");
 	const start = common.indexOf("function calculate_item_properties");
 	const end = common.indexOf("\nfunction random_one", start);
@@ -159,7 +162,9 @@ test("catalog fixtures preserve starter identities and publish role profiles", (
 	for (const name of ["blade", "bow", "mace", "staff", "wbook0", "claw"]) assert.ok(items[name], name);
 	assert.equal(items.blade.vit, undefined);
 	assert.equal(items.blade.for, undefined);
-	assert.ok(items.axe3.attack > items.blade.attack);
+	const blade = statsFor(items, { mainhand: { name: "blade", level: 0 } });
+	const axe = statsFor(items, { mainhand: { name: "axe3", level: 0 } });
+	assert.ok(axe.attack * axe.frequency > blade.attack * blade.frequency);
 	assert.equal(items.wbookhs.upgrade.dex, 6);
 	assert.equal(items.wbookhs.upgrade.int, undefined);
 	assert.equal(items.wbookhs.compound, undefined);
@@ -175,6 +180,18 @@ test("catalog fixtures preserve starter identities and publish role profiles", (
 		assert.equal(Number(definition.str || 0), target.solved_str, `${target.weapon_id}:str`);
 		assert.equal(Number(definition.int || 0), target.solved_int, `${target.weapon_id}:int`);
 		assert.equal(Number(definition.dex || 0), target.solved_dex, `${target.weapon_id}:dex`);
+	}
+});
+
+test("every ranked weapon produces positive gear-only attack without synthetic class stats", () => {
+	const catalog = loadItemProperties();
+	for (const target of weaponRanking.weapons) {
+		const stats = calculateStats({
+			slots: { mainhand: { name: target.weapon_id, level: 0 } },
+			items: catalog.items,
+			getItemProperties: catalog.properties,
+		});
+		assert.ok(Number.isFinite(stats.attack) && stats.attack > 0, `${target.weapon_id} gear-only attack`);
 	}
 });
 
@@ -218,7 +235,7 @@ test("the recorded catalog loadout calibrates the DEX crit ceiling", () => {
 		(total, item) => total + catalog.properties(item).crit,
 		0,
 	);
-	assert.equal(calculateDexCritCalibration(catalog.items, catalog.properties), 740);
+	assert.equal(calculateDexCritCalibration(catalog.items, catalog.properties), 765);
 	assert.equal(rawCrit, 9.625);
 	assert.equal(dexCrit(DEX_CRIT_CALIBRATION, DEX_CRIT_CALIBRATION), 80);
 });

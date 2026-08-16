@@ -232,21 +232,6 @@ function rebalancedContributionEvidence({ slots, items, sets, getItemProperties,
 	};
 }
 
-function classCoreItem(core, skill) {
-	return {
-		type: "class_core",
-		name: `Pinned ${skill} class core`,
-		str: core.str,
-		dex: core.dex,
-		int: core.int,
-		vit: core.vit,
-		hp: core.hp - 100 - core.vit * 48,
-		mp: core.mp - 100 - core.int * 15,
-		armor: core.armor,
-		resistance: core.resistance,
-	};
-}
-
 function fullSheetContext(data, calculators, baseline, weapon) {
 	const referenceLevel = REFERENCE_LEVELS[weapon.shared_rank - 1];
 	const role = baseline.role_rows.find((row) => row.skill === weapon.skill && row.level === referenceLevel);
@@ -263,12 +248,9 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 	const frozenEntries = Object.entries(role.loadout.frozen_slots)
 		.filter(([, item]) => data.items[item.item_id])
 		.map(([slot, item]) => [slot, { name: item.item_id, level: item.level || 0, stat_type: item.stat_type || statType }]);
-	const classItem = classCoreItem(role.class_core, role.skill);
-	const items = { ...data.items, __class_core: classItem };
 	const fixedSlots = {
 		...Object.fromEntries(equipmentEntries),
 		...Object.fromEntries(frozenEntries),
-		class_core: { name: "__class_core", level: 0 },
 	};
 	const equipmentSlots = new Set(equipmentEntries.map(([slot]) => slot));
 	const frozenSlots = new Set(frozenEntries.map(([slot]) => slot));
@@ -280,7 +262,6 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 		const key = `${level}:${upgradeLevel}:${compoundLevel}:${attack}:${attackGrowth}:${allocation.str}:${allocation.int}:${allocation.dex}:${offhandKey}`;
 		if (cache.has(key)) return cache.get(key);
 		const getItemProperties = (instance, definition) => {
-			if (instance.name === "__class_core") return definition;
 			const properties = calculators.current.calculate_item_properties(instance);
 			if (instance.name !== weapon.weapon_id) return properties;
 			const multiplier = cumulativeEnhancementWeight(enhancementKind, Number(instance.level || 0));
@@ -291,7 +272,6 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 			};
 		};
 		const enhancedFixedSlots = Object.fromEntries(Object.entries(fixedSlots).map(([slot, instance]) => {
-			if (instance.name === "__class_core") return [slot, instance];
 			const fixedDefinition = data.items[instance.name];
 			if (upgradeLevel !== null && fixedDefinition?.upgrade) return [slot, { ...instance, level: upgradeLevel }];
 			if (compoundLevel !== null && fixedDefinition?.compound) return [slot, { ...instance, level: compoundLevel }];
@@ -300,10 +280,10 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 		const slots = { mainhand: { ...mainhand, level }, ...enhancedFixedSlots };
 		if (offhand === null) delete slots.offhand;
 		else if (offhand !== undefined) slots.offhand = offhand;
-		const sheet = calculateStats({ slots, items, sets: data.sets, getItemProperties });
+		const sheet = calculateStats({ slots, items: data.items, sets: data.sets, getItemProperties });
 		const contributions = rebalancedContributionEvidence({
 			slots,
-			items,
+			items: data.items,
 			sets: data.sets,
 			getItemProperties,
 			mainhandDefinition: definition,
@@ -347,6 +327,7 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 		cape_id: equipmentEntries.find(([slot]) => slot === "cape")?.[1].name || null,
 		frozen_accessory_ids: frozenEntries.map(([, item]) => item.name),
 		class_core: clone(role.class_core),
+		runtime_class_core_applied: false,
 		hand_attack_factor: definition.wtype === "stars" && compatibleOffhand && data.items[compatibleOffhand[1].name]?.wtype !== "stars" ? 1 / 3 : 1,
 		evaluate,
 		evaluateState,
@@ -462,26 +443,26 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 	if (["warrior", "ranger", "rogue", "paladin"].includes(weapon.skill)) {
 		const paladin = weapon.skill === "paladin";
 		if (paladin) {
-			for (let primary = 0; primary <= coreCeiling * 2; primary += 1) {
+			for (let primary = 1; primary <= coreCeiling * 2; primary += 1) {
 				const str = Math.floor(primary / 2);
 				const int = primary % 2;
 				for (let dex = 0; str + int + dex <= coreCeiling; dex += 1) addAttackBracket({ str, int, dex });
 			}
 		} else {
-			for (let str = 0; str <= coreCeiling; str += 1)
+			for (let str = 1; str <= coreCeiling; str += 1)
 				for (let dex = 0; str + dex <= coreCeiling; dex += 1) addAttackBracket({ str, int: 0, dex });
 		}
 		domain = {
 			representation: paladin
-				? "paladin:primary=2*str+int,int<2,dex,total_core<=ceiling; two int is DPS-equivalent to one str and loses the minimum-core tie-break"
-				: "physical:str,dex,total_core<=ceiling;int=0",
+				? "paladin:primary=2*str+int,int<2,primary>=1,dex,total_core<=ceiling; two int is DPS-equivalent to one str and loses the minimum-core tie-break"
+				: "physical:str>=1,dex,total_core<=ceiling;int=0",
 			enumerated_maximum: paladin ? { total_core: coreCeiling, primary: coreCeiling * 2, dex: coreCeiling } : { total_core: coreCeiling, str: coreCeiling, dex: coreCeiling },
 			equivalent_allocation_reduction: paladin ? "Every omitted int>=2 allocation has an equal-DPS lower-core str/int representation and cannot win the approved stable tie-break." : null,
 		};
 	} else {
-		for (let intelligence = 0; intelligence <= coreCeiling; intelligence += 1) addAttackBracket({ str: 0, int: intelligence, dex: 0 });
+		for (let intelligence = 1; intelligence <= coreCeiling; intelligence += 1) addAttackBracket({ str: 0, int: intelligence, dex: 0 });
 		domain = {
-			representation: "magical:int,total_core<=ceiling;str=0,dex=0",
+			representation: "magical:int>=1,total_core<=ceiling;str=0,dex=0",
 			enumerated_maximum: { total_core: coreCeiling, int: coreCeiling },
 		};
 	}
@@ -507,7 +488,7 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 		band,
 		domain: {
 			rule: "endpoint-offensive-core-envelope",
-			core_constraints: "nonnegative integer DPS-affecting allocations whose total does not exceed the endpoint-derived rank ceiling; irrelevant fields are fixed to zero",
+			core_constraints: "nonnegative integer DPS-affecting allocations whose total does not exceed the endpoint-derived rank ceiling and whose weapon-owned damage core is positive; irrelevant fields are fixed to zero",
 			rank_upper_boundary: band.upper,
 			core_envelope: {
 				fields: clone(coreEnvelope.fields),
@@ -520,7 +501,7 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 			},
 			allocation_count: allocationCount,
 			candidate_count: candidateCount,
-			allocation_proof: "Every nonnegative DPS-affecting integer allocation inside the endpoint-derived total-core ceiling is enumerated directly or by a lower-core DPS-equivalent Paladin representation.",
+			allocation_proof: "Every damage-enabled weapon-owned integer allocation inside the endpoint-derived total-core ceiling is enumerated directly or by a lower-core DPS-equivalent Paladin representation.",
 			attack_proof: "For every legal allocation, monotone positive attack is searched to the exact target bracket; those two neighbors contain every possible log-nearest candidate.",
 			...domain,
 		},
@@ -668,6 +649,7 @@ function allocateSkillBudgets(data, calculators, baseline, rows, { requirements 
 			cape_id: result.context.cape_id,
 			frozen_accessory_ids: result.context.frozen_accessory_ids,
 			class_core: result.context.class_core,
+			runtime_class_core_applied: result.context.runtime_class_core_applied,
 			zero_allocation_current_sheet: result.zero_allocation_current_sheet,
 		};
 		row.quantization = {
@@ -1004,8 +986,9 @@ function buildEnhancementFullSheetRows(rows, data, calculators, baseline, warrio
 					base_dps: warriorTargets[row.shared_rank - 1].pinned_base_dps,
 				},
 				rebalanced_contributions: {
-					class_core: clone(row.full_sheet_context.class_core),
-					nonweapon_plus_class_at_zero_weapon_allocation: clone(row.full_sheet_context.zero_allocation_current_sheet),
+					pinned_reference_class_core: clone(row.full_sheet_context.class_core),
+					runtime_class_core_applied: row.full_sheet_context.runtime_class_core_applied,
+					nonweapon_at_zero_weapon_allocation: clone(row.full_sheet_context.zero_allocation_current_sheet),
 					armor_ids: clone(row.full_sheet_context.armor_ids),
 					cape_id: row.full_sheet_context.cape_id,
 					frozen_accessory_ids: clone(row.full_sheet_context.frozen_accessory_ids),
@@ -1684,10 +1667,22 @@ function validatePublicationSourceSemantics(ranking, publication) {
 	}
 }
 
-function assertOffenseFreeArmorContributions(ranking) {
+function assertGearOnlyRebalancedContributions(ranking) {
 	for (const row of ranking.enhancement_full_sheet_rows) {
+		if (row.rebalanced_contributions?.runtime_class_core_applied !== false) {
+			const error = new Error(`Weapon ranking publication applied synthetic class stats: ${row.id}`);
+			error.code = "weapon_publication_synthetic_class_core";
+			error.class_rank_state = row.id;
+			throw error;
+		}
 		for (const state of row.states) {
 			const evidence = expandContributionEvidence(state.rebalanced_contributions, ranking.enhancement_contribution_catalog, { validateCatalog: false });
+			if (evidence.groups.class.items.length || Object.keys(evidence.groups.class.totals).length) {
+				const error = new Error(`Weapon ranking publication class contribution is not gear-only: ${row.id}:+${state.upgrade_level}/+${state.compound_level}`);
+				error.code = "weapon_publication_synthetic_class_core";
+				error.class_rank_state = `${row.id}:+${state.upgrade_level}/+${state.compound_level}`;
+				throw error;
+			}
 			for (const field of OFFENSIVE_ARMOR_FIELDS) {
 				if (Number(evidence.groups.armor.totals[field] || 0) !== 0) {
 					const error = new Error(`Weapon ranking publication armor contribution contains ${field}: ${row.id}:+${state.upgrade_level}/+${state.compound_level}`);
@@ -1780,7 +1775,7 @@ function validateRankingPublicationBundle(ranking, { publication = null } = {}) 
 		throw error;
 	}
 	assertEnhancementFeasibility(report);
-	assertOffenseFreeArmorContributions(ranking);
+	assertGearOnlyRebalancedContributions(ranking);
 	if (stableJson(ranking.enhancement_feasibility) !== stableJson(compactEnhancementFeasibility(report))) {
 		const error = new Error("Weapon ranking publication feasibility summary drifted");
 		error.code = "weapon_publication_summary_drift";

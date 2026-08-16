@@ -36,18 +36,10 @@ function abilityResourceCost(ability, stats) {
 }
 
 function weaponStats(report, calculators, rankingRow, upgradeLevel) {
-	const classCore = rankingRow.full_sheet_context.class_core;
-	const items = { ...report.data.items, __class_core: classCore };
 	return calculateStats({
-		slots: {
-			mainhand: { name: rankingRow.weapon_id, level: upgradeLevel },
-			class_core: { name: "__class_core", level: 0 },
-		},
-		items,
-		getItemProperties: (instance, definition) =>
-			instance.name === "__class_core"
-				? definition
-				: calculators.current.calculate_item_properties(instance),
+		slots: { mainhand: { name: rankingRow.weapon_id, level: upgradeLevel } },
+		items: report.data.items,
+		getItemProperties: calculators.current.calculate_item_properties,
 	});
 }
 
