@@ -227,6 +227,8 @@ test("all-monsters guide groups published monster tiers and keeps unassigned mon
 	assert.match(modal.html, />Tier 2</);
 	assert.match(modal.html, />Tier 7</);
 	assert.match(modal.html, />Unassigned</);
+	assert.match(modal.html, /clear: both; margin: 12px 0; padding: 6px/);
+	assert.match(modal.html, /display: block; margin: 0 0 6px; text-align: left/);
 	assert.ok(modal.html.indexOf("Tier 1") < modal.html.indexOf("Tier 2"));
 	assert.ok(modal.html.indexOf("Tier 2") < modal.html.indexOf("Tier 7"));
 	assert.ok(modal.html.indexOf("Tier 7") < modal.html.indexOf("Unassigned"));

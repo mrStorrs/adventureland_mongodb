@@ -2946,7 +2946,8 @@ function render_all_monsters() {
 	});
 	[1, 2, 3, 4, 5, 6, 7, "unassigned"].forEach(function (tier) {
 		if (!tiers[tier].length) return;
-		html += "<div class='gamebutton gamebutton-small' style='margin: 8px 0 5px'>" + (tier == "unassigned" ? "Unassigned" : "Tier " + tier) + "</div>";
+		html += "<div style='clear: both; margin: 12px 0; padding: 6px; border: 2px solid #9F9FB0; background-color: #33334F'>";
+		html += "<div class='gamebutton gamebutton-small' style='display: block; margin: 0 0 6px; text-align: left'>" + (tier == "unassigned" ? "Unassigned" : "Tier " + tier) + "</div>";
 		tiers[tier].forEach(function (mname) {
 			html +=
 				"<div style='background-color:#575983; border: 2px solid #9F9FB0; position: relative; display: inline-block; margin: 2px; /*" +
@@ -2960,6 +2961,7 @@ function render_all_monsters() {
 					"<div style='background-color:#FD79B0; border: 2px solid #9F9FB0; position: absolute; bottom: -2px; right: -2px; display: inline-block; padding: 1px 1px 1px 1px; height: 2px; width: 2px'></div>";
 			html += "</div>";
 		});
+		html += "</div>";
 	});
 	html += "</div>";
 	show_modal(html, { wrap: false, hideinbackground: true, url: "/docs/guide/all/monsters" });
