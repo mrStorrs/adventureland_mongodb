@@ -66,6 +66,37 @@ test("Priest starters are replaceable without adding an ordinary starter loot ro
 	assert.equal((data.drops.monsters.bat || []).some((entry) => entry[1] === "wbook0"), false);
 });
 
+test("only weapons retain level-gated equipment requirements", () => {
+	const data = loadSourceData();
+	const equipmentTypes = new Set([
+		"helmet",
+		"pants",
+		"chest",
+		"weapon",
+		"amulet",
+		"earring",
+		"shoes",
+		"gloves",
+		"ring",
+		"shield",
+		"belt",
+		"source",
+		"orb",
+		"quiver",
+		"cape",
+		"misc_offhand",
+		"tool",
+	]);
+	for (const [itemId, item] of Object.entries(data.items)) {
+		if (!equipmentTypes.has(item.type) || item.type === "weapon") continue;
+		assert.deepEqual(data.itemRequirements[itemId], [], `${itemId} is not level-gated`);
+	}
+	for (const [itemId, item] of Object.entries(data.items)) {
+		if (item.type !== "weapon") continue;
+		assert.ok(data.itemRequirements[itemId].length > 0, `${itemId} remains weapon-gated`);
+	}
+});
+
 test("Hunter sidegrades are Monster Token-only without changing PvP weapon routes", () => {
 	const data = loadSourceData();
 	const hunterIds = ["mhbook", "mhcrossbow", "mhdagger", "mhhammer", "mhspear", "mhwand"];

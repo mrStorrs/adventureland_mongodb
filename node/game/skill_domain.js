@@ -318,7 +318,10 @@ function validateItemRequirements(items, itemRequirements, registry, weaponOwner
 		if (!own(items, itemId)) {
 			throw fail("invalid_game_data", `Requirements reference missing item ${itemId}`, { item: itemId });
 		}
-		validateRequirements(itemId, requirements, registry);
+		if (!Array.isArray(requirements)) {
+			throw fail("invalid_equipment_requirements", `Malformed requirements for ${itemId}`, { item: itemId, requirements });
+		}
+		if (requirements.length) validateRequirements(itemId, requirements, registry);
 		if (JSON.stringify(items[itemId].requirements) !== JSON.stringify(requirements)) {
 			throw fail("invalid_game_data", `Item requirements differ from the normalized snapshot for ${itemId}`, {
 				item: itemId,
@@ -361,19 +364,12 @@ function validateItemRequirements(items, itemRequirements, registry, weaponOwner
 		if (EQUIPPABLE_TYPES.has(item.type) && !own(itemRequirements, itemId)) {
 			throw fail("invalid_game_data", `Equippable item ${itemId} is missing an explicit requirement`, { item: itemId });
 		}
-		if (NONCOMBAT_TOOL_TYPES.has(item.wtype)) {
-			const requirements = itemRequirements[itemId];
-			if (
-				item.type !== "tool" ||
-				requirements.length !== 1 ||
-				requirements[0].skill !== "merchant" ||
-				requirements[0].level !== 16
-			) {
-				throw fail("invalid_game_data", `Noncombat tool ${itemId} must require Merchant level 16`, { item: itemId });
+		if (item.type !== "weapon") {
+			if (EQUIPPABLE_TYPES.has(item.type) && itemRequirements[itemId].length) {
+				throw fail("invalid_game_data", `Nonweapon equipment ${itemId} must be ungated`, { item: itemId });
 			}
 			continue;
 		}
-		if (item.type !== "weapon") continue;
 		if (!weaponOwners.has(item.wtype)) {
 			throw fail("invalid_game_data", `Weapon ${itemId} has an unowned weapon type ${item.wtype}`, {
 				item: itemId,

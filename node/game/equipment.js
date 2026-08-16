@@ -105,6 +105,7 @@ function requirementFailure(item, requirements, skills) {
 }
 
 function validateRequirements(item, requirements, skills) {
+	if (Array.isArray(requirements) && requirements.length === 0) return;
 	try {
 		validateRegistryRequirements(item, requirements);
 	} catch (error) {
