@@ -161,7 +161,7 @@ function renderLiveMonsterPanel(progression) {
 test("item guide DPS matches the direct item properties through each full enhancement range", () => {
 	const data = loadBenchmarkData();
 	const calculators = loadPropertyCalculators(data);
-	const guideWeaponMetrics = loadGuideMetrics(data.skills);
+	const guideWeaponMetrics = loadGuideHelpers(data.skills).guide_weapon_progression_metrics;
 	for (const [weaponId, definition] of Object.entries(data.items)) {
 		if (definition.type !== "weapon" || !definition.wtype) continue;
 		const maximumLevel = definition.compound ? 10 : definition.upgrade ? 12 : 0;
@@ -262,6 +262,18 @@ test("item guide groups visible weapons by combat profile and base DPS", () => {
 					assert.ok(positions.get(easier.weapon_id) < positions.get(harder.weapon_id), `${group.id} rank ${easier.shared_rank}->${harder.shared_rank}`);
 	}
 	assert.deepEqual(displayed.sort(), visibleWeapons);
+});
+
+test("Hunter sidegrades remain visible to the Guide as rank-five placeholders", () => {
+	const data = loadBenchmarkData();
+	const calculators = loadPropertyCalculators(data);
+	const guideWeaponMetrics = loadGuideHelpers(data.skills).guide_weapon_progression_metrics;
+	for (const itemId of ["mhspear", "mhhammer", "mhwand", "mhbook", "mhcrossbow", "mhdagger"]) {
+		const metrics = guideWeaponMetrics(data.items[itemId], calculators.current.calculate_item_properties({ name: itemId, level: 0 }));
+		assert.equal(metrics.progression.shared_rank, 5, itemId);
+		assert.equal(metrics.progression.role, "hunter_sidegrade", itemId);
+		assert.equal(data.items[itemId].placeholder_art, true, itemId);
+	}
 });
 
 test("item guide preserves non-weapon categories, ignored entries, and item detail actions", () => {

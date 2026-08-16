@@ -2,6 +2,7 @@ node/tests/fixtures/armor-set-balance.json linguist-generated=true
 node/tests/fixtures/equipment-acquisition-ranking.json linguist-generated=true
 node/tests/fixtures/equipment-balance-contract.json linguist-generated=true
 node/tests/fixtures/equipment-combat-matrix.json linguist-generated=true
+node/tests/fixtures/hunter-weapon-economy.json linguist-generated=true
 node/tests/fixtures/monster-combat-tiers.json linguist-generated=true
 node/tests/fixtures/protected-monster-loot-baseline.json linguist-generated=true
 node/tests/fixtures/vanilla-equipment-baseline.json linguist-generated=true

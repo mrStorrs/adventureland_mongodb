@@ -32,6 +32,7 @@ test("deterministic compact equipment fixtures stay outside Prettier and GitHub 
 		"equipment-acquisition-ranking.json",
 		"equipment-balance-contract.json",
 		"equipment-combat-matrix.json",
+		"hunter-weapon-economy.json",
 		"vanilla-equipment-baseline.json",
 		"weapon-acquisition-ranking.json",
 		"weapon-loadout-balance.json",

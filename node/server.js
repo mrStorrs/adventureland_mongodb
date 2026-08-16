@@ -27,6 +27,7 @@ const {
 } = require("./game/skill_domain");
 const { validateEquipmentSchema } = require("./game/equipment_schema");
 const { progression } = require("../design/progression");
+const { calculateHuntCount, chooseHuntCandidate, createHuntRecord, huntPopulation, normalizeHunt, resolveHuntWeapon, rewardQuantity } = require("./game/monster_progression");
 const { createCharacterState, loadCharacterState } = require("./game/character_state");
 const { WEAPON_PROFILES, deriveActiveSkill, weaponProfile } = require("./game/active_skill");
 const { merchantTax, merchantSlots, isOpenMerchantStand } = require("./game/merchant_progression");
@@ -4735,51 +4736,35 @@ function init_io() {
 					hunted.push(server.s[id].id);
 				}
 			}
-			if (player.s.monsterhunt && player.s.monsterhunt.c) {
+			if (player.s.monsterhunt && player.s.monsterhunt.c > 0) {
 				return fail_response("monsterhunt_already");
 			} else if (player.s.monsterhunt) {
+				var completed_hunt = normalizeHunt(player.s.monsterhunt, progression);
+				var reward_quantity = completed_hunt && rewardQuantity(completed_hunt.tier, gameplay == "hardcore", progression);
+				if (!reward_quantity) {
+					return fail_response("monsterhunt_invalid");
+				}
 				delete server.s["monsterhunt_" + player.s.monsterhunt.id];
 				delete player.s.monsterhunt;
-				add_item(player, "monstertoken", { log: true, q: (gameplay == "hardcore" && 100) || 1 });
+				add_item(player, "monstertoken", { log: true, q: reward_quantity });
 				resend(player, "u+cid+reopen");
 				return success_response({ completed: true });
 			}
-			var mmax = -1;
-			var name = "goo";
-			var count = 100;
-			var times = 0;
-			var the_hp = 0;
-			for (var id in instances) {
-				if (instances[id].name != id || !G.maps[id] || G.maps[id].irregular) {
-					continue;
-				}
-				for (var mid in instances[id].monsters) {
-					var monster = instances[id].monsters[mid];
-					if (monster.level > mmax && !in_arr(monster.type, hunted) && !monster.target) {
-						// added the target condition [21/07/23]
-						name = monster.type;
-						mmax = monster.level;
-						the_hp = monster.max_hp / 1000.0;
-					}
-				}
+			var weapon = resolveHuntWeapon(player.slots, G.items, progression);
+			if (!weapon) {
+				return fail_response("monsterhunt_weapon");
 			}
-			for (var id in G.maps) {
-				if (G.maps[id].irregular || !G.maps[id].monsters) {
-					continue;
-				}
-				G.maps[id].monsters.forEach(function (p) {
-					if (p.type == name) {
-						times += p.count;
-					}
-				});
+			var candidate = chooseHuntCandidate({ instances: instances, maps: G.maps, progression: progression, maximum_tier: weapon.maximum_tier, hunted_ids: new Set(hunted) });
+			if (!candidate) {
+				return fail_response("monsterhunt_unavailable");
 			}
-			// console.log(times);
-			count = max(1, min(500, parseInt((20 * 60 * max(1, times)) / the_hp / (G.monsters[name].respawn + 0.25))));
-			if (gameplay == "hardcore") {
-				count = max(1, parseInt(count / 10));
+			var count = calculateHuntCount({ population: huntPopulation(G.maps, candidate.monster_id), max_hp: candidate.max_hp, respawn: G.monsters[candidate.monster_id] && G.monsters[candidate.monster_id].respawn, hardcore: gameplay == "hardcore" });
+			var hunt = count && createHuntRecord({ server_name: region + " " + server_name, monster_id: candidate.monster_id, tier: candidate.tier, count: count });
+			if (!hunt) {
+				return fail_response("monsterhunt_unavailable");
 			}
-			player.s.monsterhunt = { sn: region + " " + server_name, id: name, c: count, ms: 30 * 60 * 1000, dl: true };
-			server.s["monsterhunt_" + name] = { name: player.name, id: name, ms: 20 * 60 * 1000, type: "monsterhunt" };
+			player.s.monsterhunt = hunt;
+			server.s["monsterhunt_" + candidate.monster_id] = { name: player.name, id: candidate.monster_id, ms: 20 * 60 * 1000, type: "monsterhunt" };
 			player.hitchhikers.push(["game_response", "monsterhunt_started"]);
 			resend(player, "u+cid");
 			success_response({ started: true });
