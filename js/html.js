@@ -2937,19 +2937,29 @@ function render_all_items() {
 function render_all_monsters() {
 	var html = "";
 	html += "<div style='width: 480px'>";
+	var tiers = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], unassigned: [] },
+		progression = (G.progression && G.progression.MONSTER_PROGRESSION) || {};
 	object_sort(G.monsters, "hpsort").forEach(function (e) {
 		if (((e[1].stationary || e[1].cute) && !e[1].achievements) || e[1].hide) return;
-		html +=
-			"<div style='background-color:#575983; border: 2px solid #9F9FB0; position: relative; display: inline-block; margin: 2px; /*" +
-			e[0] +
-			"*/' class='clickable' onclick='pcs(event); render_monster_info(\"" +
-			e[0] +
-			"\")'>";
-		html += sprite(e[0], { scale: 1.5 });
-		if (G.drops && G.drops.monsters && G.drops.monsters[e[0]] && G.drops.monsters[e[0]].length)
+		var tier = progression[e[0]] && progression[e[0]].tier;
+		(tiers[tier] || tiers.unassigned).push(e[0]);
+	});
+	[1, 2, 3, 4, 5, 6, 7, "unassigned"].forEach(function (tier) {
+		if (!tiers[tier].length) return;
+		html += "<div class='gamebutton gamebutton-small' style='margin: 8px 0 5px'>" + (tier == "unassigned" ? "Unassigned" : "Tier " + tier) + "</div>";
+		tiers[tier].forEach(function (mname) {
 			html +=
-				"<div style='background-color:#FD79B0; border: 2px solid #9F9FB0; position: absolute; bottom: -2px; right: -2px; display: inline-block; padding: 1px 1px 1px 1px; height: 2px; width: 2px'></div>";
-		html += "</div>";
+				"<div style='background-color:#575983; border: 2px solid #9F9FB0; position: relative; display: inline-block; margin: 2px; /*" +
+				mname +
+				"*/' class='clickable' onclick='pcs(event); render_monster_info(\"" +
+				mname +
+				"\")'>";
+			html += sprite(mname, { scale: 1.5 });
+			if (G.drops && G.drops.monsters && G.drops.monsters[mname] && G.drops.monsters[mname].length)
+				html +=
+					"<div style='background-color:#FD79B0; border: 2px solid #9F9FB0; position: absolute; bottom: -2px; right: -2px; display: inline-block; padding: 1px 1px 1px 1px; height: 2px; width: 2px'></div>";
+			html += "</div>";
+		});
 	});
 	html += "</div>";
 	show_modal(html, { wrap: false, hideinbackground: true, url: "/docs/guide/all/monsters" });

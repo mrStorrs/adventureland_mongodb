@@ -51,6 +51,26 @@ function renderGuideItems(items, skills) {
 	return modal;
 }
 
+function renderGuideMonsters(monsters, progression) {
+	const source = fs.readFileSync(path.resolve(__dirname, "../../js/html.js"), "utf8");
+	const renderStart = source.indexOf("function render_all_monsters()");
+	const renderEnd = source.indexOf("\nfunction render_all_events()", renderStart);
+	assert.ok(renderStart >= 0 && renderEnd > renderStart, "all-monsters renderer exists");
+	let modal;
+	const context = {
+		G: { drops: { monsters: { tier_two: [[1, "loot"]] } }, monsters, progression: { MONSTER_PROGRESSION: progression } },
+		object_sort: (object) => Object.entries(object).sort((left, right) => left[1].hp - right[1].hp || left[0].localeCompare(right[0])),
+		pcs: () => {},
+		render_monster_info: () => {},
+		show_modal: (html, options) => { modal = { html, options }; },
+		sprite: (id) => `<sprite id="${id}">`,
+	};
+	vm.createContext(context);
+	vm.runInContext(source.slice(renderStart, renderEnd), context, { filename: "html.js" });
+	context.render_all_monsters();
+	return modal;
+}
+
 function renderRankedWeaponInfo(level) {
 	const source = fs.readFileSync(path.resolve(__dirname, "../../js/html.js"), "utf8");
 	const infoStart = source.indexOf("function render_item_info(");
@@ -189,6 +209,31 @@ test("item guide labels direct damage, attack speed, and DPS without primary sta
 
 test("monster guide cards render the monster's published attack as direct damage", () => {
 	assert.match(renderMonsterCard(), /<metric name="Damage">240<\/metric>/);
+});
+
+test("all-monsters guide groups published monster tiers and keeps unassigned monsters visible", () => {
+	const modal = renderGuideMonsters(
+		{
+			tier_one: { hp: 10 },
+			tier_two: { hp: 20 },
+			tier_seven: { hp: 70 },
+			unassigned: { hp: 30 },
+			hidden: { hp: 40, hide: true },
+			cute: { hp: 50, cute: true },
+		},
+		{ tier_one: { tier: 1 }, tier_two: { tier: 2 }, tier_seven: { tier: 7 } },
+	);
+	assert.match(modal.html, />Tier 1</);
+	assert.match(modal.html, />Tier 2</);
+	assert.match(modal.html, />Tier 7</);
+	assert.match(modal.html, />Unassigned</);
+	assert.ok(modal.html.indexOf("Tier 1") < modal.html.indexOf("Tier 2"));
+	assert.ok(modal.html.indexOf("Tier 2") < modal.html.indexOf("Tier 7"));
+	assert.ok(modal.html.indexOf("Tier 7") < modal.html.indexOf("Unassigned"));
+	assert.match(modal.html, /sprite id="tier_two"/);
+	assert.match(modal.html, /#FD79B0/);
+	assert.doesNotMatch(modal.html, /sprite id="hidden"|sprite id="cute"/);
+	assert.equal(modal.options.url, "/docs/guide/all/monsters");
 });
 
 test("live monster panels show progression mechanics and ineligibility reason", () => {
