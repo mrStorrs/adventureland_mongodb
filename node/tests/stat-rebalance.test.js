@@ -195,6 +195,28 @@ test("every ranked weapon produces positive gear-only attack without synthetic c
 	}
 });
 
+test("CJ's +8 blade retains most canonical damage without optional offensive gear", () => {
+	const catalog = loadItemProperties();
+	const stats = calculateStats({
+		slots: {
+			mainhand: { name: "blade", level: 8 },
+			helmet: { name: "wcap", level: 4 },
+			chest: { name: "coat", level: 7 },
+			gloves: { name: "gloves", level: 8 },
+			pants: { name: "pants", level: 7 },
+			shoes: { name: "wshoes", level: 4 },
+			belt: { name: "hpbelt", level: 2 },
+			amulet: { name: "hpamulet", level: 2 },
+		},
+		items: catalog.items,
+		getItemProperties: catalog.properties,
+	});
+	const blade = weaponRanking.weapons.find((weapon) => weapon.weapon_id === "blade");
+	const canonical = blade.enhancement_states.find((state) => state.level === 8);
+	assert.ok(stats.attack >= canonical.hit_damage * 0.8, `CJ +8 blade hit ${stats.attack}/${canonical.hit_damage}`);
+	assert.ok(stats.attack * stats.frequency >= canonical.base_dps * 0.8, `CJ +8 blade DPS ${stats.attack * stats.frequency}/${canonical.base_dps}`);
+});
+
 test("reviewed armor, capes, and cumulative set bonuses flow through runtime stats", () => {
 	const items = loadItems();
 	for (const itemId of ["mpalarmor", "coat1", "tigerarmor", "angelwings", "vcape"]) {

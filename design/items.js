@@ -7617,13 +7617,13 @@ Object.assign(items.claw, { attack: 11, str: 30 });
 // and attack growth; every other field remains authored.
 var weapon_progression = {
   "basher": {
-    "attack": 751,
+    "attack": 81,
     "frequency": 39.565,
-    "str": 0,
-    "int": 1,
+    "str": 50,
+    "int": 0,
     "dex": 121,
     "upgrade": {
-      "attack": 4.86153846154
+      "attack": 18.4615384615
     },
     "progression": {
       "historical_rank": 8,
@@ -7639,13 +7639,13 @@ var weapon_progression = {
     }
   },
   "bataxe": {
-    "attack": 1969,
+    "attack": 88,
     "frequency": 31.8795,
-    "str": 1,
+    "str": 65,
     "int": 0,
     "dex": 130,
     "upgrade": {
-      "attack": 982.646153846
+      "attack": 44
     },
     "progression": {
       "historical_rank": 12,
@@ -7661,13 +7661,13 @@ var weapon_progression = {
     }
   },
   "blade": {
-    "attack": 517,
+    "attack": 92,
     "frequency": 0.737,
-    "str": 1,
+    "str": 15,
     "int": 0,
     "dex": 50,
     "upgrade": {
-      "attack": 100.492307692
+      "attack": 17.7230769231
     },
     "progression": {
       "historical_rank": 1,
@@ -7705,13 +7705,13 @@ var weapon_progression = {
     }
   },
   "bowofthedead": {
-    "attack": 1465,
+    "attack": 70,
     "frequency": 50.77075,
-    "str": 1,
+    "str": 41,
     "int": 0,
     "dex": 87,
     "upgrade": {
-      "attack": 605.538461538
+      "attack": 28.8
     },
     "progression": {
       "historical_rank": 8,
@@ -7771,13 +7771,13 @@ var weapon_progression = {
     }
   },
   "carrotsword": {
-    "attack": 1654,
+    "attack": 50,
     "frequency": 26.7145,
-    "str": 1,
+    "str": 65,
     "int": 0,
     "dex": 49,
     "upgrade": {
-      "attack": 638.769230769
+      "attack": 19.3846153846
     },
     "progression": {
       "historical_rank": 8,
@@ -7837,13 +7837,13 @@ var weapon_progression = {
     }
   },
   "crossbow": {
-    "attack": 3254,
+    "attack": 723,
     "frequency": 31.158,
-    "str": 1,
+    "str": 8,
     "int": 0,
     "dex": 141,
     "upgrade": {
-      "attack": 1037.6
+      "attack": 230.584615385
     },
     "progression": {
       "historical_rank": 9,
@@ -7859,13 +7859,13 @@ var weapon_progression = {
     }
   },
   "cupid": {
-    "attack": 1734,
+    "attack": 266,
     "frequency": 50.77075,
-    "str": 1,
+    "str": 12,
     "int": 0,
     "dex": 137,
     "upgrade": {
-      "attack": 684.984615385
+      "attack": 105.476923077
     },
     "progression": {
       "historical_rank": 10,
@@ -7881,13 +7881,13 @@ var weapon_progression = {
     }
   },
   "dagger": {
-    "attack": 1734,
+    "attack": 77,
     "frequency": 30.714,
-    "str": 1,
+    "str": 44,
     "int": 0,
     "dex": 84,
     "upgrade": {
-      "attack": 690.461538462
+      "attack": 30.7076923077
     },
     "progression": {
       "historical_rank": 6,
@@ -7903,13 +7903,13 @@ var weapon_progression = {
     }
   },
   "daggerofthedead": {
-    "attack": 1304,
+    "attack": 33,
     "frequency": 50.19875,
-    "str": 1,
+    "str": 78,
     "int": 0,
     "dex": 9,
     "upgrade": {
-      "attack": 586.523076923
+      "attack": 14.8923076923
     },
     "progression": {
       "historical_rank": 5,
@@ -7925,13 +7925,13 @@ var weapon_progression = {
     }
   },
   "dartgun": {
-    "attack": 1769,
+    "attack": 204,
     "frequency": 75.09658108108108,
-    "str": 1,
+    "str": 24,
     "int": 0,
     "dex": 201,
     "upgrade": {
-      "attack": 921.907692308
+      "attack": 106.4
     },
     "progression": {
       "historical_rank": 14,
@@ -7947,13 +7947,13 @@ var weapon_progression = {
     }
   },
   "dragondagger": {
-    "attack": 267,
+    "attack": 29,
     "frequency": 74.27158108108108,
-    "str": 1,
+    "str": 239,
     "int": 0,
     "dex": 8,
     "upgrade": {
-      "attack": 14.4
+      "attack": 9.41538461538
     },
     "progression": {
       "historical_rank": 11,
@@ -7991,13 +7991,13 @@ var weapon_progression = {
     }
   },
   "fireblade": {
-    "attack": 489,
+    "attack": 34,
     "frequency": 25.152,
-    "str": 1,
+    "str": 41,
     "int": 0,
     "dex": 32,
     "upgrade": {
-      "attack": 243.753846154
+      "attack": 16.9846153846
     },
     "progression": {
       "historical_rank": 3,
@@ -8057,13 +8057,13 @@ var weapon_progression = {
     }
   },
   "firestars": {
-    "attack": 4485,
+    "attack": 184,
     "frequency": 50.19875,
-    "str": 1,
+    "str": 48,
     "int": 0,
     "dex": 101,
     "upgrade": {
-      "attack": 1870.09230769
+      "attack": 76.2461538462
     },
     "progression": {
       "historical_rank": 7,
@@ -8079,13 +8079,13 @@ var weapon_progression = {
     }
   },
   "frostbow": {
-    "attack": 1555,
+    "attack": 53,
     "frequency": 31.158,
-    "str": 1,
+    "str": 58,
     "int": 0,
     "dex": 52,
     "upgrade": {
-      "attack": 665.846153846
+      "attack": 22.5846153846
     },
     "progression": {
       "historical_rank": 7,
@@ -8123,13 +8123,13 @@ var weapon_progression = {
     }
   },
   "fsword": {
-    "attack": 576,
+    "attack": 64,
     "frequency": 25.66,
-    "str": 1,
+    "str": 25,
     "int": 0,
     "dex": 57,
     "upgrade": {
-      "attack": 258.523076923
+      "attack": 28.7384615385
     },
     "progression": {
       "historical_rank": 4,
@@ -8145,13 +8145,13 @@ var weapon_progression = {
     }
   },
   "gbow": {
-    "attack": 1498,
+    "attack": 1070,
     "frequency": 50.77075,
-    "str": 1,
+    "str": 3,
     "int": 0,
     "dex": 257,
     "upgrade": {
-      "attack": 740.184615385
+      "attack": 528.738461538
     },
     "progression": {
       "historical_rank": 15,
@@ -8167,13 +8167,13 @@ var weapon_progression = {
     }
   },
   "glolipop": {
-    "attack": 465,
+    "attack": 93,
     "frequency": 3.65175,
-    "str": 0,
+    "str": 30,
     "int": 1,
     "dex": 82,
     "upgrade": {
-      "attack": 7.63076923077
+      "attack": 15.6923076923
     },
     "progression": {
       "historical_rank": 5,
@@ -8189,13 +8189,13 @@ var weapon_progression = {
     }
   },
   "gstaff": {
-    "attack": 129,
+    "attack": 80,
     "frequency": 64.23990584737365,
     "str": 0,
-    "int": 57,
+    "int": 96,
     "dex": 0,
     "upgrade": {
-      "attack": 35.3846153846
+      "attack": 28.3076923077
     },
     "progression": {
       "historical_rank": 15,
@@ -8204,20 +8204,20 @@ var weapon_progression = {
       "requirement": 90,
       "reference_level": 63,
       "target_dps": 397.357073071,
-      "full_sheet_hit_damage": 432,
-      "attacks_per_second": 0.919815,
+      "full_sheet_hit_damage": 424,
+      "attacks_per_second": 0.93717,
       "base_dps": 397.36008,
       "selected_effort": 2755353024.59
     }
   },
   "hammer": {
-    "attack": 472,
+    "attack": 39,
     "frequency": 59.574,
-    "str": 0,
+    "str": 67,
     "int": 1,
     "dex": 78,
     "upgrade": {
-      "attack": 2.03076923077
+      "attack": 9.53846153846
     },
     "progression": {
       "historical_rank": 7,
@@ -8255,13 +8255,13 @@ var weapon_progression = {
     }
   },
   "harpybow": {
-    "attack": 1905,
+    "attack": 58,
     "frequency": 75.09658108108108,
-    "str": 1,
+    "str": 65,
     "int": 0,
     "dex": 73,
     "upgrade": {
-      "attack": 846.153846154
+      "attack": 25.6
     },
     "progression": {
       "historical_rank": 11,
@@ -8299,13 +8299,13 @@ var weapon_progression = {
     }
   },
   "hdagger": {
-    "attack": 1769,
+    "attack": 104,
     "frequency": 74.27158108108108,
-    "str": 1,
+    "str": 49,
     "int": 0,
     "dex": 173,
     "upgrade": {
-      "attack": 936.676923077
+      "attack": 55.1384615385
     },
     "progression": {
       "historical_rank": 10,
@@ -8321,13 +8321,13 @@ var weapon_progression = {
     }
   },
   "heartwood": {
-    "attack": 746,
+    "attack": 42,
     "frequency": 51.892,
-    "str": 1,
+    "str": 135,
     "int": 0,
     "dex": 81,
     "upgrade": {
-      "attack": 45.5384615385
+      "attack": 16.3692307692
     },
     "progression": {
       "historical_rank": 14,
@@ -8343,13 +8343,13 @@ var weapon_progression = {
     }
   },
   "lmace": {
-    "attack": 351,
+    "attack": 29,
     "frequency": 60.082,
-    "str": 0,
-    "int": 1,
+    "str": 228,
+    "int": 0,
     "dex": 25,
     "upgrade": {
-      "attack": 14.7076923077
+      "attack": 9.66153846154
     },
     "progression": {
       "historical_rank": 11,
@@ -8365,13 +8365,13 @@ var weapon_progression = {
     }
   },
   "mace": {
-    "attack": 288,
+    "attack": 32,
     "frequency": 1.308,
-    "str": 0,
-    "int": 1,
+    "str": 53,
+    "int": 0,
     "dex": 10,
     "upgrade": {
-      "attack": 0
+      "attack": 2.4
     },
     "progression": {
       "historical_rank": 1,
@@ -8387,13 +8387,13 @@ var weapon_progression = {
     }
   },
   "maceofthedead": {
-    "attack": 415,
+    "attack": 161,
     "frequency": 42.617,
-    "str": 0,
-    "int": 1,
+    "str": 10,
+    "int": 0,
     "dex": 120,
     "upgrade": {
-      "attack": 3.13846153846
+      "attack": 13.4769230769
     },
     "progression": {
       "historical_rank": 6,
@@ -8409,13 +8409,13 @@ var weapon_progression = {
     }
   },
   "merry": {
-    "attack": 1745,
+    "attack": 146,
     "frequency": 15.8335,
-    "str": 1,
+    "str": 23,
     "int": 0,
     "dex": 89,
     "upgrade": {
-      "attack": 729.169230769
+      "attack": 60.7384615385
     },
     "progression": {
       "historical_rank": 6,
@@ -8453,13 +8453,13 @@ var weapon_progression = {
     }
   },
   "ololipop": {
-    "attack": 383,
+    "attack": 92,
     "frequency": 1.308,
-    "str": 0,
-    "int": 1,
+    "str": 21,
+    "int": 0,
     "dex": 64,
     "upgrade": {
-      "attack": 2.03076923077
+      "attack": 11.6307692308
     },
     "progression": {
       "historical_rank": 3,
@@ -8519,13 +8519,13 @@ var weapon_progression = {
     }
   },
   "pclaw": {
-    "attack": 2125,
+    "attack": 97,
     "frequency": 50.19875,
-    "str": 1,
+    "str": 43,
     "int": 0,
     "dex": 122,
     "upgrade": {
-      "attack": 947.692307692
+      "attack": 43.0769230769
     },
     "progression": {
       "historical_rank": 8,
@@ -8563,13 +8563,13 @@ var weapon_progression = {
     }
   },
   "pmace": {
-    "attack": 473,
+    "attack": 46,
     "frequency": 28.073,
-    "str": 0,
-    "int": 1,
+    "str": 42,
+    "int": 0,
     "dex": 53,
     "upgrade": {
-      "attack": 0
+      "attack": 7.32307692308
     },
     "progression": {
       "historical_rank": 4,
@@ -8585,13 +8585,13 @@ var weapon_progression = {
     }
   },
   "pmaceofthedead": {
-    "attack": 472,
+    "attack": 39,
     "frequency": 59.574,
-    "str": 0,
+    "str": 67,
     "int": 1,
     "dex": 78,
     "upgrade": {
-      "attack": 2.03076923077
+      "attack": 9.53846153846
     },
     "progression": {
       "historical_rank": 7,
@@ -8629,13 +8629,13 @@ var weapon_progression = {
     }
   },
   "rapier": {
-    "attack": 1269,
+    "attack": 47,
     "frequency": 30.714,
-    "str": 1,
+    "str": 79,
     "int": 0,
     "dex": 98,
     "upgrade": {
-      "attack": 711.384615385
+      "attack": 26.3384615385
     },
     "progression": {
       "historical_rank": 9,
@@ -8651,13 +8651,13 @@ var weapon_progression = {
     }
   },
   "scythe": {
-    "attack": 2377,
+    "attack": 35,
     "frequency": 55.197,
-    "str": 1,
+    "str": 202,
     "int": 0,
     "dex": 4,
     "upgrade": {
-      "attack": 1099.07692308
+      "attack": 16.1846153846
     },
     "progression": {
       "historical_rank": 13,
@@ -8695,13 +8695,13 @@ var weapon_progression = {
     }
   },
   "snowflakes": {
-    "attack": 4065,
+    "attack": 1017,
     "frequency": 30.714,
-    "str": 1,
+    "str": 7,
     "int": 0,
     "dex": 123,
     "upgrade": {
-      "attack": 1764.92307692
+      "attack": 441.230769231
     },
     "progression": {
       "historical_rank": 6,
@@ -8739,13 +8739,13 @@ var weapon_progression = {
     }
   },
   "spear": {
-    "attack": 610,
+    "attack": 56,
     "frequency": 6.352,
-    "str": 1,
+    "str": 31,
     "int": 0,
     "dex": 41,
     "upgrade": {
-      "attack": 283.507692308
+      "attack": 25.7230769231
     },
     "progression": {
       "historical_rank": 2,
@@ -8761,13 +8761,13 @@ var weapon_progression = {
     }
   },
   "spearofthedead": {
-    "attack": 1185,
+    "attack": 53,
     "frequency": 39.13975,
-    "str": 1,
+    "str": 44,
     "int": 0,
     "dex": 43,
     "upgrade": {
-      "attack": 543.938461538
+      "attack": 24.1230769231
     },
     "progression": {
       "historical_rank": 7,
@@ -8827,13 +8827,13 @@ var weapon_progression = {
     }
   },
   "stinger": {
-    "attack": 2490,
+    "attack": 2290,
     "frequency": 15.4525,
     "str": 1,
     "int": 0,
-    "dex": 19,
+    "dex": 57,
     "upgrade": {
-      "attack": 1000.61538462
+      "attack": 969.846153846
     },
     "progression": {
       "historical_rank": 3,
@@ -8842,20 +8842,20 @@ var weapon_progression = {
       "requirement": 20,
       "reference_level": 15,
       "target_dps": 85.3515065654,
-      "full_sheet_hit_damage": 125,
-      "attacks_per_second": 0.6828125,
+      "full_sheet_hit_damage": 115,
+      "attacks_per_second": 0.7421875,
       "base_dps": 85.3515625,
       "selected_effort": 972.08266329
     }
   },
   "swifty": {
-    "attack": 1555,
+    "attack": 35,
     "frequency": 20.114,
-    "str": 1,
+    "str": 86,
     "int": 0,
-    "dex": 11,
+    "dex": 24,
     "upgrade": {
-      "attack": 641.169230769
+      "attack": 14.5846153846
     },
     "progression": {
       "historical_rank": 6,
@@ -8864,20 +8864,20 @@ var weapon_progression = {
       "requirement": 40,
       "reference_level": 29,
       "target_dps": 120.411234264,
-      "full_sheet_hit_damage": 156,
-      "attacks_per_second": 0.771875,
+      "full_sheet_hit_damage": 152,
+      "attacks_per_second": 0.7921875,
       "base_dps": 120.4125,
       "selected_effort": 8355.31708972
     }
   },
   "sword": {
-    "attack": 1694,
+    "attack": 77,
     "frequency": 39.13975,
-    "str": 1,
+    "str": 43,
     "int": 0,
     "dex": 98,
     "upgrade": {
-      "attack": 664.615384615
+      "attack": 30.2153846154
     },
     "progression": {
       "historical_rank": 9,
@@ -8893,13 +8893,13 @@ var weapon_progression = {
     }
   },
   "swordofthedead": {
-    "attack": 1694,
+    "attack": 77,
     "frequency": 39.13975,
-    "str": 1,
+    "str": 43,
     "int": 0,
     "dex": 98,
     "upgrade": {
-      "attack": 664.615384615
+      "attack": 30.2153846154
     },
     "progression": {
       "historical_rank": 10,
@@ -8937,13 +8937,13 @@ var weapon_progression = {
     }
   },
   "t3bow": {
-    "attack": 1437,
+    "attack": 227,
     "frequency": 75.09658108108108,
-    "str": 1,
+    "str": 17,
     "int": 0,
     "dex": 180,
     "upgrade": {
-      "attack": 781.046153846
+      "attack": 123.323076923
     },
     "progression": {
       "historical_rank": 12,
@@ -8959,13 +8959,13 @@ var weapon_progression = {
     }
   },
   "throwingstars": {
-    "attack": 6554,
+    "attack": 126,
     "frequency": 0.8,
-    "str": 1,
+    "str": 103,
     "int": 0,
     "dex": 22,
     "upgrade": {
-      "attack": 2340.92307692
+      "attack": 45.0461538462
     },
     "progression": {
       "historical_rank": 6,
@@ -8981,13 +8981,13 @@ var weapon_progression = {
     }
   },
   "vdagger": {
-    "attack": 1769,
+    "attack": 61,
     "frequency": 77.58332432432432,
-    "str": 1,
+    "str": 85,
     "int": 0,
     "dex": 136,
     "upgrade": {
-      "attack": 936.676923077
+      "attack": 32.3076923077
     },
     "progression": {
       "historical_rank": 10,
@@ -9003,13 +9003,13 @@ var weapon_progression = {
     }
   },
   "vhammer": {
-    "attack": 383,
+    "attack": 266,
     "frequency": 59.574,
-    "str": 0,
-    "int": 1,
+    "str": 6,
+    "int": 0,
     "dex": 220,
     "upgrade": {
-      "attack": 13.2307692308
+      "attack": 17.9076923077
     },
     "progression": {
       "historical_rank": 10,
@@ -9047,13 +9047,13 @@ var weapon_progression = {
     }
   },
   "vsword": {
-    "attack": 469,
+    "attack": 436,
     "frequency": 56.42325,
-    "str": 1,
+    "str": 2,
     "int": 0,
     "dex": 258,
     "upgrade": {
-      "attack": 91.9384615385
+      "attack": 89.9076923077
     },
     "progression": {
       "historical_rank": 15,
@@ -9091,13 +9091,13 @@ var weapon_progression = {
     }
   },
   "wbasher": {
-    "attack": 438,
+    "attack": 165,
     "frequency": 13.308,
-    "str": 0,
-    "int": 1,
+    "str": 8,
+    "int": 0,
     "dex": 66,
     "upgrade": {
-      "attack": 0
+      "attack": 10.3384615385
     },
     "progression": {
       "historical_rank": 2,
@@ -9347,13 +9347,13 @@ var weapon_progression = {
     }
   },
   "wbookhs": {
-    "attack": 53,
+    "attack": 16,
     "frequency": 168.3,
     "str": 0,
-    "int": 30,
+    "int": 129,
     "dex": 0,
     "upgrade": {
-      "attack": 4.06153846154
+      "attack": 3.81538461538
     },
     "progression": {
       "historical_rank": 3,
@@ -9362,20 +9362,20 @@ var weapon_progression = {
       "requirement": 99,
       "reference_level": 70,
       "target_dps": 405,
-      "full_sheet_hit_damage": 195,
-      "attacks_per_second": 2.07669,
+      "full_sheet_hit_damage": 186,
+      "attacks_per_second": 2.177175,
       "base_dps": 404.95455,
       "selected_effort": 2783467.40761
     }
   },
   "weaver": {
-    "attack": 3616,
+    "attack": 58,
     "frequency": 23.46375,
-    "str": 1,
+    "str": 185,
     "int": 0,
     "dex": 15,
     "upgrade": {
-      "attack": 1465.10769231
+      "attack": 23.5076923077
     },
     "progression": {
       "historical_rank": 13,
@@ -9391,13 +9391,13 @@ var weapon_progression = {
     }
   },
   "woodensword": {
-    "attack": 2594,
+    "attack": 57,
     "frequency": 27.9645,
-    "str": 1,
+    "str": 90,
     "int": 0,
     "dex": 36,
     "upgrade": {
-      "attack": 992.061538462
+      "attack": 21.7846153846
     },
     "progression": {
       "historical_rank": 11,
@@ -9413,13 +9413,13 @@ var weapon_progression = {
     }
   },
   "xmace": {
-    "attack": 409,
+    "attack": 70,
     "frequency": 34.932,
-    "str": 0,
-    "int": 1,
+    "str": 61,
+    "int": 0,
     "dex": 136,
     "upgrade": {
-      "attack": 13.2307692308
+      "attack": 16.9846153846
     },
     "progression": {
       "historical_rank": 9,

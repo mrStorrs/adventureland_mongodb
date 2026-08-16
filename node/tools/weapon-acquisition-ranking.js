@@ -257,9 +257,9 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 	const definition = data.items[weapon.weapon_id];
 	const enhancementKind = definition.compound ? "compound" : definition.upgrade ? "upgrade" : null;
 	const cache = new Map();
-	const evaluateConfiguredState = (level, attack, attackGrowth, allocation, { offhand = undefined, upgradeLevel = null, compoundLevel = null } = {}) => {
+	const evaluateConfiguredState = (level, attack, attackGrowth, allocation, { offhand = undefined, upgradeLevel = null, compoundLevel = null, weaponOnly = false } = {}) => {
 		const offhandKey = offhand === undefined ? "canonical" : offhand === null ? "none" : `${offhand.name}:${offhand.level || 0}:${offhand.stat_type || ""}`;
-		const key = `${level}:${upgradeLevel}:${compoundLevel}:${attack}:${attackGrowth}:${allocation.str}:${allocation.int}:${allocation.dex}:${offhandKey}`;
+		const key = `${level}:${upgradeLevel}:${compoundLevel}:${attack}:${attackGrowth}:${allocation.str}:${allocation.int}:${allocation.dex}:${offhandKey}:${weaponOnly}`;
 		if (cache.has(key)) return cache.get(key);
 		const getItemProperties = (instance, definition) => {
 			const properties = calculators.current.calculate_item_properties(instance);
@@ -271,7 +271,7 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 				...Object.fromEntries(["str", "int", "dex"].map((field) => [field, Number(properties[field] || 0) - Number(definition[field] || 0) + allocation[field]])),
 			};
 		};
-		const enhancedFixedSlots = Object.fromEntries(Object.entries(fixedSlots).map(([slot, instance]) => {
+		const enhancedFixedSlots = weaponOnly ? {} : Object.fromEntries(Object.entries(fixedSlots).map(([slot, instance]) => {
 			const fixedDefinition = data.items[instance.name];
 			if (upgradeLevel !== null && fixedDefinition?.upgrade) return [slot, { ...instance, level: upgradeLevel }];
 			if (compoundLevel !== null && fixedDefinition?.compound) return [slot, { ...instance, level: compoundLevel }];
@@ -320,6 +320,7 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 		{ ...options, upgradeLevel, compoundLevel },
 	);
 	const evaluate = (attack, allocation) => evaluateState(0, attack, sourceGrowth, allocation);
+	const evaluateWeaponOnly = (attack, allocation) => evaluateConfiguredState(0, attack, sourceGrowth, allocation, { weaponOnly: true });
 	return {
 		reference_level: referenceLevel,
 		offhand_id: compatibleOffhand?.[1].name || null,
@@ -330,6 +331,7 @@ function fullSheetContext(data, calculators, baseline, weapon) {
 		runtime_class_core_applied: false,
 		hand_attack_factor: definition.wtype === "stars" && compatibleOffhand && data.items[compatibleOffhand[1].name]?.wtype !== "stars" ? 1 / 3 : 1,
 		evaluate,
+		evaluateWeaponOnly,
 		evaluateState,
 		evaluateEnhancementState,
 		enhancement_kind: enhancementKind,
@@ -357,12 +359,16 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 	const band = rankBand(targetPolicy, weapon.shared_rank);
 	const zero = { str: 0, int: 0, dex: 0 };
 	const base = context.evaluate(0, zero);
+	const weaponOnlyBase = context.evaluateWeaponOnly(0, zero);
 	if (base.sheet_attack !== 0) throw new Error(`Canonical non-weapon sheet contributes attack for ${weapon.weapon_id}`);
+	if (weaponOnlyBase.sheet_attack !== 0) throw new Error(`Zero-allocation weapon contributes attack for ${weapon.weapon_id}`);
 	const definition = data.items[weapon.weapon_id];
 	const dexFrequency = (dex) => Math.min(dex, 160) / 640 + Math.max(dex - 160, 0) / 925;
 	const magicFrequency = (intelligence) => 1 + Math.min(0.2, Math.max(intelligence, 0) / 2000);
 	const physicalFrequencyConstant = base.sheet_frequency - dexFrequency(base.sheet_dex);
 	const magicalFrequencyConstant = base.sheet_frequency / magicFrequency(base.sheet_int);
+	const weaponOnlyPhysicalFrequencyConstant = weaponOnlyBase.sheet_frequency - dexFrequency(weaponOnlyBase.sheet_dex);
+	const weaponOnlyMagicalFrequencyConstant = weaponOnlyBase.sheet_frequency / magicFrequency(weaponOnlyBase.sheet_int);
 	const modeledFrequency = (allocation) => roundEvidence(
 		WEAPON_PROFILES[definition.wtype]?.damage_type === "magical"
 			? magicalFrequencyConstant * magicFrequency(base.sheet_int + allocation.int)
@@ -377,11 +383,25 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 		if (weapon.skill === "priest") return intelligence / 20 * 1.6 * context.hand_attack_factor;
 		throw new Error(`Unsupported full-sheet skill ${weapon.skill}`);
 	};
+	const weaponOnlyFrequency = (allocation) => roundEvidence(
+		WEAPON_PROFILES[definition.wtype]?.damage_type === "magical"
+			? weaponOnlyMagicalFrequencyConstant * magicFrequency(allocation.int)
+			: weaponOnlyPhysicalFrequencyConstant + dexFrequency(allocation.dex),
+	);
+	const weaponOnlyAttackMultiplier = (allocation) => {
+		if (["warrior", "ranger", "rogue"].includes(weapon.skill)) return allocation.str / 20;
+		if (weapon.skill === "paladin") return allocation.str / 20 + allocation.int / 40;
+		if (weapon.skill === "mage") return allocation.int / 20;
+		if (weapon.skill === "priest") return allocation.int / 20 * 1.6;
+		throw new Error(`Unsupported weapon-only skill ${weapon.skill}`);
+	};
 	const candidateState = (allocation, attack) => {
 		const frequency = modeledFrequency(allocation);
 		const multiplier = attackMultiplier(allocation);
 		if (!(frequency > 0) || !(multiplier > 0)) return null;
 		const sheetAttack = Math.round(attack * multiplier);
+		const standaloneFrequency = weaponOnlyFrequency(allocation);
+		const standaloneAttack = Math.round(attack * weaponOnlyAttackMultiplier(allocation));
 		return {
 			attack,
 			...allocation,
@@ -392,6 +412,9 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 			sheet_str: base.sheet_str + allocation.str,
 			sheet_int: base.sheet_int + allocation.int,
 			sheet_dex: base.sheet_dex + allocation.dex,
+			weapon_only_dps: roundEvidence(standaloneAttack * standaloneFrequency),
+			weapon_only_sheet_attack: standaloneAttack,
+			weapon_only_sheet_frequency: standaloneFrequency,
 		};
 	};
 	const firstIntegerSatisfying = (predicate, label) => {
@@ -411,7 +434,8 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 		return upper;
 	};
 	const signatureOrder = (left, right) => left.str + left.int + left.dex - right.str - right.int - right.dex || left.str - right.str || left.int - right.int || left.dex - right.dex || left.attack - right.attack;
-	const selectionOrder = (left, right) => Math.abs(Math.log(left.dps / target)) - Math.abs(Math.log(right.dps / target)) || left.dps - right.dps || signatureOrder(left, right);
+	const equalSheetOrder = (left, right) => right.weapon_only_dps - left.weapon_only_dps || signatureOrder(left, right);
+	const selectionOrder = (left, right) => Math.abs(Math.log(left.dps / target)) - Math.abs(Math.log(right.dps / target)) || left.dps - right.dps || equalSheetOrder(left, right);
 	const coreEnvelope = targetPolicy.core_allocation_envelope;
 	const coreCeiling = Number(coreEnvelope?.ceilings?.[weapon.shared_rank - 1]);
 	if (!Number.isSafeInteger(coreCeiling) || coreCeiling < 0) throw new Error(`Missing endpoint-derived core envelope for ${weapon.weapon_id}`);
@@ -425,10 +449,10 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 	const consider = (candidate) => {
 		if (!candidate || !(candidate.sheet_attack > 0) || !(candidate.dps > 0)) return;
 		candidateCount += 1;
-		if (!minimum || candidate.dps < minimum.dps || candidate.dps === minimum.dps && signatureOrder(candidate, minimum) < 0) minimum = candidate;
-		if (!maximum || candidate.dps > maximum.dps || candidate.dps === maximum.dps && signatureOrder(candidate, maximum) < 0) maximum = candidate;
-		if (candidate.dps <= target && (!lower || candidate.dps > lower.dps || candidate.dps === lower.dps && signatureOrder(candidate, lower) < 0)) lower = candidate;
-		if (candidate.dps >= target && (!upper || candidate.dps < upper.dps || candidate.dps === upper.dps && signatureOrder(candidate, upper) < 0)) upper = candidate;
+		if (!minimum || candidate.dps < minimum.dps || candidate.dps === minimum.dps && equalSheetOrder(candidate, minimum) < 0) minimum = candidate;
+		if (!maximum || candidate.dps > maximum.dps || candidate.dps === maximum.dps && equalSheetOrder(candidate, maximum) < 0) maximum = candidate;
+		if (candidate.dps <= target && (!lower || candidate.dps > lower.dps || candidate.dps === lower.dps && equalSheetOrder(candidate, lower) < 0)) lower = candidate;
+		if (candidate.dps >= target && (!upper || candidate.dps < upper.dps || candidate.dps === upper.dps && equalSheetOrder(candidate, upper) < 0)) upper = candidate;
 		if (candidateInsideBand(candidate, band) && (!chosen || selectionOrder(candidate, chosen) < 0)) chosen = candidate;
 	};
 	const addAttackBracket = (allocation) => {
@@ -503,6 +527,7 @@ function weaponDpsCandidates(data, calculators, baseline, weapon, targetPolicy) 
 			candidate_count: candidateCount,
 			allocation_proof: "Every damage-enabled weapon-owned integer allocation inside the endpoint-derived total-core ceiling is enumerated directly or by a lower-core DPS-equivalent Paladin representation.",
 			attack_proof: "For every legal allocation, monotone positive attack is searched to the exact target bracket; those two neighbors contain every possible log-nearest candidate.",
+			equal_sheet_tie_break: "Equal full-sheet DPS candidates prefer the greatest weapon-only DPS before the stable field signature.",
 			...domain,
 		},
 	};
