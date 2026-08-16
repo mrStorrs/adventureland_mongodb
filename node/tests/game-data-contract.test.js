@@ -58,3 +58,9 @@ test("published direct-effect vectors use only the explicit contract keys", () =
 		}
 	}
 });
+
+test("Priest starters are replaceable without adding an ordinary starter loot route", () => {
+	const data = loadSourceData();
+	assert.ok(data.npcs.basics.items.includes("wbook0"));
+	assert.equal((data.drops.monsters.bat || []).some((entry) => entry[1] === "wbook0"), false);
+});

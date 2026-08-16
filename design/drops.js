@@ -214,7 +214,6 @@ var drops = {
 		crabx: [
 			[4.0 / 10000000, "suckerpunch"],
 			[2.0 / 100, "seashell"],
-			[1.0 / 500, "cclaw"],
 			[1.0 / 10000, "cshell"],
 		],
 		crabxx: [
@@ -302,7 +301,6 @@ var drops = {
 			[1.0 / 10000000, "mpxamulet"],
 		],
 		bat: [
-			[4.0 / 1000, "wbook0"],
 			[5.0 / 1000, "bwing"],
 			[1.0 / 100000000, "cxjar", 1, "wings102"],
 		],
@@ -1526,6 +1524,28 @@ for (var name in items) {
 drops["glitch"].push([5, "glitch", 2]);
 drops["monsters"]["cutebee"] = [[1, "open", "lglitch"]];
 drops["monsters"]["cutebee"].push([1, "funtoken"]);
+
+var ordinary_progression_weapon_drops={
+	osnake:[[.0001,"fsword"],[.00009,"wbook3"]],
+	rat:[[.00015,"ololipop"],[.00012,"firestaff"]],
+	snake:[[.00009,"hbow"],[.0001,"stinger"]],
+	armadillo:[[.000025,"swifty"],[.00005,"glolipop"]],
+	croc:[[.00007,"froststaff"],[.00006,"wbook5"]],
+	tortoise:[[.00012,"merry"],[.00012,"fclaw"]],
+	bat:[[.00004,"sword"],[.00007,"pmaceofthedead"]],
+	squigtoad:[[.0001,"arcstaff"],[.0001,"wbook6"]],
+	crabx:[[.00002,"crossbow"],[.000025,"firestars"]],
+	cgoo:[[.000004,"bataxe"],[.000007,"xmace"]],
+	stoneworm:[[.000006,"vstaff"]],
+	poisio:[[.000008,"wbook8"],[.000006,"t3bow"]],
+	bbpompom:[[.000009,"rapier"],[.002,"cclaw"]],
+	ghost:[[.000007,"scythe"]],
+	spider:[[.000015,"vhammer"],[.000011,"wblade"]],
+	scorpion:[[.000015,"wbook9"],[.00001,"weaver"]],
+	gscorpion:[[.000018,"vdagger"]],
+};
+for(var ordinary_progression_monster_id in ordinary_progression_weapon_drops)
+	drops["monsters"][ordinary_progression_monster_id]=drops["monsters"][ordinary_progression_monster_id].concat(ordinary_progression_weapon_drops[ordinary_progression_monster_id]);
 //drops["candy0"]=JSON.parse(JSON.stringify(drops["gem0"]));
 //drops["candy0"].push([2,"phelmet"]);
 //drops["candy1"]=JSON.parse(JSON.stringify(drops["gem1"]));
