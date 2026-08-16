@@ -162,7 +162,24 @@ test("the main server doubles normal monster item and gold rewards", () => {
 	assert.match(serverSource, /main_server_reward_multiplier = server_key == options\.default_server_key \? 2 : 1/);
 	assert.match(serverSource, /drop_rate_multiplier: main_server_reward_multiplier/);
 	assert.match(serverSource, /gold_multiplier: main_server_reward_multiplier/);
+	const multiplierExpression = serverSource.match(/var main_server_reward_multiplier = (.+);/)[1];
+	const multiplierFor = new Function("server_key", "options", `return ${multiplierExpression};`);
+	assert.equal(multiplierFor("local", { default_server_key: "local" }), 2);
+	assert.equal(multiplierFor("harness", { default_server_key: "local" }), 1);
+	assert.match(monsterDrops, /share \/ player\.luckm \/ monster\.luckx \/ global_mult \/ B\.drop_rate_multiplier/);
+	assert.match(monsterDrops, /share \/ player\.luckm \/ hp_mult \/ monster\.luckx \/ global_mult \/ B\.drop_rate_multiplier/);
+	assert.match(monsterDrops, /share \/ player\.luckm \/ hp_mult \/ monster\.luckx \/ B\.drop_rate_multiplier/);
 	assert.match(monsterDrops, /monster_mult \* B\.drop_rate_multiplier/);
 	assert.match(monsterDrops, /drop\.gold = round\(drop\.gold \* B\.gold_multiplier\)/);
 	assert.match(monsterDrops, /drop\.egold \*= B\.gold_multiplier/);
+
+	const hardcoreStart = serverSource.indexOf("function drop_something_hardcore(player, target) {");
+	const hardcoreEnd = serverSource.indexOf("\nfunction drop_something_pvp", hardcoreStart);
+	const pvpStart = hardcoreEnd;
+	const pvpEnd = serverSource.indexOf("\nfunction engage_monster", pvpStart);
+	const rewardsStart = serverSource.indexOf("function issue_monster_awards(monster) {");
+	const rewardsEnd = serverSource.indexOf("\nfunction issue_monster_award", rewardsStart);
+	assert.doesNotMatch(serverSource.slice(hardcoreStart, hardcoreEnd), /drop_rate_multiplier|gold_multiplier/);
+	assert.doesNotMatch(serverSource.slice(pvpStart, pvpEnd), /drop_rate_multiplier|gold_multiplier/);
+	assert.doesNotMatch(serverSource.slice(rewardsStart, rewardsEnd), /drop_rate_multiplier|gold_multiplier/);
 });
