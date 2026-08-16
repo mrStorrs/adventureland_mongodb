@@ -105,6 +105,36 @@ function renderRankedWeaponInfo(level) {
 	return context.modalHtml;
 }
 
+function renderMonsterCard() {
+	const source = fs.readFileSync(path.resolve(__dirname, "../../js/html.js"), "utf8");
+	const renderStart = source.indexOf("var last_selector = \"\";");
+	const renderEnd = source.indexOf("function render_item_by_name", renderStart);
+	assert.ok(renderStart >= 0 && renderEnd > renderStart, "monster-card renderer exists");
+	const context = {
+		G: { abilities: {}, base_gold: null, conditions: {}, craft: {}, maps: {}, sets: {}, titles: {} },
+		Math,
+		window: { character: null },
+		character: { skills: {} },
+		booster_items: [],
+		trade_slots: [],
+		colors: { attack: "attack", hp: "hp", range: "range" },
+		calculate_item_grade: () => 0,
+		calculate_item_properties: () => ({}),
+		bold_prop_line: (name, value) => `<metric name="${name}">${value}</metric>`,
+		in_arr: (value, values) => Array.isArray(values) && values.includes(value),
+		to_pretty_float: (value) => String(value),
+		to_pretty_num: (value) => String(value),
+	};
+	vm.createContext(context);
+	vm.runInContext(source.slice(renderStart, renderEnd), context, { filename: "html.js" });
+	return context.render_item("html", {
+		pure: true,
+		item: { damage_type: "physical", name: "Guide Crab", skin: "crab" },
+		monster: "crab",
+		prop: { attack: 240, attacks_per_second: 0.3 },
+	});
+}
+
 test("item guide DPS matches the direct item properties through each full enhancement range", () => {
 	const data = loadBenchmarkData();
 	const calculators = loadPropertyCalculators(data);
@@ -132,6 +162,10 @@ test("item guide labels direct damage, attack speed, and DPS without primary sta
 	assert.match(source, /"Progression Role"/);
 	assert.match(source, /"Historical Rank"/);
 	assert.doesNotMatch(source.slice(source.indexOf("function guide_weapon_metrics"), source.indexOf("function guide_weapon_progression_metrics")), /prop\.(attack|str|dex|int|frequency)\b/);
+});
+
+test("monster guide cards render the monster's published attack as direct damage", () => {
+	assert.match(renderMonsterCard(), /<metric name="Damage">240<\/metric>/);
 });
 
 test("ranked item details calculate +0 through +12 metrics from the actual enhanced properties", () => {

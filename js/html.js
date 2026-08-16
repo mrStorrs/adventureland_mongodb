@@ -3576,7 +3576,8 @@ function render_item(selector, args) {
 			if (guide_metrics.progression.historical_rank != null) html += bold_prop_line("Historical Rank", guide_metrics.progression.historical_rank, "#C3C3C3");
 			html += bold_prop_line("Reference Level", guide_metrics.progression.reference_level, "#C3C3C3");
 		}
-		if (prop.damage) html += bold_prop_line("Damage", to_pretty_float(prop.damage), colors.attack);
+		var displayed_damage = prop.damage || (args.monster && prop.attack);
+		if (displayed_damage) html += bold_prop_line("Damage", to_pretty_float(displayed_damage), colors.attack);
 		if (item.damage_type) {
 			if (item.damage_type == "pure") html += bold_prop_line("Type", "Pure", "#AA9B55");
 			else if (item.damage_type == "magical") html += bold_prop_line("Type", "Magical", "#8998AA");
