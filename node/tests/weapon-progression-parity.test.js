@@ -15,6 +15,7 @@ const {
 	loadPropertyCalculators,
 	validateParityFixture,
 } = require("../tools/weapon-progression-parity");
+const { serializeFixture } = require("../tools/fixture-serialization");
 
 test("parity fixture covers every current combat weapon or names an explicit exception", () => {
 	const fixture = loadParityFixture(PARITY_FIXTURE_PATH);
@@ -23,6 +24,7 @@ test("parity fixture covers every current combat weapon or names an explicit exc
 
 	assert.equal(validateParityFixture(fixture, report.data).missingWeapons.length, 0);
 	assert.equal(validateParityFixture(fixture, report.data).unclassifiedWeapons.length, 0);
+	assert.equal(fs.readFileSync(PARITY_FIXTURE_PATH, "utf8"), serializeFixture(fixture));
 	assert.ok(report.rows.length > 0);
 	assert.equal(report.rows.length, 80);
 	const assigned = new Map(ranking.weapons.map((weapon) => [weapon.weapon_id, weapon.assigned_requirement]));
@@ -99,21 +101,29 @@ test("parity output is deterministic and reports per-row current-versus-legacy d
 	}
 });
 
-test("represented weapons retain their protected identity and finite +0 through +4 properties", () => {
+test("represented weapons retain their protected identity and finite full-range properties", () => {
 	const report = buildParityReport({ fixturePath: PARITY_FIXTURE_PATH, legacyBaselinePath: LEGACY_BASELINE_PATH });
 	const calculators = loadPropertyCalculators(report.data);
+	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
+	const ranked = new Map(ranking.weapons.map((row) => [row.weapon_id, row]));
 	for (const row of report.rows) {
 		const definition = report.data.items[row.weapon_id];
 		assert.equal(definition.type, "weapon", row.weapon_id);
 		assert.equal(definition.wtype, row.weapon_type, row.weapon_id);
 		assert.equal(definition.requirements.length, 1, row.weapon_id);
-		for (const upgradeLevel of row.upgrade_levels) {
+		const solved = ranked.get(row.weapon_id);
+		if (solved) {
+			assert.equal(Number(definition.attack || 0), solved.solved_attack, `${row.weapon_id} attack`);
+			assert.equal(Number(definition.str || 0), solved.solved_str, `${row.weapon_id} STR`);
+			assert.equal(Number(definition.int || 0), solved.solved_int, `${row.weapon_id} INT`);
+			assert.equal(Number(definition.dex || 0), solved.solved_dex, `${row.weapon_id} DEX`);
+		}
+		const maximumLevel = definition.compound ? 10 : definition.upgrade ? 12 : 0;
+		for (let upgradeLevel = 0; upgradeLevel <= maximumLevel; upgradeLevel += 1) {
 			const properties = calculators.current.calculate_item_properties({ name: row.weapon_id, level: upgradeLevel });
 			for (const [property, value] of Object.entries(properties)) {
 				if (typeof value === "number") assert.ok(Number.isFinite(value), `${row.weapon_id}+${upgradeLevel} ${property}`);
 			}
-			for (const attribute of ["str", "int", "dex"])
-				assert.ok((properties[attribute] || 0) <= 20, `${row.weapon_id}+${upgradeLevel} keeps ${attribute} within budget`);
 		}
 	}
 });

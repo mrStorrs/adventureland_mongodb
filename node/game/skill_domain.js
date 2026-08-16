@@ -168,33 +168,50 @@ function validateRequirements(itemId, requirements, registry = null) {
 	const seen = new Set();
 	let previousIndex = -1;
 	for (const requirement of requirements) {
-		if (
-			!requirement ||
-			typeof requirement.skill !== "string" ||
-			!Number.isInteger(requirement.level) ||
-			requirement.level < 1 ||
-			requirement.level > MAX_LEVEL
-		) {
+		if (!requirement || typeof requirement !== "object" || !Number.isInteger(requirement.level) || requirement.level < 1 || requirement.level > MAX_LEVEL) {
 			throw fail("invalid_equipment_requirements", `Malformed requirements for ${itemId}`, {
 				item: itemId,
 				requirement,
 			});
 		}
-		const index = SKILL_IDS.indexOf(requirement.skill);
-		if (index === -1 || (registry && !own(registry, requirement.skill))) {
-			throw fail("invalid_equipment_requirements", `Unknown requirement skill ${requirement.skill} for ${itemId}`, {
-				item: itemId,
-				skill: requirement.skill,
-			});
+		const hasSkill = own(requirement, "skill");
+		const hasAnySkill = own(requirement, "any_skill");
+		if (hasSkill === hasAnySkill) {
+			throw fail("invalid_equipment_requirements", `Malformed requirements for ${itemId}`, { item: itemId, requirement });
 		}
-		if (seen.has(requirement.skill) || index < previousIndex) {
+		const ids = hasSkill ? [requirement.skill] : requirement.any_skill;
+		if (!Array.isArray(ids) && !hasSkill) {
+			throw fail("invalid_equipment_requirements", `Malformed requirements for ${itemId}`, { item: itemId, requirement });
+		}
+		if (!ids.length || (hasSkill && typeof requirement.skill !== "string")) {
+			throw fail("invalid_equipment_requirements", `Malformed requirements for ${itemId}`, { item: itemId, requirement });
+		}
+		const allowedKeys = hasSkill ? ["skill", "level"] : ["any_skill", "level"];
+		if (Object.keys(requirement).some((key) => !allowedKeys.includes(key))) {
+			throw fail("invalid_equipment_requirements", `Malformed requirements for ${itemId}`, { item: itemId, requirement });
+		}
+		let index = -1;
+		for (const skillId of ids) {
+			const skillIndex = SKILL_IDS.indexOf(skillId);
+			if (typeof skillId !== "string" || skillIndex === -1 || (registry && !own(registry, skillId))) {
+				throw fail("invalid_equipment_requirements", `Unknown requirement skill ${skillId} for ${itemId}`, {
+					item: itemId,
+					skill: skillId,
+				});
+			}
+			if (seen.has(skillId) || skillIndex <= index) {
+				throw fail("invalid_equipment_requirements", `Requirements for ${itemId} are duplicated or out of registry order`, { item: itemId });
+			}
+			seen.add(skillId);
+			index = skillIndex;
+		}
+		if (index < previousIndex) {
 			throw fail(
 				"invalid_equipment_requirements",
 				`Requirements for ${itemId} are duplicated or out of registry order`,
 				{ item: itemId },
 			);
 		}
-		seen.add(requirement.skill);
 		previousIndex = index;
 	}
 	return requirements;
@@ -257,20 +274,25 @@ function normalizeItems(items, itemRequirements) {
 		throw fail("invalid_game_data", "Item requirements must be an object");
 	}
 	const normalized = JSON.parse(JSON.stringify(items));
-	for (const bookId of ["wbook0", "wbook1", "wbookhs"]) {
+	for (const bookId of ["wbook0", "wbook2", "wbook3", "wbook4", "wbook5", "wbook1", "wbook6", "wbook7", "wbook8", "wbook9", "wbookhs"]) {
 		if (!own(normalized, bookId)) throw fail("invalid_game_data", `Missing Priest book ${bookId}`, { item: bookId });
+		if (normalized[bookId].compound) {
+			if (normalized[bookId].upgrade) throw fail("invalid_game_data", `Priest book ${bookId} has conflicting enhancement kinds`, { item: bookId });
+			normalized[bookId].upgrade = normalized[bookId].compound;
+			delete normalized[bookId].compound;
+		}
 		normalized[bookId].type = "weapon";
 		normalized[bookId].wtype = "book";
 		normalized[bookId].damage_type = "magical";
 		normalized[bookId].projectile = "pmagic";
 		if (bookId === "wbookhs") {
 			if (normalized[bookId].dex !== undefined) {
-				normalized[bookId].int = normalized[bookId].dex;
+				if (normalized[bookId].int === undefined) normalized[bookId].int = normalized[bookId].dex;
 				delete normalized[bookId].dex;
 			}
-			if (normalized[bookId].compound && normalized[bookId].compound.dex !== undefined) {
-				normalized[bookId].compound.int = normalized[bookId].compound.dex;
-				delete normalized[bookId].compound.dex;
+			if (normalized[bookId].upgrade && normalized[bookId].upgrade.dex !== undefined) {
+				if (normalized[bookId].upgrade.int === undefined) normalized[bookId].upgrade.int = normalized[bookId].upgrade.dex;
+				delete normalized[bookId].upgrade.dex;
 			}
 		}
 	}
@@ -304,7 +326,7 @@ function validateItemRequirements(items, itemRequirements, registry, weaponOwner
 			throw fail("invalid_game_data", `Legacy class ownership remains on item ${itemId}`, { item: itemId });
 		}
 	}
-	for (const bookId of ["wbook0", "wbook1", "wbookhs"]) {
+	for (const bookId of ["wbook0", "wbook2", "wbook3", "wbook4", "wbook5", "wbook1", "wbook6", "wbook7", "wbook8", "wbook9", "wbookhs"]) {
 		const book = items[bookId];
 		if (
 			!book ||
@@ -312,12 +334,13 @@ function validateItemRequirements(items, itemRequirements, registry, weaponOwner
 			book.wtype !== "book" ||
 			book.damage_type !== "magical" ||
 			book.projectile !== "pmagic" ||
+			!book.upgrade ||
+			book.compound !== undefined ||
 			(bookId === "wbookhs" &&
-				(book.int !== 16 ||
+				(!Number.isSafeInteger(book.int) || book.int < 0 ||
 					book.dex !== undefined ||
-					!book.compound ||
-					book.compound.int !== 0 ||
-					book.compound.dex !== undefined))
+					!Number.isSafeInteger(book.upgrade.int) || book.upgrade.int < 0 ||
+					book.upgrade.dex !== undefined))
 		) {
 			throw fail("invalid_game_data", `Priest book ${bookId} is not a normalized main-hand weapon`, { item: bookId });
 		}

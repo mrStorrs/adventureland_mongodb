@@ -94,6 +94,75 @@ var craft={
 		],
 		"cost":120000,
 	},
+	"wbook2":{
+		"items":[
+			[1,"wbook0"],
+		],
+		"cost":1200000,
+	},
+	"wbook3":{
+		"items":[
+			[1,"wbook0"],
+		],
+		"cost":2400000,
+	},
+	"wbook4":{
+		"items":[
+			[1,"wbook0"],
+		],
+		"cost":4800000,
+	},
+	"wbook5":{
+		"items":[
+			[1,"wbook0"],
+		],
+		"cost":6000000,
+	},
+	"wbook6":{
+		"items":[
+			[1,"wbook0"],
+		],
+		"cost":15000000,
+	},
+	"wbook7":{
+		"items":[
+			[1,"wbook0"],
+		],
+		"cost":33000000,
+	},
+	"wbook8":{
+		"items":[
+			[1,"wbook0"],
+		],
+		"cost":72000000,
+	},
+	"wbook9":{
+		"items":[
+			[1,"wbook0"],
+		],
+		"cost":156000000,
+	},
+	"swifthelmet":{
+		"items":[
+			[1,"shoes"],
+			[20,"feather0"],
+		],
+		"cost":120000,
+	},
+	"swiftarmor":{
+		"items":[
+			[1,"shoes"],
+			[20,"feather0"],
+		],
+		"cost":120000,
+	},
+	"swiftpants":{
+		"items":[
+			[1,"shoes"],
+			[20,"feather0"],
+		],
+		"cost":120000,
+	},
 	"fierygloves":{
 		"items":[
 			[1,"gloves"],

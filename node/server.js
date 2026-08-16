@@ -25,6 +25,7 @@ const {
 	MAX_LEVEL,
 	cumulativeXp,
 } = require("./game/skill_domain");
+const { validateEquipmentSchema } = require("./game/equipment_schema");
 const { progression } = require("../design/progression");
 const { createCharacterState, loadCharacterState } = require("./game/character_state");
 const { WEAPON_PROFILES, deriveActiveSkill, weaponProfile } = require("./game/active_skill");
@@ -416,6 +417,7 @@ async function init_game() {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/multipliers.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/item_requirements.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/items.js")));
+		validateEquipmentSchema(items, sets);
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/upgrades.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/drops.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/skills.js")));
@@ -610,6 +612,7 @@ async function reload_server(to_broadcast, change) {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/multipliers.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/item_requirements.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/items.js")));
+		validateEquipmentSchema(items, sets);
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/upgrades.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/drops.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/skills.js")));

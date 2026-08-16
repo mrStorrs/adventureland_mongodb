@@ -137,19 +137,74 @@ no accuracy stat. Derived values are recomputed during the normal login and
 equipment-refresh paths, so existing item instances do not require a database
 reset or manual respec.
 
+## Acquisition-ranked equipment
+
+Base combat equipment now follows the reviewed acquisition frontier instead of
+legacy item tiers. Nineteen named armor themes are complete five-slot sets
+(helmet, chest, pants, gloves, and shoes) with Heavy, Medium, or Light weight
+identity. Weights are universally wearable and provide different stat
+tradeoffs; each theme has cumulative armor-only bonuses at two, three, four,
+and five equipped pieces. Weapons, offhands, capes, accessories, and orbs may
+keep a theme for presentation but do not increment an armor-set bonus. The
+Monster Hunter Paladin theme is included, and 25 newly filled armor slots are
+marked as placeholder artwork until dedicated art is available.
+
+Standalone armor and capes are independent sidegrades. Combat offhands
+(shields, quivers, sources, and miscellaneous hand items) use acquisition
+ranked base values and grouped highest-compatible-skill requirements; legal
+one-hand, dual-wield, two-hand, and offhand layouts are checked together so an
+easier option cannot strictly dominate a harder one. Jewelry and orbs remain
+outside this rebalance. Rebalanced armor and set properties contribute no
+offensive `STR`, `DEX`, or `INT` at base or supported enhancement states; the
+removed vanilla offensive contribution is compensated exclusively through
+Plan 04-owned weapon numeric fields. Combat and item-property formulas remain
+unchanged.
+
+The server and Guide evaluate grouped requirements such as “Highest Warrior or
+Paladin Lv. 50” consistently. Existing stored items need no migration or
+respec; the reviewed requirement is enforced on a future equip or re-equip.
+
 ## Weapon progression
 
-Legal visible combat weapons for Warrior, Paladin, Mage, Priest, Ranger, and
-Rogue now use their easiest intended acquisition route to assign a semantic
-rank. Monster routes above the permanent-monster median carry an additional
-progression-access cost, so a difficult source is not treated as easy merely
-because its drop chance is better. Within each skill, harder ranks receive no
-lower requirement and no lower unenhanced Guide Base DPS; the existing
-per-skill requirement and DPS slots are redistributed rather than expanded.
-Weapon ownership, cadence, attributes,
-enhancement inputs, and +1 through +4 behavior remain unchanged, and the five
-ignored combat weapons stay unchanged. Deliberate TTK and broader weapon
-balancing are separate work.
+The visible combat catalog contains 83 weapons: the 75 retained acquisition
+decisions plus eight permanent Priest book placeholders (`wbook2` through
+`wbook9`). Warrior, Paladin, Mage, Priest, Ranger, and Rogue each expose the
+same eleven shared ranks with skill requirements from level 1 through 99.
+Historical acquisition ranks compress monotonically into those shared ranks;
+the easiest item at an occupied rank is the progression anchor and additional
+items are labeled sidegrades. Acquisition route and effort remain independent
+of the regenerated numeric fields.
+
+Weapon Base DPS is calculated from the neutral full sheet at the rank's pinned
+reference level. Every combat class has exactly eleven ranks. Warrior's `+0`
+full-sheet targets follow one geometric line from 50 DPS at rank 1 to 450 DPS at
+rank 11 (`50 * 9^((rank - 1) / 10)`); Paladin and Priest target `0.90×` the
+corresponding Warrior value, while Ranger, Rogue, and Mage target `1.10×` it.
+The class, armor, cape, compatible offhand, and frozen-accessory context remains
+in the sheet oracle, but rebalanced armor contributes no offensive `STR`, `DEX`,
+or `INT`; compensation is exclusively in Plan 04-owned weapon base/core and
+attack-growth fields. Active abilities, rotations, buffs, mitigation, and
+random rolls are excluded.
+
+Rank power is measured at `(+0,+0)`. The base state and the fully enhanced
+`(+12 upgrade,+10 compound)` state are hard publication gates for every class
+and rank. All other supported upgrade/compound combinations are fully
+evidenced diagnostics: each records its target, actual sheet result, signed and
+absolute error, and contribution data, and must remain finite, positive, and
+monotonic along both enhancement axes. Intermediate states do not have to hit
+their targets exactly or provide an independent target bracket. Enhancement
+levels do not change a weapon's rank; retained identity, cadence, range,
+projectile, special effects, and non-attack enhancement fields remain intact.
+Effective range uses the profile base plus the item's additive range exactly
+once.
+
+All eleven Priest books (`wbook0`, `wbook1`, `wbook2`–`wbook9`, and `wbookhs`)
+are visible magical `book`/`pmagic` weapons that use the game's upgrade/enchant
+path through `+12` and have no `compound` object. Eight are placeholders that
+reuse existing book assets; their non-attack enhancement fields remain intact.
+The Guide shows each weapon's shared rank, historical rank, progression role,
+reference level, Hit Damage, Attacks / Sec, and Base DPS; it does not present
+historical acquisition rank as current power.
 
 In the in-game Guide → Items view, visible weapons are grouped under Warrior,
 Paladin, Mage, Priest, Ranger, and Rogue in combat-profile order. Each group is
@@ -167,6 +222,27 @@ respec step. To inspect the deterministic diagnostic chart locally:
 ```sh
 node tools/weapon-progression-parity.js --format=markdown
 ```
+
+The checked-in equipment fixtures also cover all 129 monster definitions and
+canonical loadouts. Outgoing time-to-defeat rows are diagnostics; incoming
+ordinary-solo survival remains a hard 0.80–1.20 ratio against its pinned
+reference. Monster definitions and progression-time data are not rewritten by
+this balance pass. The former XP/time benchmark is archived under
+`node/tests/obsolete/` and is excluded from the default test suite, so its
+duration output is historical rather than a current release authority.
+
+Generated equipment evidence is stored as deterministic one-line JSON so its
+full data remains reproducible without overwhelming code review with formatting
+lines. GitHub marks these payloads as generated; this README carries their
+human-reviewable scale summary:
+
+| Evidence | Reviewable scale |
+|---|---:|
+| Weapon acquisition and enhancement | 83 weapons; 66 class/rank rows; 9,438 enhancement states |
+| Vanilla equipment baseline | 420 role/level rows; 129 monsters; 1,573 Warrior enhancement states |
+| Armor and sets | 138 nonweapon items; 19 sets |
+| Weapon and offhand loadouts | 11 ranks; 1,079 weapon states; 744 legal layouts |
+| Combat matrix | 735 canonical loadouts × 129 monsters = 94,815 rows |
 
 ## Merchant enhancement progression
 

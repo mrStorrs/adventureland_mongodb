@@ -28,6 +28,7 @@ var tokens={
 		"mrngloves":8, "mrnarmor":12, "mrnpants":11, "mrnhat":7, "mrnboots":15,
 		"mrgloves":8, "mrarmor":12, "mrpants":11, "mrhood":7, "mrboots":15,
 		"mcgloves":8, "mcarmor":12, "mcpants":11, "mchat":7, "mcboots":15,
+		"mpalgloves":8, "mpalarmor":12, "mpalpants":11, "mpalhelmet":7, "mpalboots":15,
 		"fieldgen0":100,
 	},
 	"friendtoken":{

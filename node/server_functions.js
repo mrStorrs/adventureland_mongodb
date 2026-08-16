@@ -244,7 +244,7 @@ function sprocess_game_data() {
 	}
 	for (var sname in G.sets) {
 		var set = G.sets[sname];
-		for (var i = 2; i <= set.items.length; i++) {
+		for (var i = 2; i <= 5; i++) {
 			set[i] = set[i] || {};
 			for (var prop in set[i - 1]) {
 				if (set[i][prop]) {

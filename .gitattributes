@@ -1,0 +1,8 @@
+node/tests/fixtures/armor-set-balance.json linguist-generated=true
+node/tests/fixtures/equipment-acquisition-ranking.json linguist-generated=true
+node/tests/fixtures/equipment-balance-contract.json linguist-generated=true
+node/tests/fixtures/equipment-combat-matrix.json linguist-generated=true
+node/tests/fixtures/vanilla-equipment-baseline.json linguist-generated=true
+node/tests/fixtures/weapon-acquisition-ranking.json linguist-generated=true
+node/tests/fixtures/weapon-loadout-balance.json linguist-generated=true
+node/tests/fixtures/weapon-progression-parity.json linguist-generated=true
