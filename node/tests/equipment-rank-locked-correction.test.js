@@ -249,10 +249,14 @@ test("every pinned and rebalanced enhancement state carries verifiable contribut
 	}
 	for (const row of generated.enhancement_full_sheet_rows) {
 		assert.equal(row.states.length, 143, row.id);
+		assert.equal(row.rebalanced_contributions.runtime_class_core_applied, false, row.id);
+		assert.ok(row.rebalanced_contributions.pinned_reference_class_core, row.id);
 		for (const state of row.states) {
 			const evidence = expandContributionEvidence(state.rebalanced_contributions, generated.enhancement_contribution_catalog, { validateCatalog: false });
 			assert.deepEqual(Object.keys(evidence.groups), CONTRIBUTION_GROUP_ORDER, `${row.id}:${state.upgrade_level}/${state.compound_level}`);
-			assert.ok(evidence.groups.class.items.length && evidence.groups.weapon.items.length, row.id);
+			assert.equal(evidence.groups.class.items.length, 0, row.id);
+			assert.deepEqual(evidence.groups.class.totals, {}, row.id);
+			assert.ok(evidence.groups.weapon.items.length, row.id);
 			for (const field of offensiveFields) assert.equal(Number(evidence.groups.armor.totals[field] || 0), 0, `${row.id}:${state.upgrade_level}/${state.compound_level}:${field}`);
 		}
 	}

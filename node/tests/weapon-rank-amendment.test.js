@@ -160,11 +160,12 @@ test("every weapon is the nearest legal full-sheet candidate inside a strictly s
 		assert.equal(row.quantization.domain.core_envelope.exact_value, fixture.policy.core_allocation_envelope.exact_values[row.shared_rank - 1], row.weapon_id);
 		assert.deepEqual(row.quantization.domain.core_envelope.endpoints, { start: 65, end: 260 }, row.weapon_id);
 		assert.ok(row.solved_str + row.solved_int + row.solved_dex <= ceiling, `${row.weapon_id} core ceiling`);
-		assert.match(row.quantization.domain.allocation_proof, /every nonnegative.*endpoint-derived total-core ceiling/i, row.weapon_id);
+		assert.match(row.quantization.domain.allocation_proof, /every damage-enabled weapon-owned.*endpoint-derived total-core ceiling/i, row.weapon_id);
 		assert.match(row.quantization.domain.attack_proof, /every legal allocation.*exact target bracket/i, row.weapon_id);
 		assert.ok(Number.isSafeInteger(row.quantization.domain.allocation_count) && row.quantization.domain.allocation_count > 0, row.weapon_id);
 		assert.ok(Number.isSafeInteger(row.quantization.domain.candidate_count) && row.quantization.domain.candidate_count > 0, row.weapon_id);
 		assert.ok(row.full_sheet_context.zero_allocation_current_sheet, `${row.weapon_id} zero-allocation context`);
+		assert.equal(row.full_sheet_context.runtime_class_core_applied, false, `${row.weapon_id} gear-only runtime context`);
 		assert.equal("source_core" in row.full_sheet_context, false, `${row.weapon_id} has no circular source core`);
 		assert.equal("source_core_budget" in row.full_sheet_context, false, `${row.weapon_id} has no circular source budget`);
 		assert.ok(row.quantization.lower.dps <= row.assigned_dps_target || row.quantization.lower.dps === row.quantization.upper.dps, `${row.weapon_id} lower candidate`);
@@ -184,7 +185,7 @@ test("every weapon is the nearest legal full-sheet candidate inside a strictly s
 	assert.ok(wbook3.quantization.domain.enumerated_maximum.int >= 65, "the complete derived domain includes the formerly omitted int=65 candidate");
 	assert.ok(Number.isFinite(candidate65.dps) && candidate65.dps > 0, "int=65 remains an evaluated candidate after the endpoint shift");
 	const legalCandidates = [];
-	for (let int = 0; int <= wbook3.quantization.domain.core_envelope.ceiling; int += 1) {
+	for (let int = 1; int <= wbook3.quantization.domain.core_envelope.ceiling; int += 1) {
 		let attack = 1;
 		while (context.evaluate(attack, { str: 0, int, dex: 0 }).dps < wbook3.assigned_dps_target) attack += 1;
 		for (const bracketAttack of new Set([Math.max(1, attack - 1), attack])) {

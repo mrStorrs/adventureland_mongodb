@@ -7617,13 +7617,13 @@ Object.assign(items.claw, { attack: 11, str: 30 });
 // and attack growth; every other field remains authored.
 var weapon_progression = {
   "basher": {
-    "attack": 40,
+    "attack": 81,
     "frequency": 39.565,
-    "str": 5,
+    "str": 50,
     "int": 0,
-    "dex": 117,
+    "dex": 121,
     "upgrade": {
-      "attack": 12
+      "attack": 18.4615384615
     },
     "progression": {
       "historical_rank": 8,
@@ -7639,13 +7639,13 @@ var weapon_progression = {
     }
   },
   "bataxe": {
-    "attack": 67,
+    "attack": 88,
     "frequency": 31.8795,
-    "str": 3,
+    "str": 65,
     "int": 0,
-    "dex": 110,
+    "dex": 130,
     "upgrade": {
-      "attack": 33.5384615385
+      "attack": 44
     },
     "progression": {
       "historical_rank": 12,
@@ -7661,13 +7661,13 @@ var weapon_progression = {
     }
   },
   "blade": {
-    "attack": 120,
+    "attack": 92,
     "frequency": 0.737,
-    "str": 0,
+    "str": 15,
     "int": 0,
-    "dex": 48,
+    "dex": 50,
     "upgrade": {
-      "attack": 23.2
+      "attack": 17.7230769231
     },
     "progression": {
       "historical_rank": 1,
@@ -7683,13 +7683,13 @@ var weapon_progression = {
     }
   },
   "bow": {
-    "attack": 744,
+    "attack": 2350,
     "frequency": 1.118,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 5,
+    "dex": 0,
     "upgrade": {
-      "attack": 119.323076923
+      "attack": 359.384615385
     },
     "progression": {
       "historical_rank": 1,
@@ -7698,20 +7698,20 @@ var weapon_progression = {
       "requirement": 1,
       "reference_level": 1,
       "target_dps": 55,
-      "full_sheet_hit_damage": 112,
-      "attacks_per_second": 0.49125,
-      "base_dps": 55.02,
+      "full_sheet_hit_damage": 118,
+      "attacks_per_second": 0.46625,
+      "base_dps": 55.0175,
       "selected_effort": 0
     }
   },
   "bowofthedead": {
-    "attack": 250,
+    "attack": 70,
     "frequency": 50.77075,
-    "str": 0,
+    "str": 41,
     "int": 0,
-    "dex": 98,
+    "dex": 87,
     "upgrade": {
-      "attack": 106.092307692
+      "attack": 28.8
     },
     "progression": {
       "historical_rank": 8,
@@ -7720,9 +7720,9 @@ var weapon_progression = {
       "requirement": 50,
       "reference_level": 36,
       "target_dps": 165,
-      "full_sheet_hit_damage": 138,
-      "attacks_per_second": 1.19567567568,
-      "base_dps": 165.003243243,
+      "full_sheet_hit_damage": 147,
+      "attacks_per_second": 1.1225,
+      "base_dps": 165.0075,
       "selected_effort": 13648.4955503
     }
   },
@@ -7730,7 +7730,7 @@ var weapon_progression = {
     "attack": 77,
     "frequency": 1.5759999999999996,
     "str": 0,
-    "int": 89,
+    "int": 157,
     "dex": 0,
     "upgrade": {
       "attack": 28.7384615385
@@ -7749,13 +7749,13 @@ var weapon_progression = {
     }
   },
   "candycanesword": {
-    "attack": 72,
+    "attack": 2290,
     "frequency": 25.152,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 14,
+    "dex": 21,
     "upgrade": {
-      "attack": 29.7230769231
+      "attack": 952.553846154
     },
     "progression": {
       "historical_rank": 5,
@@ -7771,13 +7771,13 @@ var weapon_progression = {
     }
   },
   "carrotsword": {
-    "attack": 70,
+    "attack": 50,
     "frequency": 26.7145,
-    "str": 0,
+    "str": 65,
     "int": 0,
-    "dex": 38,
+    "dex": 49,
     "upgrade": {
-      "attack": 27.2
+      "attack": 19.3846153846
     },
     "progression": {
       "historical_rank": 8,
@@ -7793,13 +7793,13 @@ var weapon_progression = {
     }
   },
   "cclaw": {
-    "attack": 349,
+    "attack": 1949,
     "frequency": 15.4525,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 68,
+    "dex": 34,
     "upgrade": {
-      "attack": 173.846153846
+      "attack": 908.307692308
     },
     "progression": {
       "historical_rank": 2,
@@ -7808,20 +7808,20 @@ var weapon_progression = {
       "requirement": 10,
       "reference_level": 8,
       "target_dps": 68.5152016789,
-      "full_sheet_hit_damage": 87,
-      "attacks_per_second": 0.7875,
-      "base_dps": 68.5125,
+      "full_sheet_hit_damage": 97,
+      "attacks_per_second": 0.70625,
+      "base_dps": 68.50625,
       "selected_effort": 362.099525106
     }
   },
   "claw": {
-    "attack": 488,
+    "attack": 2090,
     "frequency": 0.8,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 20,
+    "dex": 7,
     "upgrade": {
-      "attack": 87.3846153846
+      "attack": 354.461538462
     },
     "progression": {
       "historical_rank": 1,
@@ -7830,20 +7830,20 @@ var weapon_progression = {
       "requirement": 1,
       "reference_level": 1,
       "target_dps": 55,
-      "full_sheet_hit_damage": 98,
-      "attacks_per_second": 0.5615625,
-      "base_dps": 55.033125,
+      "full_sheet_hit_damage": 105,
+      "attacks_per_second": 0.5240625,
+      "base_dps": 55.0265625,
       "selected_effort": 0
     }
   },
   "crossbow": {
-    "attack": 542,
+    "attack": 723,
     "frequency": 31.158,
-    "str": 0,
+    "str": 8,
     "int": 0,
-    "dex": 87,
+    "dex": 141,
     "upgrade": {
-      "attack": 172.984615385
+      "attack": 230.584615385
     },
     "progression": {
       "historical_rank": 9,
@@ -7859,13 +7859,13 @@ var weapon_progression = {
     }
   },
   "cupid": {
-    "attack": 289,
+    "attack": 266,
     "frequency": 50.77075,
-    "str": 0,
+    "str": 12,
     "int": 0,
-    "dex": 83,
+    "dex": 137,
     "upgrade": {
-      "attack": 114.215384615
+      "attack": 105.476923077
     },
     "progression": {
       "historical_rank": 10,
@@ -7881,13 +7881,13 @@ var weapon_progression = {
     }
   },
   "dagger": {
-    "attack": 289,
+    "attack": 77,
     "frequency": 30.714,
-    "str": 0,
+    "str": 44,
     "int": 0,
-    "dex": 38,
+    "dex": 84,
     "upgrade": {
-      "attack": 115.076923077
+      "attack": 30.7076923077
     },
     "progression": {
       "historical_rank": 6,
@@ -7903,13 +7903,13 @@ var weapon_progression = {
     }
   },
   "daggerofthedead": {
-    "attack": 218,
+    "attack": 33,
     "frequency": 50.19875,
-    "str": 0,
+    "str": 78,
     "int": 0,
-    "dex": 100,
+    "dex": 9,
     "upgrade": {
-      "attack": 107.815384615
+      "attack": 14.8923076923
     },
     "progression": {
       "historical_rank": 5,
@@ -7918,20 +7918,20 @@ var weapon_progression = {
       "requirement": 40,
       "reference_level": 29,
       "target_dps": 132.45235769,
-      "full_sheet_hit_damage": 109,
-      "attacks_per_second": 1.21513513514,
-      "base_dps": 132.44972973,
+      "full_sheet_hit_damage": 130,
+      "attacks_per_second": 1.01875,
+      "base_dps": 132.4375,
       "selected_effort": 13253.4955503
     }
   },
   "dartgun": {
-    "attack": 230,
+    "attack": 204,
     "frequency": 75.09658108108108,
-    "str": 0,
+    "str": 24,
     "int": 0,
-    "dex": 97,
+    "dex": 201,
     "upgrade": {
-      "attack": 120.307692308
+      "attack": 106.4
     },
     "progression": {
       "historical_rank": 14,
@@ -7947,13 +7947,13 @@ var weapon_progression = {
     }
   },
   "dragondagger": {
-    "attack": 107,
+    "attack": 29,
     "frequency": 74.27158108108108,
-    "str": 2,
+    "str": 239,
     "int": 0,
-    "dex": 126,
+    "dex": 8,
     "upgrade": {
-      "attack": 15.3230769231
+      "attack": 9.41538461538
     },
     "progression": {
       "historical_rank": 11,
@@ -7962,20 +7962,20 @@ var weapon_progression = {
       "requirement": 99,
       "reference_level": 70,
       "target_dps": 495,
-      "full_sheet_hit_damage": 310,
-      "attacks_per_second": 1.59675675676,
-      "base_dps": 494.994594595,
+      "full_sheet_hit_damage": 387,
+      "attacks_per_second": 1.2790625,
+      "base_dps": 494.9971875,
       "selected_effort": 700465416.306
     }
   },
   "fclaw": {
-    "attack": 302,
+    "attack": 2490,
     "frequency": 31.222,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 7,
+    "dex": 21,
     "upgrade": {
-      "attack": 128.246153846
+      "attack": 1039.93846154
     },
     "progression": {
       "historical_rank": 4,
@@ -7984,20 +7984,20 @@ var weapon_progression = {
       "requirement": 30,
       "reference_level": 22,
       "target_dps": 106.325012471,
-      "full_sheet_hit_damage": 121,
-      "attacks_per_second": 0.87875,
-      "base_dps": 106.32875,
+      "full_sheet_hit_damage": 125,
+      "attacks_per_second": 0.850625,
+      "base_dps": 106.328125,
       "selected_effort": 4358.35314159
     }
   },
   "fireblade": {
-    "attack": 73,
+    "attack": 34,
     "frequency": 25.152,
-    "str": 0,
+    "str": 41,
     "int": 0,
-    "dex": 28,
+    "dex": 32,
     "upgrade": {
-      "attack": 36.6153846154
+      "attack": 16.9846153846
     },
     "progression": {
       "historical_rank": 3,
@@ -8013,13 +8013,13 @@ var weapon_progression = {
     }
   },
   "firebow": {
-    "attack": 403,
+    "attack": 1610,
     "frequency": 31.158,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 33,
+    "dex": 51,
     "upgrade": {
-      "attack": 201.169230769
+      "attack": 804.861538462
     },
     "progression": {
       "historical_rank": 3,
@@ -8038,7 +8038,7 @@ var weapon_progression = {
     "attack": 73,
     "frequency": 28.83704071499502,
     "str": 0,
-    "int": 3,
+    "int": 28,
     "dex": 0,
     "upgrade": {
       "attack": 12.3076923077
@@ -8057,13 +8057,13 @@ var weapon_progression = {
     }
   },
   "firestars": {
-    "attack": 690,
+    "attack": 184,
     "frequency": 50.19875,
-    "str": 0,
+    "str": 48,
     "int": 0,
-    "dex": 47,
+    "dex": 101,
     "upgrade": {
-      "attack": 287.692307692
+      "attack": 76.2461538462
     },
     "progression": {
       "historical_rank": 7,
@@ -8079,13 +8079,13 @@ var weapon_progression = {
     }
   },
   "frostbow": {
-    "attack": 346,
+    "attack": 53,
     "frequency": 31.158,
-    "str": 0,
+    "str": 58,
     "int": 0,
-    "dex": 13,
+    "dex": 52,
     "upgrade": {
-      "attack": 147.938461538
+      "attack": 22.5846153846
     },
     "progression": {
       "historical_rank": 7,
@@ -8101,13 +8101,13 @@ var weapon_progression = {
     }
   },
   "froststaff": {
-    "attack": 39,
+    "attack": 141,
     "frequency": 28.962490566037747,
     "str": 0,
-    "int": 50,
+    "int": 17,
     "dex": 0,
     "upgrade": {
-      "attack": 12.8615384615
+      "attack": 18.0307692308
     },
     "progression": {
       "historical_rank": 7,
@@ -8116,18 +8116,18 @@ var weapon_progression = {
       "requirement": 40,
       "reference_level": 29,
       "target_dps": 132.45235769,
-      "full_sheet_hit_damage": 197,
-      "attacks_per_second": 0.67232,
-      "base_dps": 132.44704,
+      "full_sheet_hit_damage": 204,
+      "attacks_per_second": 0.64928,
+      "base_dps": 132.45312,
       "selected_effort": 4358.35314159
     }
   },
   "fsword": {
     "attack": 64,
     "frequency": 25.66,
-    "str": 0,
+    "str": 25,
     "int": 0,
-    "dex": 52,
+    "dex": 57,
     "upgrade": {
       "attack": 28.7384615385
     },
@@ -8145,13 +8145,13 @@ var weapon_progression = {
     }
   },
   "gbow": {
-    "attack": 242,
+    "attack": 1070,
     "frequency": 50.77075,
-    "str": 0,
+    "str": 3,
     "int": 0,
-    "dex": 127,
+    "dex": 257,
     "upgrade": {
-      "attack": 119.384615385
+      "attack": 528.738461538
     },
     "progression": {
       "historical_rank": 15,
@@ -8167,13 +8167,13 @@ var weapon_progression = {
     }
   },
   "glolipop": {
-    "attack": 53,
+    "attack": 93,
     "frequency": 3.65175,
-    "str": 0,
-    "int": 0,
-    "dex": 79,
+    "str": 30,
+    "int": 1,
+    "dex": 82,
     "upgrade": {
-      "attack": 12.2461538462
+      "attack": 15.6923076923
     },
     "progression": {
       "historical_rank": 5,
@@ -8189,13 +8189,13 @@ var weapon_progression = {
     }
   },
   "gstaff": {
-    "attack": 42,
+    "attack": 80,
     "frequency": 64.23990584737365,
     "str": 0,
-    "int": 80,
+    "int": 96,
     "dex": 0,
     "upgrade": {
-      "attack": 18.7692307692
+      "attack": 28.3076923077
     },
     "progression": {
       "historical_rank": 15,
@@ -8204,20 +8204,20 @@ var weapon_progression = {
       "requirement": 90,
       "reference_level": 63,
       "target_dps": 397.357073071,
-      "full_sheet_hit_damage": 407,
-      "attacks_per_second": 0.97633,
-      "base_dps": 397.36631,
+      "full_sheet_hit_damage": 424,
+      "attacks_per_second": 0.93717,
+      "base_dps": 397.36008,
       "selected_effort": 2755353024.59
     }
   },
   "hammer": {
-    "attack": 32,
+    "attack": 39,
     "frequency": 59.574,
-    "str": 2,
-    "int": 0,
-    "dex": 74,
+    "str": 67,
+    "int": 1,
+    "dex": 78,
     "upgrade": {
-      "attack": 8.49230769231
+      "attack": 9.53846153846
     },
     "progression": {
       "historical_rank": 7,
@@ -8233,13 +8233,13 @@ var weapon_progression = {
     }
   },
   "harbringer": {
-    "attack": 24,
+    "attack": 94,
     "frequency": 54.39558254833913,
     "str": 0,
-    "int": 55,
+    "int": 17,
     "dex": 0,
     "upgrade": {
-      "attack": 7.63076923077
+      "attack": 10.4
     },
     "progression": {
       "historical_rank": 6,
@@ -8248,20 +8248,20 @@ var weapon_progression = {
       "requirement": 30,
       "reference_level": 22,
       "target_dps": 106.325012471,
-      "full_sheet_hit_damage": 114,
-      "attacks_per_second": 0.932275,
-      "base_dps": 106.27935,
+      "full_sheet_hit_damage": 118,
+      "attacks_per_second": 0.901125,
+      "base_dps": 106.33275,
       "selected_effort": 3809.54935622
     }
   },
   "harpybow": {
-    "attack": 254,
+    "attack": 58,
     "frequency": 75.09658108108108,
-    "str": 0,
+    "str": 65,
     "int": 0,
-    "dex": 5,
+    "dex": 73,
     "upgrade": {
-      "attack": 112.861538462
+      "attack": 25.6
     },
     "progression": {
       "historical_rank": 11,
@@ -8277,13 +8277,13 @@ var weapon_progression = {
     }
   },
   "hbow": {
-    "attack": 378,
+    "attack": 2429,
     "frequency": 15.8335,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 64,
+    "dex": 57,
     "upgrade": {
-      "attack": 159.569230769
+      "attack": 982.215384615
     },
     "progression": {
       "historical_rank": 4,
@@ -8292,20 +8292,20 @@ var weapon_progression = {
       "requirement": 20,
       "reference_level": 15,
       "target_dps": 85.3515065654,
-      "full_sheet_hit_damage": 113,
-      "attacks_per_second": 0.7553125,
-      "base_dps": 85.3503125,
+      "full_sheet_hit_damage": 121,
+      "attacks_per_second": 0.7053125,
+      "base_dps": 85.3428125,
       "selected_effort": 1969.28097259
     }
   },
   "hdagger": {
-    "attack": 221,
+    "attack": 104,
     "frequency": 74.27158108108108,
-    "str": 0,
+    "str": 49,
     "int": 0,
-    "dex": 69,
+    "dex": 173,
     "upgrade": {
-      "attack": 117.107692308
+      "attack": 55.1384615385
     },
     "progression": {
       "historical_rank": 10,
@@ -8321,13 +8321,13 @@ var weapon_progression = {
     }
   },
   "heartwood": {
-    "attack": 51,
+    "attack": 42,
     "frequency": 51.892,
-    "str": 6,
+    "str": 135,
     "int": 0,
-    "dex": 56,
+    "dex": 81,
     "upgrade": {
-      "attack": 19.0769230769
+      "attack": 16.3692307692
     },
     "progression": {
       "historical_rank": 14,
@@ -8343,13 +8343,13 @@ var weapon_progression = {
     }
   },
   "lmace": {
-    "attack": 33,
+    "attack": 29,
     "frequency": 60.082,
-    "str": 3,
+    "str": 228,
     "int": 0,
-    "dex": 17,
+    "dex": 25,
     "upgrade": {
-      "attack": 10.5846153846
+      "attack": 9.66153846154
     },
     "progression": {
       "historical_rank": 11,
@@ -8365,13 +8365,13 @@ var weapon_progression = {
     }
   },
   "mace": {
-    "attack": 82,
+    "attack": 32,
     "frequency": 1.308,
-    "str": 0,
-    "int": 1,
-    "dex": 8,
+    "str": 53,
+    "int": 0,
+    "dex": 10,
     "upgrade": {
-      "attack": 2.03076923077
+      "attack": 2.4
     },
     "progression": {
       "historical_rank": 1,
@@ -8387,13 +8387,13 @@ var weapon_progression = {
     }
   },
   "maceofthedead": {
-    "attack": 33,
+    "attack": 161,
     "frequency": 42.617,
-    "str": 1,
+    "str": 10,
     "int": 0,
-    "dex": 117,
+    "dex": 120,
     "upgrade": {
-      "attack": 8.73846153846
+      "attack": 13.4769230769
     },
     "progression": {
       "historical_rank": 6,
@@ -8409,13 +8409,13 @@ var weapon_progression = {
     }
   },
   "merry": {
-    "attack": 388,
+    "attack": 146,
     "frequency": 15.8335,
-    "str": 0,
+    "str": 23,
     "int": 0,
-    "dex": 50,
+    "dex": 89,
     "upgrade": {
-      "attack": 162.030769231
+      "attack": 60.7384615385
     },
     "progression": {
       "historical_rank": 6,
@@ -8434,7 +8434,7 @@ var weapon_progression = {
     "attack": 61,
     "frequency": 7.912192938836399,
     "str": 0,
-    "int": 38,
+    "int": 70,
     "dex": 0,
     "upgrade": {
       "attack": 17.3538461538
@@ -8453,13 +8453,13 @@ var weapon_progression = {
     }
   },
   "ololipop": {
-    "attack": 57,
+    "attack": 92,
     "frequency": 1.308,
-    "str": 0,
+    "str": 21,
     "int": 0,
-    "dex": 62,
+    "dex": 64,
     "upgrade": {
-      "attack": 10.2153846154
+      "attack": 11.6307692308
     },
     "progression": {
       "historical_rank": 3,
@@ -8475,13 +8475,13 @@ var weapon_progression = {
     }
   },
   "oozingterror": {
-    "attack": 53,
+    "attack": 127,
     "frequency": 55.65495785820524,
     "str": 0,
-    "int": 19,
+    "int": 26,
     "dex": 0,
     "upgrade": {
-      "attack": 11.2615384615
+      "attack": 12.7384615385
     },
     "progression": {
       "historical_rank": 10,
@@ -8490,20 +8490,20 @@ var weapon_progression = {
       "requirement": 60,
       "reference_level": 42,
       "target_dps": 205.545605036,
-      "full_sheet_hit_damage": 217,
-      "attacks_per_second": 0.94731,
-      "base_dps": 205.56627,
+      "full_sheet_hit_damage": 222,
+      "attacks_per_second": 0.925925,
+      "base_dps": 205.55535,
       "selected_effort": 48695.9578214
     }
   },
   "ornamentstaff": {
-    "attack": 70,
+    "attack": 169,
     "frequency": 28.83704071499502,
     "str": 0,
-    "int": 16,
+    "int": 21,
     "dex": 0,
     "upgrade": {
-      "attack": 16.8
+      "attack": 19.7538461538
     },
     "progression": {
       "historical_rank": 8,
@@ -8512,20 +8512,20 @@ var weapon_progression = {
       "requirement": 50,
       "reference_level": 36,
       "target_dps": 165,
-      "full_sheet_hit_damage": 249,
-      "attacks_per_second": 0.66272,
-      "base_dps": 165.01728,
+      "full_sheet_hit_damage": 254,
+      "attacks_per_second": 0.6496,
+      "base_dps": 164.9984,
       "selected_effort": 5033.67092033
     }
   },
   "pclaw": {
-    "attack": 266,
+    "attack": 97,
     "frequency": 50.19875,
-    "str": 0,
+    "str": 43,
     "int": 0,
-    "dex": 54,
+    "dex": 122,
     "upgrade": {
-      "attack": 118.461538462
+      "attack": 43.0769230769
     },
     "progression": {
       "historical_rank": 8,
@@ -8541,13 +8541,13 @@ var weapon_progression = {
     }
   },
   "pinkie": {
-    "attack": 39,
+    "attack": 125,
     "frequency": 21.48166915052161,
     "str": 0,
-    "int": 37,
+    "int": 34,
     "dex": 0,
     "upgrade": {
-      "attack": 10.9538461538
+      "attack": 14.0923076923
     },
     "progression": {
       "historical_rank": 16,
@@ -8556,20 +8556,20 @@ var weapon_progression = {
       "requirement": 99,
       "reference_level": 70,
       "target_dps": 495,
-      "full_sheet_hit_damage": 388,
-      "attacks_per_second": 1.27542,
-      "base_dps": 494.86296,
+      "full_sheet_hit_damage": 413,
+      "attacks_per_second": 1.19828,
+      "base_dps": 494.88964,
       "selected_effort": 8939157232.81
     }
   },
   "pmace": {
-    "attack": 40,
+    "attack": 46,
     "frequency": 28.073,
-    "str": 1,
+    "str": 42,
     "int": 0,
-    "dex": 50,
+    "dex": 53,
     "upgrade": {
-      "attack": 7.01538461538
+      "attack": 7.32307692308
     },
     "progression": {
       "historical_rank": 4,
@@ -8585,13 +8585,13 @@ var weapon_progression = {
     }
   },
   "pmaceofthedead": {
-    "attack": 32,
+    "attack": 39,
     "frequency": 59.574,
-    "str": 2,
-    "int": 0,
-    "dex": 74,
+    "str": 67,
+    "int": 1,
+    "dex": 78,
     "upgrade": {
-      "attack": 8.49230769231
+      "attack": 9.53846153846
     },
     "progression": {
       "historical_rank": 7,
@@ -8607,13 +8607,13 @@ var weapon_progression = {
     }
   },
   "pouchbow": {
-    "attack": 472,
+    "attack": 3849,
     "frequency": 1.118,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 79,
+    "dex": 53,
     "upgrade": {
-      "attack": 181.353846154
+      "attack": 1335.38461538
     },
     "progression": {
       "historical_rank": 5,
@@ -8622,20 +8622,20 @@ var weapon_progression = {
       "requirement": 30,
       "reference_level": 22,
       "target_dps": 106.325012471,
-      "full_sheet_hit_damage": 165,
-      "attacks_per_second": 0.644375,
-      "base_dps": 106.321875,
+      "full_sheet_hit_damage": 192,
+      "attacks_per_second": 0.55375,
+      "base_dps": 106.32,
       "selected_effort": 2500
     }
   },
   "rapier": {
-    "attack": 174,
+    "attack": 47,
     "frequency": 30.714,
-    "str": 0,
+    "str": 79,
     "int": 0,
-    "dex": 149,
+    "dex": 98,
     "upgrade": {
-      "attack": 99.7538461538
+      "attack": 26.3384615385
     },
     "progression": {
       "historical_rank": 9,
@@ -8644,20 +8644,20 @@ var weapon_progression = {
       "requirement": 80,
       "reference_level": 56,
       "target_dps": 318.975037414,
-      "full_sheet_hit_damage": 174,
-      "attacks_per_second": 1.83324324324,
-      "base_dps": 318.984324324,
+      "full_sheet_hit_damage": 190,
+      "attacks_per_second": 1.67875,
+      "base_dps": 318.9625,
       "selected_effort": 547725.075063
     }
   },
   "scythe": {
-    "attack": 59,
+    "attack": 35,
     "frequency": 55.197,
-    "str": 1,
+    "str": 202,
     "int": 0,
-    "dex": 63,
+    "dex": 4,
     "upgrade": {
-      "attack": 29.1692307692
+      "attack": 16.1846153846
     },
     "progression": {
       "historical_rank": 13,
@@ -8666,20 +8666,20 @@ var weapon_progression = {
       "requirement": 90,
       "reference_level": 63,
       "target_dps": 361.233702792,
-      "full_sheet_hit_damage": 316,
-      "attacks_per_second": 1.143125,
-      "base_dps": 361.2275,
+      "full_sheet_hit_damage": 357,
+      "attacks_per_second": 1.011875,
+      "base_dps": 361.239375,
       "selected_effort": 32430087.2093
     }
   },
   "slimestaff": {
-    "attack": 31,
+    "attack": 133,
     "frequency": 15.671302186878721,
     "str": 0,
-    "int": 57,
+    "int": 12,
     "dex": 0,
     "upgrade": {
-      "attack": 11.0769230769
+      "attack": 14.4
     },
     "progression": {
       "historical_rank": 3,
@@ -8688,20 +8688,20 @@ var weapon_progression = {
       "requirement": 10,
       "reference_level": 8,
       "target_dps": 68.5152016789,
-      "full_sheet_hit_damage": 129,
-      "attacks_per_second": 0.531165,
-      "base_dps": 68.520285,
+      "full_sheet_hit_damage": 133,
+      "attacks_per_second": 0.5151,
+      "base_dps": 68.5083,
       "selected_effort": 789.697581691
     }
   },
   "snowflakes": {
-    "attack": 658,
+    "attack": 1017,
     "frequency": 30.714,
-    "str": 0,
+    "str": 7,
     "int": 0,
-    "dex": 111,
+    "dex": 123,
     "upgrade": {
-      "attack": 287.630769231
+      "attack": 441.230769231
     },
     "progression": {
       "historical_rank": 6,
@@ -8710,20 +8710,20 @@ var weapon_progression = {
       "requirement": 50,
       "reference_level": 36,
       "target_dps": 165,
-      "full_sheet_hit_damage": 132,
-      "attacks_per_second": 1.25,
-      "base_dps": 165,
+      "full_sheet_hit_damage": 136,
+      "attacks_per_second": 1.21324324324,
+      "base_dps": 165.001081081,
       "selected_effort": 56757.5824774
     }
   },
   "sparkstaff": {
-    "attack": 38,
+    "attack": 345,
     "frequency": 45.18042162698415,
     "str": 0,
-    "int": 100,
+    "int": 12,
     "dex": 0,
     "upgrade": {
-      "attack": 14.5230769231
+      "attack": 27.2
     },
     "progression": {
       "historical_rank": 12,
@@ -8732,20 +8732,20 @@ var weapon_progression = {
       "requirement": 70,
       "reference_level": 49,
       "target_dps": 256.054519696,
-      "full_sheet_hit_damage": 336,
-      "attacks_per_second": 0.76195,
-      "base_dps": 256.0152,
+      "full_sheet_hit_damage": 362,
+      "attacks_per_second": 0.70735,
+      "base_dps": 256.0607,
       "selected_effort": 1301924.40666
     }
   },
   "spear": {
-    "attack": 92,
+    "attack": 56,
     "frequency": 6.352,
-    "str": 0,
+    "str": 31,
     "int": 0,
-    "dex": 37,
+    "dex": 41,
     "upgrade": {
-      "attack": 42.5230769231
+      "attack": 25.7230769231
     },
     "progression": {
       "historical_rank": 2,
@@ -8761,13 +8761,13 @@ var weapon_progression = {
     }
   },
   "spearofthedead": {
-    "attack": 58,
+    "attack": 53,
     "frequency": 39.13975,
-    "str": 1,
+    "str": 44,
     "int": 0,
-    "dex": 34,
+    "dex": 43,
     "upgrade": {
-      "attack": 26.5230769231
+      "attack": 24.1230769231
     },
     "progression": {
       "historical_rank": 7,
@@ -8783,13 +8783,13 @@ var weapon_progression = {
     }
   },
   "staff": {
-    "attack": 128,
+    "attack": 328,
     "frequency": 1.5759999999999996,
     "str": 0,
-    "int": 4,
+    "int": 1,
     "dex": 0,
     "upgrade": {
-      "attack": 4.06153846154
+      "attack": 0
     },
     "progression": {
       "historical_rank": 1,
@@ -8798,20 +8798,20 @@ var weapon_progression = {
       "requirement": 1,
       "reference_level": 1,
       "target_dps": 55,
-      "full_sheet_hit_damage": 147,
-      "attacks_per_second": 0.374255,
-      "base_dps": 55.015485,
+      "full_sheet_hit_damage": 148,
+      "attacks_per_second": 0.371665,
+      "base_dps": 55.00642,
       "selected_effort": 0
     }
   },
   "staffofthedead": {
-    "attack": 42,
+    "attack": 127,
     "frequency": 45.101535218253986,
     "str": 0,
-    "int": 39,
+    "int": 23,
     "dex": 0,
     "upgrade": {
-      "attack": 11.8153846154
+      "attack": 15.8153846154
     },
     "progression": {
       "historical_rank": 9,
@@ -8820,20 +8820,20 @@ var weapon_progression = {
       "requirement": 50,
       "reference_level": 36,
       "target_dps": 165,
-      "full_sheet_hit_damage": 197,
-      "attacks_per_second": 0.8376,
-      "base_dps": 165.0072,
+      "full_sheet_hit_damage": 203,
+      "attacks_per_second": 0.8128,
+      "base_dps": 164.9984,
       "selected_effort": 13648.4955503
     }
   },
   "stinger": {
-    "attack": 328,
+    "attack": 2290,
     "frequency": 15.4525,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 32,
+    "dex": 57,
     "upgrade": {
-      "attack": 138.523076923
+      "attack": 969.846153846
     },
     "progression": {
       "historical_rank": 3,
@@ -8849,13 +8849,13 @@ var weapon_progression = {
     }
   },
   "swifty": {
-    "attack": 78,
+    "attack": 35,
     "frequency": 20.114,
-    "str": 0,
+    "str": 86,
     "int": 0,
-    "dex": 2,
+    "dex": 24,
     "upgrade": {
-      "attack": 32.0615384615
+      "attack": 14.5846153846
     },
     "progression": {
       "historical_rank": 6,
@@ -8864,20 +8864,20 @@ var weapon_progression = {
       "requirement": 40,
       "reference_level": 29,
       "target_dps": 120.411234264,
-      "full_sheet_hit_damage": 156,
-      "attacks_per_second": 0.771875,
+      "full_sheet_hit_damage": 152,
+      "attacks_per_second": 0.7921875,
       "base_dps": 120.4125,
       "selected_effort": 8355.31708972
     }
   },
   "sword": {
-    "attack": 52,
+    "attack": 77,
     "frequency": 39.13975,
-    "str": 10,
+    "str": 43,
     "int": 0,
-    "dex": 85,
+    "dex": 98,
     "upgrade": {
-      "attack": 20.4307692308
+      "attack": 30.2153846154
     },
     "progression": {
       "historical_rank": 9,
@@ -8893,13 +8893,13 @@ var weapon_progression = {
     }
   },
   "swordofthedead": {
-    "attack": 52,
+    "attack": 77,
     "frequency": 39.13975,
-    "str": 10,
+    "str": 43,
     "int": 0,
-    "dex": 85,
+    "dex": 98,
     "upgrade": {
-      "attack": 20.4307692308
+      "attack": 30.2153846154
     },
     "progression": {
       "historical_rank": 10,
@@ -8915,13 +8915,13 @@ var weapon_progression = {
     }
   },
   "t2bow": {
-    "attack": 403,
+    "attack": 1610,
     "frequency": 31.158,
-    "str": 0,
+    "str": 1,
     "int": 0,
-    "dex": 33,
+    "dex": 51,
     "upgrade": {
-      "attack": 201.169230769
+      "attack": 804.861538462
     },
     "progression": {
       "historical_rank": 2,
@@ -8937,13 +8937,13 @@ var weapon_progression = {
     }
   },
   "t3bow": {
-    "attack": 221,
+    "attack": 227,
     "frequency": 75.09658108108108,
-    "str": 0,
+    "str": 17,
     "int": 0,
-    "dex": 136,
+    "dex": 180,
     "upgrade": {
-      "attack": 120.615384615
+      "attack": 123.323076923
     },
     "progression": {
       "historical_rank": 12,
@@ -8952,20 +8952,20 @@ var weapon_progression = {
       "requirement": 80,
       "reference_level": 56,
       "target_dps": 318.975037414,
-      "full_sheet_hit_damage": 210,
-      "attacks_per_second": 1.51891891892,
-      "base_dps": 318.972972973,
+      "full_sheet_hit_damage": 216,
+      "attacks_per_second": 1.47675675676,
+      "base_dps": 318.979459459,
       "selected_effort": 1369312.68762
     }
   },
   "throwingstars": {
-    "attack": 852,
+    "attack": 126,
     "frequency": 0.8,
-    "str": 0,
+    "str": 103,
     "int": 0,
-    "dex": 130,
+    "dex": 22,
     "upgrade": {
-      "attack": 346.215384615
+      "attack": 45.0461538462
     },
     "progression": {
       "historical_rank": 6,
@@ -8974,20 +8974,20 @@ var weapon_progression = {
       "requirement": 50,
       "reference_level": 36,
       "target_dps": 165,
-      "full_sheet_hit_damage": 170,
-      "attacks_per_second": 0.970540540541,
-      "base_dps": 164.991891892,
+      "full_sheet_hit_damage": 218,
+      "attacks_per_second": 0.756875,
+      "base_dps": 164.99875,
       "selected_effort": 54495.0725733
     }
   },
   "vdagger": {
-    "attack": 221,
+    "attack": 61,
     "frequency": 77.58332432432432,
-    "str": 0,
+    "str": 85,
     "int": 0,
-    "dex": 32,
+    "dex": 136,
     "upgrade": {
-      "attack": 117.107692308
+      "attack": 32.3076923077
     },
     "progression": {
       "historical_rank": 10,
@@ -9003,13 +9003,13 @@ var weapon_progression = {
     }
   },
   "vhammer": {
-    "attack": 28,
+    "attack": 266,
     "frequency": 59.574,
-    "str": 2,
-    "int": 1,
-    "dex": 214,
+    "str": 6,
+    "int": 0,
+    "dex": 220,
     "upgrade": {
-      "attack": 10.1538461538
+      "attack": 17.9076923077
     },
     "progression": {
       "historical_rank": 10,
@@ -9025,13 +9025,13 @@ var weapon_progression = {
     }
   },
   "vstaff": {
-    "attack": 56,
+    "attack": 85,
     "frequency": 66.86653465346537,
     "str": 0,
-    "int": 13,
+    "int": 61,
     "dex": 0,
     "upgrade": {
-      "attack": 20.6769230769
+      "attack": 25.2923076923
     },
     "progression": {
       "historical_rank": 13,
@@ -9040,20 +9040,20 @@ var weapon_progression = {
       "requirement": 80,
       "reference_level": 56,
       "target_dps": 318.975037414,
-      "full_sheet_hit_damage": 297,
-      "attacks_per_second": 1.07406,
-      "base_dps": 318.99582,
+      "full_sheet_hit_damage": 302,
+      "attacks_per_second": 1.05621,
+      "base_dps": 318.97542,
       "selected_effort": 6659755.80498
     }
   },
   "vsword": {
-    "attack": 43,
+    "attack": 436,
     "frequency": 56.42325,
-    "str": 0,
+    "str": 2,
     "int": 0,
-    "dex": 226,
+    "dex": 258,
     "upgrade": {
-      "attack": 19.5076923077
+      "attack": 89.9076923077
     },
     "progression": {
       "historical_rank": 15,
@@ -9072,7 +9072,7 @@ var weapon_progression = {
     "attack": 36,
     "frequency": 1.2480000000000047,
     "str": 0,
-    "int": 13,
+    "int": 31,
     "dex": 0,
     "upgrade": {
       "attack": 7.63076923077
@@ -9091,13 +9091,13 @@ var weapon_progression = {
     }
   },
   "wbasher": {
-    "attack": 64,
+    "attack": 165,
     "frequency": 13.308,
-    "str": 0,
+    "str": 8,
     "int": 0,
-    "dex": 64,
+    "dex": 66,
     "upgrade": {
-      "attack": 10.7076923077
+      "attack": 10.3384615385
     },
     "progression": {
       "historical_rank": 2,
@@ -9113,13 +9113,13 @@ var weapon_progression = {
     }
   },
   "wblade": {
-    "attack": 21,
+    "attack": 81,
     "frequency": 68.27382673267327,
     "str": 0,
-    "int": 203,
+    "int": 81,
     "dex": 0,
     "upgrade": {
-      "attack": 10.7076923077
+      "attack": 26.5846153846
     },
     "progression": {
       "historical_rank": 14,
@@ -9128,20 +9128,20 @@ var weapon_progression = {
       "requirement": 90,
       "reference_level": 63,
       "target_dps": 397.357073071,
-      "full_sheet_hit_damage": 333,
-      "attacks_per_second": 1.193255,
-      "base_dps": 397.353915,
+      "full_sheet_hit_damage": 369,
+      "attacks_per_second": 1.076865,
+      "base_dps": 397.363185,
       "selected_effort": 765950302.1
     }
   },
   "wbook0": {
-    "attack": 33,
+    "attack": 137,
     "frequency": 1.9549303828940823,
     "str": 0,
-    "int": 24,
+    "int": 1,
     "dex": 0,
     "upgrade": {
-      "attack": 0.738461538462
+      "attack": 0
     },
     "progression": {
       "historical_rank": 1,
@@ -9150,20 +9150,20 @@ var weapon_progression = {
       "requirement": 1,
       "reference_level": 1,
       "target_dps": 45,
-      "full_sheet_hit_damage": 119,
-      "attacks_per_second": 0.378325,
-      "base_dps": 45.020675,
+      "full_sheet_hit_damage": 121,
+      "attacks_per_second": 0.372035,
+      "base_dps": 45.016235,
       "selected_effort": 0
     }
   },
   "wbook1": {
-    "attack": 45,
+    "attack": 71,
     "frequency": 29.84511320754717,
     "str": 0,
-    "int": 1,
+    "int": 27,
     "dex": 0,
     "upgrade": {
-      "attack": 4.30769230769
+      "attack": 3.50769230769
     },
     "progression": {
       "historical_rank": 2,
@@ -9172,15 +9172,15 @@ var weapon_progression = {
       "requirement": 50,
       "reference_level": 36,
       "target_dps": 135,
-      "full_sheet_hit_damage": 202,
-      "attacks_per_second": 0.6682,
-      "base_dps": 134.9764,
+      "full_sheet_hit_damage": 204,
+      "attacks_per_second": 0.6617,
+      "base_dps": 134.9868,
       "selected_effort": 54896.7249634
     }
   },
   "wbook2": {
     "attack": 24,
-    "int": 52,
+    "int": 70,
     "upgrade": {
       "attack": 4.73846153846
     },
@@ -9201,7 +9201,7 @@ var weapon_progression = {
   },
   "wbook3": {
     "attack": 68,
-    "int": 1,
+    "int": 26,
     "upgrade": {
       "attack": 4.49230769231
     },
@@ -9222,7 +9222,7 @@ var weapon_progression = {
   },
   "wbook4": {
     "attack": 56,
-    "int": 14,
+    "int": 46,
     "upgrade": {
       "attack": 5.90769230769
     },
@@ -9242,10 +9242,10 @@ var weapon_progression = {
     }
   },
   "wbook5": {
-    "attack": 24,
-    "int": 99,
+    "attack": 226,
+    "int": 5,
     "upgrade": {
-      "attack": 6.33846153846
+      "attack": 0.923076923077
     },
     "str": 0,
     "dex": 0,
@@ -9256,17 +9256,17 @@ var weapon_progression = {
       "requirement": 40,
       "reference_level": 29,
       "target_dps": 108.370110838,
-      "full_sheet_hit_damage": 288,
-      "attacks_per_second": 0.37625,
-      "base_dps": 108.36,
+      "full_sheet_hit_damage": 307,
+      "attacks_per_second": 0.352975,
+      "base_dps": 108.363325,
       "selected_effort": 50000
     }
   },
   "wbook6": {
-    "attack": 26,
-    "int": 146,
+    "attack": 164,
+    "int": 27,
     "upgrade": {
-      "attack": 6.76923076923
+      "attack": 7.13846153846
     },
     "str": 0,
     "dex": 0,
@@ -9277,17 +9277,17 @@ var weapon_progression = {
       "requirement": 60,
       "reference_level": 42,
       "target_dps": 168.173676848,
-      "full_sheet_hit_damage": 435,
-      "attacks_per_second": 0.386575,
-      "base_dps": 168.160125,
+      "full_sheet_hit_damage": 472,
+      "attacks_per_second": 0.3563,
+      "base_dps": 168.1736,
       "selected_effort": 125000
     }
   },
   "wbook7": {
-    "attack": 43,
-    "int": 84,
+    "attack": 620,
+    "int": 3,
     "upgrade": {
-      "attack": 10.6461538462
+      "attack": 0
     },
     "str": 0,
     "dex": 0,
@@ -9298,17 +9298,17 @@ var weapon_progression = {
       "requirement": 70,
       "reference_level": 49,
       "target_dps": 209.499152478,
-      "full_sheet_hit_damage": 554,
-      "attacks_per_second": 0.378175,
-      "base_dps": 209.50895,
+      "full_sheet_hit_damage": 595,
+      "attacks_per_second": 0.3521,
+      "base_dps": 209.4995,
       "selected_effort": 275000
     }
   },
   "wbook8": {
-    "attack": 57,
-    "int": 54,
+    "attack": 317,
+    "int": 14,
     "upgrade": {
-      "attack": 14.5230769231
+      "attack": 10.7076923077
     },
     "str": 0,
     "dex": 0,
@@ -9319,15 +9319,15 @@ var weapon_progression = {
       "requirement": 80,
       "reference_level": 56,
       "target_dps": 260.979576066,
-      "full_sheet_hit_damage": 693,
-      "attacks_per_second": 0.3766,
-      "base_dps": 260.9838,
+      "full_sheet_hit_damage": 735,
+      "attacks_per_second": 0.355075,
+      "base_dps": 260.980125,
       "selected_effort": 600000
     }
   },
   "wbook9": {
     "attack": 43,
-    "int": 122,
+    "int": 226,
     "upgrade": {
       "attack": 13.9076923077
     },
@@ -9347,13 +9347,13 @@ var weapon_progression = {
     }
   },
   "wbookhs": {
-    "attack": 12,
+    "attack": 16,
     "frequency": 168.3,
     "str": 0,
-    "int": 44,
+    "int": 129,
     "dex": 0,
     "upgrade": {
-      "attack": 3.38461538462
+      "attack": 3.81538461538
     },
     "progression": {
       "historical_rank": 3,
@@ -9362,20 +9362,20 @@ var weapon_progression = {
       "requirement": 99,
       "reference_level": 70,
       "target_dps": 405,
-      "full_sheet_hit_damage": 182,
-      "attacks_per_second": 2.22285,
-      "base_dps": 404.5587,
+      "full_sheet_hit_damage": 186,
+      "attacks_per_second": 2.177175,
+      "base_dps": 404.95455,
       "selected_effort": 2783467.40761
     }
   },
   "weaver": {
-    "attack": 317,
+    "attack": 58,
     "frequency": 23.46375,
-    "str": 0,
+    "str": 185,
     "int": 0,
-    "dex": 198,
+    "dex": 15,
     "upgrade": {
-      "attack": 153.292307692
+      "attack": 23.5076923077
     },
     "progression": {
       "historical_rank": 13,
@@ -9384,20 +9384,20 @@ var weapon_progression = {
       "requirement": 90,
       "reference_level": 63,
       "target_dps": 397.357073071,
-      "full_sheet_hit_damage": 365,
-      "attacks_per_second": 1.08864864865,
-      "base_dps": 397.356756757,
+      "full_sheet_hit_damage": 542,
+      "attacks_per_second": 0.733125,
+      "base_dps": 397.35375,
       "selected_effort": 1566256.20152
     }
   },
   "woodensword": {
-    "attack": 75,
+    "attack": 57,
     "frequency": 27.9645,
-    "str": 0,
+    "str": 90,
     "int": 0,
-    "dex": 20,
+    "dex": 36,
     "upgrade": {
-      "attack": 28.8
+      "attack": 21.7846153846
     },
     "progression": {
       "historical_rank": 11,
@@ -9413,13 +9413,13 @@ var weapon_progression = {
     }
   },
   "xmace": {
-    "attack": 37,
+    "attack": 70,
     "frequency": 34.932,
-    "str": 2,
+    "str": 61,
     "int": 0,
-    "dex": 131,
+    "dex": 136,
     "upgrade": {
-      "attack": 12.1230769231
+      "attack": 16.9846153846
     },
     "progression": {
       "historical_rank": 9,
