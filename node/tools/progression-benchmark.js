@@ -1348,6 +1348,7 @@ module.exports = {
 	FIXTURE_PATH,
 	MERCHANT_PROFILES,
 	abilityDamageAgainst,
+	benchmarkItemChoices,
 	chooseCandidate,
 	enumerateCanonicalCandidates,
 	evaluateCombatPlan,
@@ -1359,4 +1360,5 @@ module.exports = {
 	runBenchmark,
 	simulateSoloKill,
 	stableJson,
+	validateItemRoute,
 };
