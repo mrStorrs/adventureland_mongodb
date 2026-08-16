@@ -39,6 +39,7 @@ const {
 const { applyEquipmentTransaction } = require("./game/equipment_runtime");
 const { authorizeAbility } = require("./game/ability_access");
 const { calculateStats } = require("./game/stats");
+const { directBonusFor, validateItemBonus } = require("./game/direct_bonus_migration");
 const { tagStyleEffect } = require("./game/style_effects");
 const { ContributionLedger } = require("./game/contributions");
 const {
@@ -112,6 +113,15 @@ var sockets = {};
 var observers = {};
 var total_monsters = 0;
 var progression_ledger = new ContributionLedger();
+
+function refresh_direct_bonus(item) {
+	if (!item || !item.direct_bonus) return;
+	item.direct_bonus = directBonusFor(item, item.direct_bonus.source, {
+		items: G.items,
+		calculateItemProperties: calculate_item_properties,
+	});
+}
+
 var max_players = 96;
 var chests = {};
 var projectiles = {};
@@ -812,11 +822,11 @@ function player_to_client(player, stranger) {
 	var skills = {};
 	if (!stranger) {
 		var sourceSkills = clientSkillState(player);
-		if (!sourceSkills) throw new Error("Protocol 3 character skill state is missing");
+		if (!sourceSkills) throw new Error("Protocol 4 character skill state is missing");
 		for (var i = 0; i < SKILL_IDS.length; i++) {
 			var skill = SKILL_IDS[i];
 			var progress = sourceSkills[skill];
-			if (!progress) throw new Error("Protocol 3 character skill state is incomplete: " + skill);
+			if (!progress) throw new Error("Protocol 4 character skill state is incomplete: " + skill);
 			skills[skill] = {
 				level: progress.level,
 				xp: progress.xp,
@@ -895,7 +905,7 @@ function player_to_client(player, stranger) {
 	data.skin = player.tskin || player.skin;
 	data.cx = player.tcx || player.cx;
 	data.slots = player.cslots;
-	data.protocol = 3;
+	data.protocol = 4;
 	if (!stranger) {
 		data.skills = skills;
 		data.rip = player.rip ?? null;
@@ -932,11 +942,8 @@ function player_to_client(player, stranger) {
 
 	if (!stranger) {
 		[
-			"int",
-			"str",
-			"dex",
-			"vit",
-			"for",
+			"throw_range",
+			"pvp_damage_reduction",
 			"mp_cost",
 			"mp_reduction",
 			"goldm",
@@ -3371,8 +3378,8 @@ function complete_attack(attacker, target, info) {
 					}
 				}
 				var dmg_mult = 1;
-				if (attacker.is_player && target["for"]) {
-					dmg_mult = damage_multiplier(target["for"] * 5);
+				if (attacker.is_player && target.pvp_damage_reduction) {
+					dmg_mult = 1 - Math.max(0, Math.min(100, target.pvp_damage_reduction)) / 100;
 				}
 				i_attack = attack = ceil(combo_m * attack * (0.9 + ((attack && Math.random() * 0.2) || 0)));
 				attack =
@@ -5974,13 +5981,10 @@ function init_io() {
 				return fail_response("no_item");
 			}
 			var def = G.items[item.name];
-			if (item.stat_type == null) {
+			if (!item.direct_bonus) {
 				return fail_response("scrollsmith_cant");
 			}
-			var scrolltype = item.stat_type + "scroll";
-			if (scrolltype == "mp_costscroll") {
-				scrolltype = "mpcostscroll";
-			}
+			var scrolltype = item.direct_bonus.source;
 			var scrolldef = G.items[scrolltype];
 			if (!scrolldef) {
 				return fail_response("scrollsmith_cant"); // Just in case there isn't actually an item associated with the scroll... should never happen, though.
@@ -5996,7 +6000,7 @@ function init_io() {
 			}
 			player.gold -= cost;
 			add_item(player, scrolltype, { q: needed[ograde] });
-			delete item.stat_type;
+			delete item.direct_bonus;
 			socket.emit("game_response", { response: "scrollsmith_success", gold: cost });
 			player.citems[data.num] = cache_item(player.items[data.num]);
 			resend(player, "reopen+nc");
@@ -6284,6 +6288,7 @@ function init_io() {
 						player.p.ograce *= 1 - new_level * 0.02;
 					}
 					item0.level = new_level;
+					refresh_direct_bonus(item0);
 					if ((item0.p || item1.p || item2.p) != "legacy") {
 						item0.p = item0.p || item1.p || item2.p;
 					} else {
@@ -6392,7 +6397,7 @@ function init_io() {
 					scroll &&
 					(!in_arr(scroll_def.type, ["uscroll", "pscroll"]) ||
 						(scroll_def.type == "uscroll" && !item_def.upgrade) ||
-						(scroll_def.type == "pscroll" && !item_def.stat) ||
+						(scroll_def.type == "pscroll" && !item_def.scroll_value) ||
 						grade > scroll_def.grade)
 				) {
 					if (grade == 4 && scroll_def.type == "uscroll") {
@@ -6679,6 +6684,7 @@ function init_io() {
 							player.p.ograce *= 1 - new_level * 0.005;
 						}
 						item.level = new_level;
+						refresh_direct_bonus(item);
 						if (item.oo != player.name) {
 							item.o = player.name;
 						}
@@ -6741,10 +6747,13 @@ function init_io() {
 						server_log("Graced up to " + item.grace);
 					}
 
-					item.stat_type = scroll_def.stat;
+					item.direct_bonus = directBonusFor(item, scroll.name, {
+						items: G.items,
+						calculateItemProperties: calculate_item_properties,
+					});
 					player.p.u_roll = Math.random();
 
-					player.p.u_type = "stat";
+					player.p.u_type = "direct_bonus";
 					if (player.p.u_roll <= 0.99999 || offering) {
 						player.p.u_item = item;
 					} else {
@@ -8410,7 +8419,7 @@ function init_io() {
 				}
 				var x = parseFloat(data.x) || 0;
 				var y = parseFloat(data.y) || 0;
-				if (distance(player, { map: player.map, in: player.in, x: x, y: y }) > player.str * 3) {
+				if (distance(player, { map: player.map, in: player.in, x: x, y: y }) > player.throw_range) {
 					fail_response("too_far");
 				}
 				consume_one(player, data.num);
@@ -8805,7 +8814,11 @@ function init_io() {
 			if (gSkill.requirements) {
 				for (const requirement in gSkill.requirements) {
 					if (!player[requirement] || player[requirement] < gSkill.requirements[requirement]) {
-						return fail_response("skill_cant_requirements", data.name);
+						return fail_response("skill_cant_requirements", data.name, {
+							requirement: requirement === "max_mp" ? "Max MP" : requirement,
+							required: gSkill.requirements[requirement],
+							actual: player[requirement] || 0,
+						});
 					}
 				}
 			}
@@ -13304,14 +13317,14 @@ function update_instance(instance) {
 						if (success) {
 							player.hitchhikers.push(["game_response", { response: "upgrade_offering_success", stale: ref.stale }]);
 						}
-					} else if (player.p.u_type == "stat") {
+					} else if (player.p.u_type == "direct_bonus") {
 						if (success) {
 							player.hitchhikers.push([
 								"game_response",
 								{
-									response: "upgrade_success_stat",
+									response: "upgrade_success_direct_bonus",
 									stale: ref.stale,
-									stat_type: p && G.items[p.scroll].stat,
+									direct_bonus: item && item.direct_bonus,
 									num: ref.num,
 								},
 							]);

@@ -13,21 +13,21 @@ var titles={
 	},
 	"sniper":{
 		"type":"mainhand",
-		"attack":2,
+		"damage":2,
 		"consecutive_200p_range_last_hits":1000000,
 		"source":"achievement",
 		"title":"Sniper's",
 	},
 	"superfast":{
 		"type":"weapon",
-		"frequency":20,
+		"attacks_per_second":0.2,
 		"source":"upgrade",
 		"misc":true,
 		"title":"Super Fast",
 	},
 	"fast":{
 		"type":"weapon",
-		"frequency":10,
+		"attacks_per_second":0.1,
 		"source":"upgrade",
 		"misc":true,
 		"title":"Fast",
@@ -46,7 +46,8 @@ var titles={
 	},
 	"critmonger":{
 		"type":"mainhand",
-		"str":2,
+		"damage":2,
+		"throw_range":6,
 		"title":"Monger's",
 	},
 	"lucky":{
@@ -58,7 +59,7 @@ var titles={
 		"type":"helmet",
 		"achievement":"stomped",
 		"title":"Stomped",
-		"for":1,
+		"pvp_damage_reduction":4.7619047619,
 	},
 	"gooped":{
 		"type":"pants",
@@ -76,6 +77,6 @@ var titles={
 		"type":"orb",
 		"achievement":"abtesting",
 		"title":"Tester's",
-		"for":1,
+		"pvp_damage_reduction":4.7619047619,
 	},
 };

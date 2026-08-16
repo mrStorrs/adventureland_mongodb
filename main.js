@@ -3,7 +3,7 @@ var fs = require("fs"),
 var { buildProgressionData, loadProgressionPublication } = require("./node/game/skill_domain");
 var { ensureWorldIndexes, verifyWorldState } = require("./node/game/world_schema");
 var { rankingSort } = require("./node/game/rankings");
-var { assertProtocol3Publication } = require("./node/game/release_readiness");
+var { assertProtocol4Publication } = require("./node/game/release_readiness");
 var { readSeed } = require("./node/tools/export-map-seed");
 var keys = require("./secretsandconfig/keys");
 var options = require("./secretsandconfig/options");
@@ -690,7 +690,7 @@ async function startBackend() {
 	var seed = await readSeed(path.resolve(__dirname, "seeds"), { maps: maps });
 	await verifyWorldState(db, { requiredMapHash: seed.manifest.sha256 });
 	var publication = loadProgressionPublication({}, progression_data);
-	assertProtocol3Publication(publication);
+	assertProtocol4Publication(publication);
 	app.listen(PORT, () => {
 		console.log(`\x1b[32mAdventure Land\x1b[0m listening on port ${PORT}`);
 	});

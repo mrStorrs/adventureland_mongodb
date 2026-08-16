@@ -125,7 +125,7 @@ function expandContributionEvidence(evidence, catalog, { validateCatalog = true 
 	const loadout = CONTRIBUTION_GROUP_ORDER
 		.filter((groupId) => LOADOUT_GROUPS.has(groupId))
 		.flatMap((groupId) => groups[groupId].items)
-		.map(({ slot, item_id, level, stat_type }) => ({ slot, item_id, level, stat_type }))
+		.map(({ slot, item_id, level, direct_bonus }) => ({ slot, item_id, level, direct_bonus: direct_bonus || null }))
 		.sort((left, right) => left.slot.localeCompare(right.slot));
 	if (evidence.loadout_sha256 !== sha256(loadout)) throw new Error("Contribution loadout hash drifted");
 	if (evidence.set_sha256 !== sha256({ counts: evidence.set_counts, contribution: groups.set })) throw new Error("Contribution set hash drifted");

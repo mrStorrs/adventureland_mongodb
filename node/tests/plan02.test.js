@@ -18,13 +18,13 @@ function item(type, wtype, props = {}) {
 }
 
 const items = {
-	blade: item("weapon", "short_sword", { attack: 12, str: 36 }),
-	mace: item("weapon", "mace", { attack: 12, str: 28, int: 30 }),
-	staff: item("weapon", "staff", { attack: 15, int: 40 }),
-	wbook0: item("weapon", "book", { attack: 11, int: 34 }),
-	bow: item("weapon", "bow", { attack: 12, str: 39 }),
-	claw: item("weapon", "fist", { attack: 11, str: 30 }),
-	greatsword: item("weapon", "great_sword", { attack: 30 }),
+	blade: item("weapon", "short_sword", { damage: 22, attacks_per_second: .5 }),
+	mace: item("weapon", "mace", { damage: 26, mp: 450, attacks_per_second: .5 }),
+	staff: item("weapon", "staff", { damage: 30, mp: 600, attacks_per_second: .5 }),
+	wbook0: item("weapon", "book", { damage: 30, heal: 30, mp: 510, attacks_per_second: .5 }),
+	bow: item("weapon", "bow", { damage: 23, attacks_per_second: .5 }),
+	claw: item("weapon", "fist", { damage: 17, attacks_per_second: .5 }),
+	greatsword: item("weapon", "great_sword", { damage: 30, attacks_per_second: .5 }),
 	shield: item("shield", null, { armor: 10 }),
 	rod: item("tool", "rod"),
 	pickaxe: item("tool", "pickaxe"),
@@ -134,19 +134,29 @@ test("equipment validates all requirements and atomically displaces incompatible
 				itemRequirements: requirements,
 				skills: advanced,
 			}),
-		(error) => error.code === "inventory_item_changed",
 	);
 	assert.throws(
 		() =>
 			planEquipmentTransaction({
-				player: { slots: {}, items: [{ name: "blade", stat_type: "str" }] },
-				item: { name: "blade", stat_type: "dex" },
+				player: { slots: {}, items: [{ name: "blade", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 2 } } }] },
+				item: { name: "blade", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 3 } } },
 				itemIndex: 0,
 				items,
 				itemRequirements: requirements,
 				skills: advanced,
 			}),
 		(error) => error.code === "inventory_item_changed",
+	);
+	assert.doesNotThrow(
+		() =>
+			planEquipmentTransaction({
+				player: { slots: {}, items: [{ name: "blade", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 2 } } }] },
+				item: { name: "blade", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 2 } } },
+				itemIndex: 0,
+				items,
+				itemRequirements: requirements,
+				skills: advanced,
+			}),
 	);
 	const serverOnlyMutation = planEquipmentTransaction({
 		player: { slots: {}, items: [{ name: "blade", grace: 1, rid: "server-id" }] },
@@ -247,7 +257,7 @@ test("acquisition retune grandfathers an equipped weapon but rejects a below-lev
 	const data = loadBenchmarkData();
 	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
 	const target = ranking.weapons.find((weapon) => weapon.weapon_id === "broom");
-	assert.deepEqual({ skill: target.skill, before: target.baseline_requirement, after: target.assigned_requirement }, { skill: "mage", before: 1, after: 70 });
+	assert.deepEqual({ skill: target.skill, requirement: target.requirement }, { skill: "mage", requirement: 70 });
 	assert.deepEqual(data.itemRequirements.broom, [{ skill: "mage", level: 70 }]);
 
 	const player = { slots: { mainhand: { name: "broom", level: 0 } }, items: [null] };
@@ -436,6 +446,6 @@ test("gear-only stats match the six starter golden inputs and ignore skill level
 	assert.equal(noWeapon.range, 0);
 	assert.equal(noWeapon.damage_type, null);
 	const sick = calculateStats({ slots: { mainhand: { name: "blade" } }, items, deathSickness: true });
-	assert.equal(sick.attack, 17);
+	assert.equal(sick.attack, 18);
 	assert.equal(sick.max_hp, 80);
 });

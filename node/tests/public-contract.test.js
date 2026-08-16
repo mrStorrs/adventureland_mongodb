@@ -29,12 +29,12 @@ function loadRawProgression() {
 	return context;
 }
 
-test("public progression publication is protocol 3 and contains no class or level catalogs", () => {
+test("public progression publication is protocol 4 and contains no class or level catalogs", () => {
 	const publication = loadProgressionPublication(
 		{ version: 1, classes: { legacy: true }, levels: { legacy: true } },
 		buildProgressionData(loadRawProgression()),
 	);
-	assert.equal(publication.protocol, 3);
+	assert.equal(publication.protocol, 4);
 	assert.equal("classes" in publication, false);
 	assert.equal("levels" in publication, false);
 	assert.deepEqual(Object.keys(publication.skills), [
@@ -53,9 +53,10 @@ test("public progression publication is protocol 3 and contains no class or leve
 	);
 });
 
-test("server, API, and browser producers expose only the protocol-3 vocabulary", () => {
+test("server, API, and browser producers expose only the protocol-4 vocabulary", () => {
 	const server = read("node/server.js");
 	const serverFunctions = read("node/server_functions.js");
+	const main = read("main.js");
 	const api = read("api.js");
 	const browser = [
 		"js/functions.js",
@@ -123,11 +124,14 @@ test("server, API, and browser producers expose only the protocol-3 vocabulary",
 	assert.deepEqual(standLogs, [
 		{ message: "merchant settlement failed: player_id=stable-id error=merchant_settlement_failed", important: 1 },
 	]);
-	assert.match(server, /data\.protocol = 3/);
+	assert.match(server, /data\.protocol = 4/);
+	assert.match(main, /assertProtocol4Publication/);
+	assert.doesNotMatch(main, /assertProtocol3Publication/);
 	assert.match(server, /max_xp:/);
 	assert.match(server, /data\.active_skill/);
 	assert.match(server, /data\.total_level/);
 	assert.match(server, /data\.death_sickness_until/);
+	assert.match(server, /"throw_range"/);
 	assert.match(server, /data\.ctype\s*=/);
 	const partyStart = server.indexOf("function party_to_client(oname)");
 	const partyEnd = server.indexOf("\nfunction send_party_update", partyStart);
@@ -152,6 +156,8 @@ test("server, API, and browser producers expose only the protocol-3 vocabulary",
 	assert.match(api, /fresh: fresh, starter: starter/);
 	assert.match(api, /slots: A\.starter\.slots/);
 	assert.match(api, /items: A\.starter\.items/);
+	assert.doesNotMatch(api, /stats:\s*\{\}/);
+	assert.doesNotMatch(read("adventure_functions.js"), /stats:\s*character\.info\.stats/);
 	assert.doesNotMatch(api, /\{ name: "blade", level: 0, gift: 1 \}/);
 	assert.doesNotMatch(api, /\{ name: "helmet", level: 0, gift: 1 \}/);
 	assert.doesNotMatch(api, /\{ name: "shoes", level: 0, gift: 1 \}/);
@@ -163,6 +169,9 @@ test("server, API, and browser producers expose only the protocol-3 vocabulary",
 	assert.match(browser, /socket\.on\("ability_timeout"/);
 	assert.match(browser, /socket\.on\("skill_xp"/);
 	assert.match(browser, /socket\.on\("skill_level_up"/);
+	assert.match(browser, /upgrade_success_direct_bonus/);
+	assert.doesNotMatch(browser, /upgrade_success_stat/);
+	assert.doesNotMatch(browser, /element\.stats\[p\]\s*=\s*data\[p\]/);
 });
 
 test("party share keeps its presentation color while XP remains private", () => {
@@ -189,11 +198,10 @@ test("party share keeps its presentation color while XP remains private", () => 
 			tax: undefined,
 			attack: 10,
 			frequency: 1,
-			str: 10,
-			int: 10,
-			dex: 10,
-			vit: 10,
-			for: 10,
+			hp: 75,
+			max_hp: 100,
+			mp: 50,
+			max_mp: 100,
 			armor: 10,
 			resistance: 10,
 			courage: 1,
@@ -218,6 +226,10 @@ test("party share keeps its presentation color while XP remains private", () => 
 	vm.runInNewContext(`${htmlSource.slice(renderStart, renderEnd)}\nrender_character_sheet();`, context);
 	assert.match(rendered.value, /color:#AD73E0/);
 	assert.match(rendered.value, /> 25% <span style='color:gray'>\(Your Share\)/);
+	assert.match(rendered.value, /Damage/);
+	assert.match(rendered.value, /Attacks\/Sec/);
+	assert.match(rendered.value, /DPS/);
+	assert.doesNotMatch(rendered.value, /Strength|Intelligence|Dexterity|Vitality|Fortitude/);
 });
 
 test("release-safe email and progression logs contain only bounded diagnostics", async () => {

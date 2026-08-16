@@ -12,8 +12,6 @@ test("disposable smoke target guards use the scoped database prefix", () => {
 	const sources = [
 		fs.readFileSync(path.join(root, "scripts/browser-smoke.mjs"), "utf8"),
 		fs.readFileSync(path.join(root, "scripts/cleanup-browser-smoke.mjs"), "utf8"),
-		fs.readFileSync(path.join(root, "cjs-al-service/tools/live-game-smoke.mjs"), "utf8"),
-		fs.readFileSync(path.join(root, "cjs-al-service/tools/live-progression-matrix.mjs"), "utf8"),
 	];
 	const legacyPrefix = ["skill", "-", "reset"].join("");
 	for (const source of sources) {

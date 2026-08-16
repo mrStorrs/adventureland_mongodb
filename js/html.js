@@ -379,7 +379,7 @@ function render_character_sheet() {
 	});
 	if (character.death_sickness_until && new Date(character.death_sickness_until) > new Date()) {
 		html += "<div><span style='color:#D88989'>Death Sickness:</span> " + ((new Date(character.death_sickness_until) - new Date()) / 1000).toFixed(0) + "s</div>";
-		html += "<div><span style='color:#D88989'>Affected stats:</span> Attack, Heal, Max HP, Max MP, Armor, Resistance, Attack Speed</div>";
+		html += "<div><span style='color:#D88989'>Affected effects:</span> Damage, Heal, Max HP, Max MP, Armor, Resistance, Attacks/Sec</div>";
 		html += "<div><span style='color:#D88989'>Remedy:</span> Wait for the sickness timer to expire.</div>";
 	}
 	if (character.party && party && party[character.name])
@@ -388,18 +388,11 @@ function render_character_sheet() {
 	if (character.active_skill == "priest") {
 		html += "<div><span style='color:gray'>Heal:</span> " + character.heal + "</div>";
 	}
-	html += "<div><span style='color:gray'>Attack:</span> " + character.attack + "</div>";
-	html += "<div><span style='color:gray'>Attack Speed:</span> " + round(character.frequency * 100) + "</div>";
-	html += "<div><span style='color:gray'>Strength:</span> " + character.str + "</div>";
-	html += "<div><span style='color:gray'>Intelligence:</span> " + character["int"] + "</div>";
-	html += "<div><span style='color:gray'>Dexterity:</span> " + character.dex + "</div>";
-	html += "<div><span style='color:gray'>Vitality:</span> " + character.vit + "</div>";
-	html +=
-		"<div><span style='color:gray'>Fortitude:</span> " +
-		character["for"] +
-		" <span style='color:gray'>(" +
-		parseInt((1 - damage_multiplier(character["for"] * 5)) * 10000.0) / 100.0 +
-		"%)</span></div>";
+	html += "<div><span style='color:gray'>Damage:</span> " + character.attack + "</div>";
+	html += "<div><span style='color:gray'>Attacks/Sec:</span> " + to_pretty_float(character.frequency) + "</div>";
+	html += "<div><span style='color:gray'>DPS:</span> " + to_pretty_float(character.attack * character.frequency) + "</div>";
+	html += "<div><span style='color:gray'>HP:</span> " + character.hp + "/" + character.max_hp + "</div>";
+	html += "<div><span style='color:gray'>MP:</span> " + character.mp + "/" + character.max_mp + "</div>";
 	html += "<div><span style='color:gray'>Armor:</span> " + character.armor + " <span style='color:gray'>(" + parseInt((1 - damage_multiplier(character.armor)) * 10000.0) / 100.0 + "%)</span></div>";
 	html +=
 		"<div><span style='color:gray'>Resistance:</span> " +
@@ -1345,7 +1338,7 @@ function render_locksmith(mode) {
 }
 
 function render_scrollsmith() {
-	var button = "DE-STAT",
+	var button = "REMOVE SCROLL",
 		f = "destat_item",
 		shade = "shade_chest";
 	reset_inventory(1);
@@ -3409,47 +3402,39 @@ function guide_weapon_owner(item) {
 	return null;
 }
 
-function guide_weapon_base_frequency(wtype) {
-	return {
-		short_sword: 0.5,
-		sword: 0.5,
-		great_sword: 0.42,
-		axe: 0.4,
-		spear: 0.5,
-		scythe: 0.39,
-		hammer: 0.4,
-		mace: 0.4,
-		pmace: 0.4,
-		basher: 0.28,
-		staff: 0.35,
-		great_staff: 0.25,
-		wand: 0.95,
-		wblade: 0.35,
-		book: 0.35,
-		bow: 0.4,
-		crossbow: 0.04,
-		dartgun: 0.4,
-		fist: 0.45,
-		dagger: 0.45,
-		stars: 0.65,
-		rapier: 1.15,
-	}[wtype];
-}
-
 function guide_weapon_metrics(item, prop) {
 	var skill = guide_weapon_owner(item),
-		item_attack = prop.attack || 0,
-		frequency = guide_weapon_base_frequency(item.wtype);
-	if (!skill || !item_attack || frequency === undefined) return null;
-	if (skill == "warrior" || skill == "ranger" || skill == "rogue") item_attack *= (prop.str || 0) / 20;
-	else if (skill == "paladin") item_attack *= (prop.str || 0) / 20 + (prop.int || 0) / 40;
-	else if (skill == "mage" || skill == "priest") item_attack *= (prop.int || 0) / 20;
-	if (skill == "priest") item_attack *= 1.6;
-	frequency += (prop.frequency || 0) / 100;
-	if (skill == "mage" || skill == "priest") frequency *= 1 + Math.min(0.2, Math.max(prop.int || 0, 0) / 2000);
-	else frequency += Math.min(prop.dex || 0, 160) / 640 + Math.max((prop.dex || 0) - 160, 0) / 925;
-	var hit_damage = Math.max(0, Math.round(item_attack));
-	return { hit_damage: hit_damage, attacks_per_second: frequency, dps: hit_damage * frequency };
+		damage = prop.damage || 0,
+		attacks_per_second = prop.attacks_per_second || 0;
+	if (!skill || !damage || !attacks_per_second) return null;
+	return { damage: damage, attacks_per_second: attacks_per_second, dps: damage * attacks_per_second };
+}
+
+function direct_effect_label(key) {
+	return {
+		damage: "Damage",
+		attacks_per_second: "Attacks/Sec",
+		hp: "HP",
+		mp: "MP",
+		base_crit: "Crit",
+		pvp_damage_reduction: "PvP Damage Reduction",
+		throw_range: "Throw Range",
+		mp_cost: "Attack MP Cost",
+		rpiercing: "R.Piercing",
+		apiercing: "A.Piercing",
+		dreturn: "D.Return",
+	}[key] || key.replace(/_/g, " ").replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
+}
+
+function direct_bonus_summary(bonus) {
+	if (!bonus || !bonus.effects) return "Applied";
+	var effects = [];
+	for (var key in bonus.effects) {
+		var value = bonus.effects[key];
+		if (typeof value != "number") continue;
+		effects.push((value > 0 ? "+" : "") + to_pretty_float(value) + " " + direct_effect_label(key));
+	}
+	return effects.join(", ") || "Applied";
 }
 
 function guide_weapon_progression_metrics(item, prop) {
@@ -3480,7 +3465,6 @@ function guide_weapon_groups(items, skills, properties_for) {
 			dps: (metrics && metrics.dps) || 0,
 			shared_rank: (item.progression && item.progression.shared_rank) || null,
 			role: (item.progression && item.progression.role) || null,
-			selected_effort: item.progression ? item.progression.selected_effort : null,
 		});
 	}
 	groups.forEach(function (group) {
@@ -3488,7 +3472,6 @@ function guide_weapon_groups(items, skills, properties_for) {
 			if (a.shared_rank != null && b.shared_rank != null && a.shared_rank != b.shared_rank) return a.shared_rank - b.shared_rank;
 			if (a.shared_rank != null && b.shared_rank == null) return -1;
 			if (a.shared_rank == null && b.shared_rank != null) return 1;
-			if (a.selected_effort != null && b.selected_effort != null && a.selected_effort != b.selected_effort) return a.selected_effort - b.selected_effort;
 			if (a.dps != b.dps) return a.dps - b.dps;
 			if (a.id < b.id) return -1;
 			if (a.id > b.id) return 1;
@@ -3584,7 +3567,7 @@ function render_item(selector, args) {
 		if (prop.miss && item.type != "elixir") html += bold_prop_line("Miss", prop.miss + "%", "#F36C6E");
 		if (prop.reflection) html += bold_prop_line("Reflection", to_pretty_float(prop.reflection) + "%", "#B484E5");
 		if (prop.dreturn) html += bold_prop_line("D.Return", to_pretty_float(prop.dreturn) + "%", "#E94959");
-		if (prop.crit) html += bold_prop_line("Crit", to_pretty_float(prop.crit) + "%", "#E52967");
+		if (prop.base_crit || prop.crit) html += bold_prop_line("Crit", to_pretty_float((prop.base_crit || 0) + (prop.crit || 0)) + "%", "#E52967");
 		if (prop.critdamage) html += bold_prop_line("Crit Damage", "+" + to_pretty_float(prop.critdamage) + "%", "#A8214E");
 		var guide_metrics = args.guide && item.type == "weapon" && guide_weapon_progression_metrics(item, prop);
 		if (guide_metrics && guide_metrics.progression) {
@@ -3593,7 +3576,8 @@ function render_item(selector, args) {
 			if (guide_metrics.progression.historical_rank != null) html += bold_prop_line("Historical Rank", guide_metrics.progression.historical_rank, "#C3C3C3");
 			html += bold_prop_line("Reference Level", guide_metrics.progression.reference_level, "#C3C3C3");
 		}
-		if (prop.attack) html += bold_prop_line((guide_metrics && guide_metrics.full_sheet && "Full-Sheet Hit Damage") || (guide_metrics && "Hit Damage") || "Damage", (guide_metrics && guide_metrics.hit_damage) || prop.attack, colors.attack);
+		var displayed_damage = prop.damage || (args.monster && prop.attack);
+		if (displayed_damage) html += bold_prop_line("Damage", to_pretty_float(displayed_damage), colors.attack);
 		if (item.damage_type) {
 			if (item.damage_type == "pure") html += bold_prop_line("Type", "Pure", "#AA9B55");
 			else if (item.damage_type == "magical") html += bold_prop_line("Type", "Magical", "#8998AA");
@@ -3601,17 +3585,13 @@ function render_item(selector, args) {
 		}
 		if (prop.range) html += bold_prop_line("Range", ((!args.monster && "+") || "") + prop.range, colors.range);
 		if (prop.hp) html += bold_prop_line("HP", prop.hp, colors.hp);
-		if (prop.str) html += bold_prop_line("Strength", prop.str, colors.str);
-		if (prop["int"]) html += bold_prop_line("Intelligence", prop["int"], colors["int"]);
-		if (prop.dex) html += bold_prop_line("Dexterity", prop.dex, colors.dex);
-		if (prop.vit) html += bold_prop_line("Vitality", prop.vit, colors.hp);
-		if (prop["for"]) html += bold_prop_line("Fortitude", prop["for"], colors["for"]);
 		if (prop.mp) html += bold_prop_line("MP", prop.mp, colors.mp);
+		if (prop.throw_range) html += bold_prop_line("Throw Range", prop.throw_range, colors.range);
+		if (prop.pvp_damage_reduction) html += bold_prop_line("PvP Damage Reduction", to_pretty_float(prop.pvp_damage_reduction) + "%", "#5F3085");
 		if (prop.mp_cost > 0) html += bold_prop_line("Attack MP Cost", "+" + prop.mp_cost, colors.mp);
 		else if (prop.mp_cost) html += bold_prop_line("Attack MP Cost", prop.mp_cost, colors.mp);
 		if (prop.mp_reduction > 0) html += bold_prop_line("Skill MP Reduction", "%" + prop.mp_reduction, colors.mp);
 		else if (prop.mp_reduction) html += bold_prop_line("Skill MP Increase", "%" + -prop.mp_reduction, colors.mp);
-		if (prop.stat) html += bold_prop_line("Stat", prop.stat);
 		if (prop.armor) html += bold_prop_line("Armor", prop.armor, colors.armor);
 		if (prop.apiercing) html += bold_prop_line("A.Piercing", prop.apiercing, colors.armor);
 		if (prop.rpiercing) html += bold_prop_line("R.Piercing", prop.rpiercing, colors.resistance);
@@ -3623,9 +3603,10 @@ function render_item(selector, args) {
 		if (prop.stresistance) html += bold_prop_line("Status Res.", prop.stresistance, "#9FA7B6");
 		if (item.wspeed) html += bold_prop_line("Speed", item.wspeed.toTitleCase(), "gray");
 		if (prop.speed) html += bold_prop_line((item.wtype && "Run Speed") || "Speed", ((!args.monster && prop.speed > 0 && "+") || "") + prop.speed, colors.speed);
-		if (guide_metrics) html += bold_prop_line("Attacks / Sec", to_pretty_float(guide_metrics.attacks_per_second), "#3BE681");
-		else if (prop.frequency || args.monster) html += bold_prop_line("A.Speed", (prop.frequency || 1) * ((args.monster && 100) || 1), "#3BE681");
-		if (guide_metrics) html += bold_prop_line((guide_metrics.full_sheet && "Full-Sheet Base DPS") || "Base DPS", to_pretty_float(guide_metrics.dps), colors.attack);
+		if (guide_metrics) html += bold_prop_line("Attacks/Sec", to_pretty_float(guide_metrics.attacks_per_second), "#3BE681");
+		else if (prop.attacks_per_second || args.monster) html += bold_prop_line("Attacks/Sec", prop.attacks_per_second || 1, "#3BE681");
+		if (guide_metrics) html += bold_prop_line("DPS", to_pretty_float(guide_metrics.dps), colors.attack);
+		if (actual && actual.direct_bonus) html += bold_prop_line("Applied Scroll", direct_bonus_summary(actual.direct_bonus), "#C3C3C3");
 		if (prop.output) html += bold_prop_line("Damage Output", ((prop.output > 0 && "+") || "") + prop.output + "%", "#D93319");
 		if (prop.incdmgamp) html += bold_prop_line("Incoming Damage", prop.incdmgamp + "%", "#D93319");
 		if (prop.stun) html += bold_prop_line("Stun", prop.stun + "%", "#784224");
@@ -5326,8 +5307,8 @@ function render_interaction(type, sub_type, args) {
 			"<span style='float: right; margin-top: 5px'><div class='slimbutton' onclick='render_locksmith(\"lock\")'>LOCK</div> <div class='slimbutton' onclick='render_locksmith(\"seal\")'>SEAL</div> <div class='slimbutton' onclick='render_locksmith(\"unlock\")'>UNLOCK</div></span>";
 	} else if (type == "scrollsmith") {
 		html +=
-			"De-stat an item. Give you back the scrolls used on the item, as though the item were level 0. Returns the item back to you along with scrolls. Got it? Good. Cost? Depends on the scroll. 10 times the value of the scrolls that will be returned to you.";
-		html += "<span style='float: right; margin-top: 5px'><div class='slimbutton' onclick='render_scrollsmith()'>DE-STAT</div></span>";
+		"Remove an applied scroll bonus. You receive its scrolls back as though the item were level 0, along with the item. Cost: 10 times the value of the returned scrolls.";
+		html += "<span style='float: right; margin-top: 5px'><div class='slimbutton' onclick='render_scrollsmith()'>REMOVE SCROLL</div></span>";
 	} else if (type == "crafting") {
 		html += "I can craft or dismantle items for you. Price differs from item to item. Check out my recipes if you are interested!";
 		html +=

@@ -1,0 +1,39 @@
+{
+  "Character": [
+    {
+      "_id": "character-redacted",
+      "__v": 4,
+      "info": {
+        "items": [
+          {"name":"mshield","level":0,"q":1,"stat_type":"str","data":"kept"},
+          {"name":"mshield","level":1,"q":2,"stat_type":"int"},
+          {"name":"mshield","level":2,"q":1,"stat_type":"dex"},
+          {"name":"mshield","level":3,"q":1,"stat_type":"vit"},
+          {"name":"mshield","level":4,"q":1,"stat_type":"for"},
+          {"name":"mshield","level":5,"q":1,"stat_type":"evasion"},
+          {"name":"mshield","level":6,"q":1,"stat_type":"reflection"},
+          {"name":"mshield","level":7,"q":1,"stat_type":"gold"},
+          {"name":"mshield","level":8,"q":1,"stat_type":"luck"},
+          {"name":"mshield","level":9,"q":1,"stat_type":"xp"},
+          {"name":"mshield","level":10,"q":1,"stat_type":"armor"},
+          {"name":"mshield","level":11,"q":1,"stat_type":"resistance"},
+          {"name":"mshield","level":12,"q":1,"stat_type":"speed"},
+          {"name":"mshield","level":1,"q":1,"stat_type":"lifesteal"},
+          {"name":"mshield","level":2,"q":1,"stat_type":"manasteal"},
+          {"name":"mshield","level":3,"q":1,"stat_type":"rpiercing"},
+          {"name":"mshield","level":4,"q":1,"stat_type":"apiercing"},
+          {"name":"mshield","level":5,"q":1,"stat_type":"crit"},
+          {"name":"mshield","level":6,"q":1,"stat_type":"dreturn"},
+          {"name":"mshield","level":7,"q":1,"stat_type":"frequency"},
+          {"name":"mshield","level":8,"q":1,"stat_type":"mp_cost"},
+          {"name":"mshield","level":9,"q":1,"stat_type":"output"}
+        ],
+        "slots": {"mainhand":{"name":"mshield","level":2,"stat_type":"str","l":"l"},"trade1":{"name":"mshield","level":1,"stat_type":"int"}},
+        "p": {"trade_history":[[1,"trade",{"name":"mshield","level":2,"stat_type":"dex","price":7}]],"u_item":{"name":"mshield","level":3,"stat_type":"vit"},"u_itemx":{"name":"mshield","level":4,"stat_type":"for"},"c_item":{"name":"mshield","level":5,"stat_type":"crit"},"c_itemx":{"name":"mshield","level":6,"stat_type":"output"}}
+      }
+    }
+  ],
+  "User": [{"_id":"user-redacted","info":{"items0":[{"name":"mshield","level":1,"stat_type":"str"}],"items47":[{"name":"mshield","level":2,"stat_type":"mp_cost"}]}}],
+  "Mail": [{"_id":"mail-redacted","info":{"item":{"name":"mshield","level":3,"stat_type":"dreturn","gift":"kept"}}}],
+  "Server": [{"_id":"server-redacted","info":{"data":{"sold":[{"name":"mshield","level":4,"stat_type":"speed"}],"found":[{"name":"mshield","level":5,"stat_type":"reflection"}]}}}]
+}

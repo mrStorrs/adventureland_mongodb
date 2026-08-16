@@ -126,6 +126,19 @@ test("browser character and appearance surfaces use skill progression", () => {
 	assert.match(fs.readFileSync(path.join(root, "main.js"), "utf8"), /character_view\(character\)/);
 });
 
+test("browser consumes direct-bonus scroll responses and discards primary player aliases", () => {
+	const game = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+	const html = fs.readFileSync(path.join(root, "js/html.js"), "utf8");
+	assert.match(game, /upgrade_success_direct_bonus/);
+	assert.doesNotMatch(game, /upgrade_success_stat/);
+	assert.match(game, /delete element\.stats/);
+	assert.doesNotMatch(game, /element\.stats\[p\]\s*=\s*data\[p\]/);
+	assert.match(html, /"Applied Scroll"/);
+	assert.doesNotMatch(html.slice(html.indexOf("function render_character_sheet"), html.indexOf("function render_conditions")), /Strength|Intelligence|Dexterity|Vitality|Fortitude/);
+	assert.doesNotMatch(html.slice(html.indexOf("function render_character_sheet"), html.indexOf("function render_conditions")), /Affected stats/);
+	assert.doesNotMatch(game, /De-statted/);
+});
+
 test("skills tab filters combat skills to the equipped weapon", () => {
 	const code = source();
 	assert.match(functionSource(code, "render_skills", "show_condition"), /if \(!ability_matches_equipped_weapon\(skill\)\) return;/);

@@ -3549,7 +3549,7 @@ var item_trade_p_ignore = { grace: true, o: true, oo: true, src: true };
 // DOC
 // .name -> key from G.items
 // .level -> 9
-// .stat_type -> "str"
+// .direct_bonus -> { version: 1, source: "strscroll", effects: { damage: 1, throw_range: 3 } }
 // .p -> property
 // .q -> quantity
 // .m -> merchant luck
@@ -3578,6 +3578,7 @@ function cache_item(current, trade, override) {
 	if (!current) {
 		return null;
 	}
+	validateItemBonus(current, { items: G.items, path: "cache_item" });
 	var item = {};
 	if (trade) {
 		for (var p in current) {
@@ -3600,6 +3601,7 @@ function cache_item(current, trade, override) {
 			item[p] = override[p];
 		}
 	}
+	if (item.direct_bonus) item.direct_bonus = JSON.parse(JSON.stringify(item.direct_bonus));
 	return item;
 }
 

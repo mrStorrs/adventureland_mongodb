@@ -252,6 +252,18 @@ function validateAbilityCatalog(abilities, registry) {
 		if (own(definition, "style_bound") && typeof definition.style_bound !== "boolean") {
 			throw fail("invalid_ability_catalog", `Invalid style-bound metadata for ${id}`, { ability: id });
 		}
+		if (own(definition, "requirements")) {
+			if (
+				!definition.requirements ||
+				typeof definition.requirements !== "object" ||
+				Array.isArray(definition.requirements) ||
+				Object.keys(definition.requirements).join("\0") !== "max_mp" ||
+				!Number.isFinite(definition.requirements.max_mp) ||
+				definition.requirements.max_mp <= 0
+			) {
+				throw fail("invalid_ability_catalog", `Invalid direct requirement for ${id}`, { ability: id });
+			}
+		}
 		if (own(definition, "contribution")) {
 			const contribution = definition.contribution;
 			if (
@@ -285,16 +297,6 @@ function normalizeItems(items, itemRequirements) {
 		normalized[bookId].wtype = "book";
 		normalized[bookId].damage_type = "magical";
 		normalized[bookId].projectile = "pmagic";
-		if (bookId === "wbookhs") {
-			if (normalized[bookId].dex !== undefined) {
-				if (normalized[bookId].int === undefined) normalized[bookId].int = normalized[bookId].dex;
-				delete normalized[bookId].dex;
-			}
-			if (normalized[bookId].upgrade && normalized[bookId].upgrade.dex !== undefined) {
-				if (normalized[bookId].upgrade.int === undefined) normalized[bookId].upgrade.int = normalized[bookId].upgrade.dex;
-				delete normalized[bookId].upgrade.dex;
-			}
-		}
 	}
 	for (const [itemId, requirements] of Object.entries(itemRequirements)) {
 		if (!own(normalized, itemId))
@@ -336,11 +338,10 @@ function validateItemRequirements(items, itemRequirements, registry, weaponOwner
 			book.projectile !== "pmagic" ||
 			!book.upgrade ||
 			book.compound !== undefined ||
-			(bookId === "wbookhs" &&
-				(!Number.isSafeInteger(book.int) || book.int < 0 ||
-					book.dex !== undefined ||
-					!Number.isSafeInteger(book.upgrade.int) || book.upgrade.int < 0 ||
-					book.upgrade.dex !== undefined))
+			(!Number.isFinite(book.damage) || book.damage <= 0 ||
+				!Number.isFinite(book.attacks_per_second) || book.attacks_per_second <= 0 ||
+				!Number.isFinite(book.upgrade.damage) ||
+				!Number.isFinite(book.upgrade.attacks_per_second))
 		) {
 			throw fail("invalid_game_data", `Priest book ${bookId} is not a normalized main-hand weapon`, { item: bookId });
 		}
@@ -422,16 +423,10 @@ function validateCharacterDefinition(character, items) {
 		"max_hp",
 		"max_mp",
 		"speed",
-		"frequency",
 		"inventory_size",
-		"attack",
 		"heal",
 		"armor",
 		"resistance",
-		"str",
-		"dex",
-		"int",
-		"vit",
 	];
 	if (!character.baseline || baselineFields.some((field) => !Number.isFinite(character.baseline[field]))) {
 		throw fail("invalid_game_data", "Character baseline is incomplete");
@@ -524,7 +519,7 @@ function loadProgressionPublication(target, progressionData) {
 	delete publication.classes;
 	delete publication.levels;
 	return Object.assign(
-		{ ...publication, protocol: 3 },
+		{ ...publication, protocol: 4 },
 		{
 			items: next.items,
 			item_requirements: next.item_requirements,

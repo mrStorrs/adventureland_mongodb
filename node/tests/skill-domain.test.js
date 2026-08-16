@@ -55,6 +55,12 @@ const registry = {
 };
 const expectedXp = (level) => Math.round(900000000 * Math.pow((level - 1) / 98, 2));
 
+test("player-facing ability copy uses direct terminology", () => {
+	const { abilities } = require("../../design/abilities");
+	assert.equal(abilities.toggle_stats.name, "Toggle Character Sheet");
+	assert.doesNotMatch(abilities.magiport.complementary, /intelligence/i);
+});
+
 test("canonical skill registry is seven ordered skills with six combat tracks", () => {
 	assert.deepEqual(SKILL_IDS, ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant"]);
 	assert.deepEqual(COMBAT_SKILL_IDS, SKILL_IDS.slice(0, 6));
