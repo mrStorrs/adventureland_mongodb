@@ -176,10 +176,18 @@ test("the main server doubles normal monster item and gold rewards", () => {
 	const hardcoreStart = serverSource.indexOf("function drop_something_hardcore(player, target) {");
 	const hardcoreEnd = serverSource.indexOf("\nfunction drop_something_pvp", hardcoreStart);
 	const pvpStart = hardcoreEnd;
-	const pvpEnd = serverSource.indexOf("\nfunction engage_monster", pvpStart);
-	const rewardsStart = serverSource.indexOf("function issue_monster_awards(monster) {");
-	const rewardsEnd = serverSource.indexOf("\nfunction issue_monster_award", rewardsStart);
+	const pvpEnd = serverSource.indexOf("\nfunction monster_hunt_logic", pvpStart);
+	const cooperativeRewardsStart = serverSource.indexOf("function issue_monster_awards(monster) {");
+	const cooperativeRewardsEnd = serverSource.indexOf("\nfunction issue_monster_award", cooperativeRewardsStart);
+	const soloPartyRewardsStart = cooperativeRewardsEnd;
+	const soloPartyRewardsEnd = serverSource.indexOf("\nfunction kill_monster", soloPartyRewardsStart);
+	for (const boundary of [hardcoreStart, hardcoreEnd, pvpStart, pvpEnd, cooperativeRewardsStart, cooperativeRewardsEnd, soloPartyRewardsStart, soloPartyRewardsEnd])
+		assert.notEqual(boundary, -1);
 	assert.doesNotMatch(serverSource.slice(hardcoreStart, hardcoreEnd), /drop_rate_multiplier|gold_multiplier/);
 	assert.doesNotMatch(serverSource.slice(pvpStart, pvpEnd), /drop_rate_multiplier|gold_multiplier/);
-	assert.doesNotMatch(serverSource.slice(rewardsStart, rewardsEnd), /drop_rate_multiplier|gold_multiplier/);
+	assert.doesNotMatch(serverSource.slice(cooperativeRewardsStart, cooperativeRewardsEnd), /drop_rate_multiplier|gold_multiplier/);
+	const soloPartyRewards = serverSource.slice(soloPartyRewardsStart, soloPartyRewardsEnd);
+	assert.match(soloPartyRewards, /round\(monster\.xp \* player\.xpm \* monster\.mult\)/);
+	assert.match(soloPartyRewards, /var cxp = round\(xp \* current\.xpm \* current\.share\)/);
+	assert.doesNotMatch(soloPartyRewards, /drop_rate_multiplier|gold_multiplier/);
 });
