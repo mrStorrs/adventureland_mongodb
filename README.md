@@ -166,19 +166,19 @@ respec; the reviewed requirement is enforced on a future equip or re-equip.
 
 ## Weapon progression
 
-The visible combat catalog contains 83 weapons: the 75 retained acquisition
-decisions plus eight permanent Priest book placeholders (`wbook2` through
-`wbook9`). Warrior, Paladin, Mage, Priest, Ranger, and Rogue each expose the
-same eleven shared ranks with skill requirements from level 1 through 99.
+The visible progression catalog contains 90 combat weapons: 84 baseline
+weapon/source entries plus six rank-5 Hunter-only sidegrades. Warrior, Paladin,
+Mage, Priest, Ranger, and Rogue each expose the same seven shared ranks with
+skill requirements at levels 1, 20, 40, 60, 80, 90, and 99.
 Historical acquisition ranks compress monotonically into those shared ranks;
 the easiest item at an occupied rank is the progression anchor and additional
 items are labeled sidegrades. Acquisition route and effort remain independent
 of the regenerated numeric fields.
 
 Weapon Base DPS is calculated from the neutral full sheet at the rank's pinned
-reference level. Every combat class has exactly eleven ranks. Warrior's `+0`
+reference level. Every combat class has exactly seven ranks. Warrior's `+0`
 full-sheet targets follow one geometric line from 50 DPS at rank 1 to 450 DPS at
-rank 11 (`50 * 9^((rank - 1) / 10)`); Paladin and Priest target `0.90×` the
+rank 7 (`50 * 9^((rank - 1) / 6)`); Paladin and Priest target `0.90×` the
 corresponding Warrior value, while Ranger, Rogue, and Mage target `1.10×` it.
 The class, armor, cape, compatible offhand, and frozen-accessory context remains
 in the sheet oracle, but rebalanced armor contributes no offensive `STR`, `DEX`,
@@ -204,13 +204,15 @@ path through `+12` and have no `compound` object. Eight are placeholders that
 reuse existing book assets; their non-attack enhancement fields remain intact.
 The Guide shows each weapon's shared rank, historical rank, progression role,
 reference level, Hit Damage, Attacks / Sec, and Base DPS; it does not present
-historical acquisition rank as current power.
+historical acquisition rank as current power. The shared-rank display uses the
+published seven-rank scale.
 
 In the in-game Guide → Items view, visible weapons are grouped under Warrior,
 Paladin, Mage, Priest, Ranger, and Rogue in combat-profile order. Each group is
 sorted by the existing level-0 Base DPS calculation, with item ID as the
 deterministic tie-breaker; ignored items remain hidden and the other item
-categories keep their existing layout and detail actions.
+categories keep their existing layout and detail actions. Monster details show
+the published progression tier, eligibility, and supported-mechanics flags.
 
 The parity runner and checked-in fixtures expose current assigned requirements
 alongside immutable historical DPS/TTK comparisons. Historical family and
@@ -223,11 +225,12 @@ respec step. To inspect the deterministic diagnostic chart locally:
 node tools/weapon-progression-parity.js --format=markdown
 ```
 
-The checked-in equipment fixtures also cover all 129 monster definitions and
-canonical loadouts. Outgoing time-to-defeat rows are diagnostics; incoming
-ordinary-solo survival remains a hard 0.80–1.20 ratio against its pinned
-reference. Monster definitions and progression-time data are not rewritten by
-this balance pass. The former XP/time benchmark is archived under
+The checked-in equipment fixtures cover all 129 source monster definitions; the
+combat matrix evaluates the 119 attackable rows and its canonical loadouts.
+Outgoing time-to-defeat rows are diagnostics; incoming ordinary-solo survival
+remains a hard 0.80–1.20 ratio against its pinned reference. Monster
+definitions and progression-time data are not rewritten by this balance pass.
+The former XP/time benchmark is archived under
 `node/tests/obsolete/` and is excluded from the default test suite, so its
 duration output is historical rather than a current release authority.
 
@@ -238,11 +241,41 @@ human-reviewable scale summary:
 
 | Evidence | Reviewable scale |
 |---|---:|
-| Weapon acquisition and enhancement | 83 weapons; 66 class/rank rows; 9,438 enhancement states |
+| Weapon acquisition and enhancement | 90 weapons; 42 class/rank rows; 1,170 enhancement states |
 | Vanilla equipment baseline | 420 role/level rows; 129 monsters; 1,573 Warrior enhancement states |
 | Armor and sets | 138 nonweapon items; 19 sets |
-| Weapon and offhand loadouts | 11 ranks; 1,079 weapon states; 744 legal layouts |
-| Combat matrix | 735 canonical loadouts × 129 monsters = 94,815 rows |
+| Weapon and offhand loadouts | 7 ranks; 1,170 weapon states; 811 legal layouts |
+| Combat matrix | 36 canonical loadouts × 119 attackable monsters = 4,284 rows |
+
+### Monster Hunter progression
+
+The Monster Token shop has one optional rank-5 Hunter sidegrade for each combat
+class. These upgradeable weapons use placeholder art and retain the existing
+PvP/signature routes:
+
+| Class | Weapon |
+|---|---|
+| Warrior | Hunter's Spear (`mhspear`) |
+| Paladin | Hunter's Hammer (`mhhammer`) |
+| Mage | Hunter's Wand (`mhwand`) |
+| Priest | Hunter's Codex (`mhbook`) |
+| Ranger | Hunter's Crossbow (`mhcrossbow`) |
+| Rogue | Hunter's Dagger (`mhdagger`) |
+
+All six cost **1,944 Monster Tokens** and Monster Tokens are their only
+acquisition source. The price is derived from the ordinary rank-5 copy effort
+and tier-5 hunt effort, rather than being hand-tuned.
+
+Monster Hunt assignment is authoritative to the equipped ranked combat weapon.
+At enhancement `+0` through `+3`, a weapon unlocks hunts through its current
+rank; at `+4` or higher it unlocks the next tier, with assignments capped at
+tier 6. The server chooses the highest available live `hunter_eligible`
+permanent ordinary monster and falls back to lower tiers when needed. Targeted,
+concurrently hunted, event, boss, keyed, scripted, unsupported, and other
+ineligible monsters are excluded from new assignments. Normal completion awards
+tier 1–6 quantities `1, 1, 2, 3, 4, 5`; Hardcore preserves the existing 100×
+multiplier. Older in-progress hunt records are resolved from their server-owned
+monster ID, so no migration is required.
 
 ## Merchant enhancement progression
 
