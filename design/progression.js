@@ -91,7 +91,7 @@ var progression = {
 	MONSTER_TIER_ASSIGNMENTS: monster_progression_tier_assignments,
 	MONSTER_GROUP_RECOMMENDED: monster_progression_group_recommended,
 	MONSTER_PROGRESSION: monster_progression,
-	HUNTER_TOKEN_REWARDS: Object.freeze({ 1: 1, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6 }),
+	HUNTER_TOKEN_REWARDS: Object.freeze({ 1: 1, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 }),
 	HUNTER_MAX_ASSIGNABLE_TIER: 6,
 };
 

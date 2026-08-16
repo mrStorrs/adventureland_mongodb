@@ -99,12 +99,14 @@ function hasUnsupportedMechanics(mechanics) {
 }
 
 function requirementPasses(requirements, skill, level) {
+	if (Array.isArray(requirements) && requirements.length === 0) return true;
 	return (requirements || []).some((requirement) =>
 		(requirement.skill === skill || (Array.isArray(requirement.any_skill) && requirement.any_skill.includes(skill))) && Number(requirement.level) <= level,
 	);
 }
 
 function highestEligibleRequirement(requirements, skill, level) {
+	if (Array.isArray(requirements) && requirements.length === 0) return 0;
 	return Math.max(
 		...(requirements || [])
 			.filter((requirement) => (requirement.skill === skill || (Array.isArray(requirement.any_skill) && requirement.any_skill.includes(skill))) && Number(requirement.level) <= level)
@@ -365,8 +367,9 @@ function analyze(data = loadSourceData()) {
 		const tier = Number(progression.MONSTER_TIER_ASSIGNMENTS?.[monster_id] || progression.MONSTER_PROGRESSION[monster_id]?.tier);
 		if (!Number.isInteger(tier) || tier < 1 || tier > 7) throw new Error(`Missing authored monster tier: ${monster_id}`);
 		const assigned_passes = tier <= 6 && tierPasses[tier];
-		const progression_eligible = Boolean(supported && assigned_passes);
-		const reason = progression_eligible ? "matrix" : supported ? progression.MONSTER_GROUP_RECOMMENDED?.[monster_id] ? `group_recommended:assigned_tier_${tier}_not_solo_safe` : `assigned_tier_${tier}_not_safe` : hasUnsupportedMechanics(mechanics) ? `unsupported_mechanics:${mechanics.filter((mechanic) => mechanic !== "dreturn").join(",")}` : `ineligible_availability:${availability.join(",")}`;
+		const published = progression.MONSTER_PROGRESSION[monster_id];
+		const progression_eligible = Boolean(supported && assigned_passes && published?.progression_eligible);
+		const reason = progression_eligible ? "matrix" : published?.reason || (supported ? progression.MONSTER_GROUP_RECOMMENDED?.[monster_id] ? `group_recommended:assigned_tier_${tier}_not_solo_safe` : `assigned_tier_${tier}_not_safe` : hasUnsupportedMechanics(mechanics) ? `unsupported_mechanics:${mechanics.filter((mechanic) => mechanic !== "dreturn").join(",")}` : `ineligible_availability:${availability.join(",")}`);
 		monsters.push({ monster_id, tier, availability, mechanics, progression_eligible, hunter_eligible: progression_eligible, reason, evidence: { earliest_passing_tier: earliest, assigned_tier_passes: assigned_passes, tier_passes: tierPasses, class_margins: results.filter((row) => row.tier === Math.min(tier, 6)).map((row) => ({ skill: row.skill, kill_time_ms: row.kill_time_ms, ending_hp_ratio: row.ending_hp_ratio, minimum_hp: row.minimum_hp, minimum_mp: row.minimum_mp, largest_expected_hit: row.largest_expected_hit, returned_damage_per_hit: row.returned_damage_per_hit, failure_reasons: row.failure_reasons, passed: row.passed })) } });
 		matrix_rows.push({ monster_id, tier, progression_eligible, hunter_eligible: progression_eligible, results });
 	}

@@ -257,8 +257,8 @@ test("acquisition retune grandfathers an equipped weapon but rejects a below-lev
 	const data = loadBenchmarkData();
 	const ranking = loadRankingFixture(RANKING_FIXTURE_PATH);
 	const target = ranking.weapons.find((weapon) => weapon.weapon_id === "broom");
-	assert.deepEqual({ skill: target.skill, requirement: target.requirement }, { skill: "mage", requirement: 70 });
-	assert.deepEqual(data.itemRequirements.broom, [{ skill: "mage", level: 70 }]);
+	assert.deepEqual({ skill: target.skill, requirement: target.requirement }, { skill: "mage", requirement: 80 });
+	assert.deepEqual(data.itemRequirements.broom, [{ skill: "mage", level: 80 }]);
 
 	const player = { slots: { mainhand: { name: "broom", level: 0 } }, items: [null] };
 	const equippedStats = calculateStats({ slots: player.slots, items: data.items });
@@ -270,7 +270,7 @@ test("acquisition retune grandfathers an equipped weapon but rejects a below-lev
 	assert.equal(unequipped.items[0].name, "broom");
 	const beforeAttempt = structuredClone(unequipped);
 	const belowLevel = createCharacterState().skills;
-	belowLevel.mage.level = 69;
+	belowLevel.mage.level = 79;
 	assert.throws(
 		() => planEquipmentTransaction({
 			player: unequipped,
@@ -281,7 +281,7 @@ test("acquisition retune grandfathers an equipped weapon but rejects a below-lev
 			itemRequirements: data.itemRequirements,
 			skills: belowLevel,
 		}),
-		(error) => error.code === "skill_level_required" && error.item === "broom" && error.skill === "mage" && error.required === 70 && error.actual === 69,
+		(error) => error.code === "skill_level_required" && error.item === "broom" && error.skill === "mage" && error.required === 80 && error.actual === 79,
 	);
 	assert.deepEqual(unequipped, beforeAttempt);
 });

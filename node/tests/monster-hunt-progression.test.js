@@ -79,6 +79,11 @@ test("monster-hunt socket orchestration uses authoritative progression helpers",
 	assert.doesNotMatch(handler, /q: \(gameplay == "hardcore" && 100\) \|\| 1/);
 });
 
+test("Hunter token rewards end at the assignable hunt tier", () => {
+	assert.equal(progression.HUNTER_MAX_ASSIGNABLE_TIER, 6);
+	assert.deepEqual(Object.keys(progression.HUNTER_TOKEN_REWARDS).map(Number), [1, 2, 3, 4, 5, 6]);
+});
+
 test("monster-hunt assignment stores v2 state, chooses unlocked tiers, and falls back around reservations", () => {
 	const rankOne = harness({ weapon: { name: "blade", level: 3 } });
 	rankOne.handler({ tier: 99, reward: 999 });

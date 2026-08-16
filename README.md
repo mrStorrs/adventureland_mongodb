@@ -149,20 +149,21 @@ keep a theme for presentation but do not increment an armor-set bonus. The
 Monster Hunter Paladin theme is included, and 25 newly filled armor slots are
 marked as placeholder artwork until dedicated art is available.
 
-Standalone armor and capes are independent sidegrades. Combat offhands
-(shields, quivers, sources, and miscellaneous hand items) use acquisition
-ranked base values and grouped highest-compatible-skill requirements; legal
-one-hand, dual-wield, two-hand, and offhand layouts are checked together so an
-easier option cannot strictly dominate a harder one. Jewelry and orbs remain
-outside this rebalance. Rebalanced armor and set properties contribute no
+Standalone armor, capes, and combat offhands (shields, quivers, sources, and
+miscellaneous hand items) are independent sidegrades. Every equippable
+nonweapon item—including armor, jewelry, orbs, offhands, capes, and tools—is
+ungated and carries an explicit empty requirement list. Weapons retain their
+class and level requirements; legal one-hand, dual-wield, two-hand, and offhand
+layouts are checked together so an easier weapon option cannot strictly
+dominate a harder one. Rebalanced armor and set properties contribute no
 offensive `STR`, `DEX`, or `INT` at base or supported enhancement states; the
 removed vanilla offensive contribution is compensated exclusively through
 Plan 04-owned weapon numeric fields. Combat and item-property formulas remain
 unchanged.
 
-The server and Guide evaluate grouped requirements such as “Highest Warrior or
-Paladin Lv. 50” consistently. Existing stored items need no migration or
-respec; the reviewed requirement is enforced on a future equip or re-equip.
+Existing stored items need no migration or respec. Weapon requirements are
+enforced on a future equip or re-equip, while nonweapon equipment remains
+available at every character level.
 
 ## Weapon progression
 
@@ -211,8 +212,10 @@ In the in-game Guide → Items view, visible weapons are grouped under Warrior,
 Paladin, Mage, Priest, Ranger, and Rogue in combat-profile order. Each group is
 sorted by the existing level-0 Base DPS calculation, with item ID as the
 deterministic tie-breaker; ignored items remain hidden and the other item
-categories keep their existing layout and detail actions. Monster details show
-the published progression tier, eligibility, and supported-mechanics flags.
+categories keep their existing layout and detail actions. Guide → Monsters is
+grouped into the published Tier 1–7 sections (plus Unassigned when needed), and
+each monster detail view shows its progression tier, eligibility, and supported
+mechanics or ineligibility reason.
 
 The parity runner and checked-in fixtures expose current assigned requirements
 alongside immutable historical DPS/TTK comparisons. Historical family and
@@ -276,6 +279,15 @@ ineligible monsters are excluded from new assignments. Normal completion awards
 tier 1–6 quantities `1, 1, 2, 3, 4, 5`; Hardcore preserves the existing 100×
 multiplier. Older in-progress hunt records are resolved from their server-owned
 monster ID, so no migration is required.
+
+## Default server monster rewards
+
+The game server derives its reward multiplier from
+`options.default_server_key`. The server started with that key receives **2×**
+normal monster item-drop odds and chest gold (including extra gold); every other
+server key uses **1×**. The multiplier is applied by the normal monster drop
+path and does not change XP, Monster Hunt token quantities, or the dedicated
+Hardcore/PvP reward paths.
 
 ## Merchant enhancement progression
 

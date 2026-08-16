@@ -45,9 +45,9 @@ test("canonical loadouts use source-backed permanent gear and expose its acquisi
 	const analysis = analyze(data);
 	const tierThreeMage = analysis.loadouts.find((row) => row.tier === 3 && row.skill === "mage");
 	assert.deepEqual(tierThreeMage.acquisition_routes.chest, {
-		route_id: "monster:spiderbl", kind: "nested_drop", effort: 522451.288511, monster_id: "spiderbl", map_id: "spider_instance", access_item_id: "spiderkey",
+		route_id: "shop:basics", kind: "shop", effort: 50,
 	});
-	assert.ok(analysis.loadouts.some((row) => Object.values(row.acquisition_routes).some((route) => route.token_id === "monstertoken")));
+	assert.ok(Object.values(tierThreeMage.acquisition_routes).every((route) => ["shop", "starter"].includes(route.kind)));
 	const keyedSource = analysis.monsters.find((row) => row.monster_id === "spiderbl");
 	assert.equal(keyedSource.progression_eligible, false);
 	assert.equal(keyedSource.hunter_eligible, false);
