@@ -20,17 +20,31 @@ function fixture() {
 	return JSON.parse(fs.readFileSync(fixturePath, "utf8"));
 }
 
-test("all 83 visible weapons publish flat direct Damage and Attacks/Sec at every supported level", () => {
+test("all 90 visible weapons publish flat direct Damage and Attacks/Sec at every supported level", () => {
 	const current = fixture();
-	assert.equal(current.schema_version, 3);
-	assert.deepEqual(current.policy.shared_rank_requirements, [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]);
-	assert.equal(current.counts.weapons, 83);
-	assert.equal(current.counts.rank_bands, 11);
-	assert.equal(current.weapon_states.length, 1079);
+	assert.equal(current.schema_version, 4);
+	assert.deepEqual(current.policy.shared_rank_requirements, [1, 20, 40, 60, 80, 90, 99]);
+	assert.equal(current.counts.weapons, 90);
+	assert.equal(current.counts.rank_bands, 7);
+	assert.equal(current.counts.class_rank_rows, 42);
 	for (const row of current.weapon_states) {
 		assert.ok(Number.isFinite(row.damage) && row.damage > 0, `${row.weapon_id}+${row.level}:damage`);
 		assert.ok(Number.isFinite(row.attacks_per_second) && row.attacks_per_second > 0, `${row.weapon_id}+${row.level}:attacks_per_second`);
 		assert.equal(row.dps, row.damage * row.attacks_per_second, `${row.weapon_id}+${row.level}:dps`);
+	}
+});
+
+test("each higher rank is strictly stronger at the same enhancement level", () => {
+	const current = fixture();
+	for (const skill of current.policy.combat_skills) {
+		for (let level = 0; level <= 12; level += 1) {
+			for (let rank = 1; rank < 7; rank += 1) {
+				const lower = current.weapon_states.filter((row) => row.skill === skill && row.shared_rank === rank && row.level === level).map((row) => row.dps);
+				const higher = current.weapon_states.filter((row) => row.skill === skill && row.shared_rank === rank + 1 && row.level === level).map((row) => row.dps);
+				if (!lower.length || !higher.length) continue;
+				assert.ok(Math.min(...higher) > Math.max(...lower), `${skill} rank ${rank}->${rank + 1} +${level}`);
+			}
+		}
 	}
 });
 
@@ -53,8 +67,7 @@ test("direct runtime matches the approved base and fully enhanced weapon endpoin
 
 test("legal layouts remain complete and deterministic under direct weapon ownership", () => {
 	const current = fixture();
-	assert.equal(current.counts.legal_layouts, 744);
-	assert.equal(current.legal_layouts.length, 744);
+	assert.equal(current.counts.legal_layouts, current.legal_layouts.length);
 	assert.deepEqual(current.legal_layouts, [...current.legal_layouts].sort((left, right) => left.mainhand_id.localeCompare(right.mainhand_id) || String(left.offhand_id).localeCompare(String(right.offhand_id))));
 	assert.doesNotThrow(() => validateDirectWeaponLoadoutBalanceFixture(current));
 	assert.equal(serializeFixture(buildDirectWeaponLoadoutBalanceFixture()), fs.readFileSync(fixturePath, "utf8"));

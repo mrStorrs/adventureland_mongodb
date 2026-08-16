@@ -4301,7 +4301,7 @@ var items={
 		"upgrade": {
 			"crit": 0.2,
 			"range": 8.6,
-			"damage": 60.49230769230769,
+			"damage": 73.25,
 			"attacks_per_second": 0
 		},
 		"name": "Bow of the Dead",
@@ -12927,6 +12927,41 @@ var sets={
 		}
 	}
 };
+
+var weapon_progression_rank_by_legacy_rank={1:1,2:2,3:2,4:3,5:3,6:4,7:4,8:5,9:5,10:6,11:7};
+var weapon_progression_requirements=[1,20,40,60,80,90,99];
+var weapon_progression_anchor_ids={blade:true,mace:true,staff:true,wbook0:true,bow:true,claw:true,fsword:true,ololipop:true,firestaff:true,wbook3:true,hbow:true,stinger:true,swifty:true,glolipop:true,froststaff:true,wbook5:true,merry:true,fclaw:true,sword:true,pmaceofthedead:true,arcstaff:true,wbook6:true,crossbow:true,firestars:true,bataxe:true,xmace:true,vstaff:true,wbook8:true,t3bow:true,rapier:true,scythe:true,vhammer:true,wblade:true,wbook9:true,weaver:true,vdagger:true,vsword:true,lmace:true,pinkie:true,wbookhs:true,gbow:true,dragondagger:true};
+// The normal rank-four Mage route needs a non-seasonal weapon. Art temporarily reuses the base Staff.
+items.arcstaff={type:"weapon",wtype:"staff",tier:2,skin:"staff",placeholder_art:true,placeholder_asset:"staff",name:"Arcane Staff",explanation:"A rank-four Mage progression weapon. Placeholder artwork reuses the Staff.",g:120000,grades:[0,2,10,12],range:20,damage_type:"magical",damage:254,attacks_per_second:.6496,upgrade:{range:3.5,damage:57,attacks_per_second:0},progression:{historical_rank:null,shared_rank:7,role:"progression",requirement:60,reference_level:36,target_dps:165,anchor:true}};
+for(var weapon_progression_item_id in items){
+	var weapon_progression_item=items[weapon_progression_item_id];
+	if(!weapon_progression_item.progression || (!weapon_progression_item.wtype && weapon_progression_item_id.indexOf("wbook")!==0) || !weapon_progression_rank_by_legacy_rank[weapon_progression_item.progression.shared_rank]) continue;
+	var weapon_progression_rank=weapon_progression_rank_by_legacy_rank[weapon_progression_item.progression.shared_rank];
+	weapon_progression_item.progression.shared_rank=weapon_progression_rank;
+	weapon_progression_item.progression.requirement=weapon_progression_requirements[weapon_progression_rank-1];
+	weapon_progression_item.progression.anchor=!!weapon_progression_anchor_ids[weapon_progression_item_id];
+	if(weapon_progression_item.progression.anchor) weapon_progression_item.progression.role="progression";
+}
+
+// Oozing Terror remains an optional health-sacrificing staff sidegrade, not a safe unlock route.
+items.daggerofthedead.progression.role="sidegrade";
+items.ornamentstaff.progression.role="sidegrade";
+items.oozingterror.progression.role="sidegrade";
+items.oozingterror.progression.next_tier_hunt_eligible=false;
+items.oozingterror.progression.next_tier_hunt_reason="health_penalty_sidegrade";
+
+// These narrowly raise only attack growth where a lower-rank curve overtook the next rank at the same enhancement.
+// These correct rank crossings and the approved staff/bow progression parity.
+var weapon_progression_upgrade_damage_corrections={staff:22.5422190578985,slimestaff:15,vsword:150,maceofthedead:25,vhammer:61,harbringer:21,ornamentstaff:57,staffofthedead:45,sparkstaff:65,pinkie:154,weaver:312,dragondagger:219};
+for(var weapon_progression_weapon_id in weapon_progression_upgrade_damage_corrections)
+	items[weapon_progression_weapon_id].upgrade.damage=weapon_progression_upgrade_damage_corrections[weapon_progression_weapon_id];
+
+items.mhspear={type:"weapon",wtype:"spear",tier:2,skin:"spear",placeholder_art:true,placeholder_asset:"spear",hunter_only:true,name:"Hunter's Spear",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Spear.",g:960000,grades:[0,2,10,12],range:9,damage_type:"physical",damage:266,attacks_per_second:.875,upgrade:{range:1,damage:180,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:232.75,anchor:false},requirements:[{skill:"warrior",level:80}]};
+items.mhhammer={type:"weapon",wtype:"hammer",tier:2,skin:"hammer",placeholder_art:true,placeholder_asset:"hammer",hunter_only:true,name:"Hunter's Hammer",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Hammer.",g:960000,grades:[0,2,10,12],range:7,damage_type:"physical",damage:190,attacks_per_second:1.1,upgrade:{range:1,damage:70,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:209,anchor:false},requirements:[{skill:"paladin",level:80}]};
+items.mhwand={type:"weapon",wtype:"wand",tier:2,skin:"wand",placeholder_art:true,placeholder_asset:"wand",hunter_only:true,name:"Hunter's Wand",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Wand.",g:960000,grades:[0,2,10,12],range:50,damage_type:"magical",damage:280,attacks_per_second:.915,upgrade:{range:2,damage:120,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:256.2,anchor:false},requirements:[{skill:"mage",level:80}]};
+items.mhbook={type:"weapon",wtype:"book",tier:2,skin:"wbook0",placeholder_art:true,placeholder_asset:"wbook0",hunter_only:true,name:"Hunter's Codex",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Book of Knowledge.",g:960000,grades:[0,2,10,12],damage_type:"magical",projectile:"pmagic",damage:524,attacks_per_second:.4,mp:240,upgrade:{damage:232,mp:20,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:209.6,anchor:false},requirements:[{skill:"priest",level:80}]};
+items.mhcrossbow={type:"weapon",wtype:"crossbow",tier:2,skin:"crossbow",placeholder_art:true,placeholder_asset:"crossbow",hunter_only:true,name:"Hunter's Crossbow",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Crossbow.",g:960000,grades:[0,2,10,12],range:36,damage_type:"physical",damage:200,attacks_per_second:1.28,upgrade:{range:4,damage:147,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:256,anchor:false},requirements:[{skill:"ranger",level:80}]};
+items.mhdagger={type:"weapon",wtype:"dagger",tier:2,skin:"dagger",placeholder_art:true,placeholder_asset:"dagger",hunter_only:true,name:"Hunter's Dagger",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Dagger.",g:960000,grades:[0,2,10,12],range:7,damage_type:"physical",damage:220,attacks_per_second:1.164,upgrade:{range:1,damage:168,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:256.08,anchor:false},requirements:[{skill:"rogue",level:80}]};
 
 if(typeof finalize_equipment_requirements=="function") finalize_equipment_requirements(items,sets,item_requirements,equipment_set_requirement_levels,equipment_standalone_unlocks);
 

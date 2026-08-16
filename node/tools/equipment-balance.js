@@ -16,7 +16,7 @@ function buildDirectArmorSetBalanceFixture() {
 }
 
 function validateDirectWeaponLoadoutBalanceFixture(fixture, generated = buildDirectWeaponLoadoutBalanceFixture()) {
-	if (!fixture || fixture.schema_version !== 3 || fixture.counts?.weapons !== 83 || fixture.counts?.rank_bands !== 11 || JSON.stringify(fixture) !== JSON.stringify(generated))
+	if (!fixture || fixture.schema_version !== 4 || fixture.counts?.weapons !== 90 || fixture.counts?.rank_bands !== 7 || JSON.stringify(fixture) !== JSON.stringify(generated))
 		throw new Error("Direct weapon loadout fixture drifted from the catalog");
 	return true;
 }

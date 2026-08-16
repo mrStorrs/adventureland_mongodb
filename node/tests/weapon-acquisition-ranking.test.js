@@ -8,9 +8,20 @@ test("direct acquisition fixture deterministically covers every visible combat w
 	const fixture = loadRankingFixture(RANKING_FIXTURE_PATH);
 	assert.doesNotThrow(() => validateRankingFixture(fixture));
 	assert.deepEqual(fixture, buildAcquisitionRanking());
-	assert.equal(fixture.counts.weapons, 83);
-	assert.equal(fixture.counts.ranks, 11);
-	assert.deepEqual([...new Set(fixture.weapons.map((weapon) => weapon.shared_rank))].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+	assert.equal(fixture.counts.weapons, 90);
+	assert.equal(fixture.counts.ranks, 7);
+	assert.deepEqual([...new Set(fixture.weapons.map((weapon) => weapon.shared_rank))].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7]);
+});
+
+test("Hunter placeholders are rank-five sidegrades with no existing weapon moved", () => {
+	const fixture = loadRankingFixture();
+	for (const id of ["mhspear", "mhhammer", "mhwand", "mhbook", "mhcrossbow", "mhdagger"]) {
+		const weapon = fixture.weapons.find((row) => row.weapon_id === id);
+		assert.ok(weapon, id);
+		assert.equal(weapon.shared_rank, 5, id);
+		assert.equal(weapon.role, "hunter_sidegrade", id);
+		assert.equal(weapon.requirement, 80, id);
+	}
 });
 
 test("direct acquisition evidence owns Damage and Attacks/Sec through weapon definitions", () => {

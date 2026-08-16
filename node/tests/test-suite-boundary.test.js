@@ -35,6 +35,7 @@ test("deterministic compact equipment fixtures stay outside Prettier and GitHub 
 		"vanilla-equipment-baseline.json",
 		"weapon-acquisition-ranking.json",
 		"weapon-loadout-balance.json",
+		"monster-combat-tiers.json",
 		"weapon-progression-parity.json",
 	];
 	for (const fixture of fixtures) {

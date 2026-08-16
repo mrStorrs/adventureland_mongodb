@@ -135,6 +135,29 @@ function renderMonsterCard() {
 	});
 }
 
+function renderLiveMonsterPanel(progression) {
+	const source = fs.readFileSync(path.resolve(__dirname, "../../js/html.js"), "utf8");
+	const renderStart = source.indexOf("function render_monster(monster)");
+	const renderEnd = source.indexOf("\nvar cache_bid", renderStart);
+	assert.ok(renderStart >= 0 && renderEnd > renderStart, "live-monster renderer exists");
+	let html = "";
+	const context = {
+		G: { abilities: {}, monsters: { crab: { name: "Crab" } }, progression: { MONSTER_PROGRESSION: { crab: progression } } },
+		$: () => ({ html: (value) => { html = value; } }),
+		button_line: () => "",
+		character: null,
+		colors: { hp: "hp", inspect: "inspect", lifesteal: "lifesteal", poison: "poison" },
+		info_line: ({ name, value, line }) => `<metric name="${name || "line"}">${value || line}</metric>`,
+		render_conditions: () => {},
+		smart_num: (value) => String(value),
+		to_pretty_num: (value) => String(value),
+	};
+	vm.createContext(context);
+	vm.runInContext(source.slice(renderStart, renderEnd), context, { filename: "html.js" });
+	context.render_monster({ mtype: "crab", hp: 100, max_hp: 100, xp: 10, attack: 5, s: {} });
+	return html;
+}
+
 test("item guide DPS matches the direct item properties through each full enhancement range", () => {
 	const data = loadBenchmarkData();
 	const calculators = loadPropertyCalculators(data);
@@ -168,6 +191,15 @@ test("monster guide cards render the monster's published attack as direct damage
 	assert.match(renderMonsterCard(), /<metric name="Damage">240<\/metric>/);
 });
 
+test("live monster panels show progression mechanics and ineligibility reason", () => {
+	const html = renderLiveMonsterPanel({ tier: 4, progression_eligible: false, mechanics: ["reflection"], reason: "unsupported_mechanics:reflection" });
+	assert.match(html, /<metric name="TIER">4<\/metric>/);
+	assert.match(html, /<metric name="PROGRESSION">NOT ELIGIBLE<\/metric>/);
+	assert.match(html, /<metric name="MECHANICS">reflection<\/metric>/);
+	assert.match(html, /<metric name="REASON">unsupported_mechanics:reflection<\/metric>/);
+	assert.match(renderLiveMonsterPanel({ tier: 2, progression_eligible: true, mechanics: [], reason: "matrix" }), /<metric name="MECHANICS">None<\/metric>/);
+});
+
 test("ranked item details calculate +0 through +12 metrics from the actual enhanced properties", () => {
 	for (let level = 0; level <= 12; level += 1) {
 		const html = renderRankedWeaponInfo(level);
@@ -175,7 +207,7 @@ test("ranked item details calculate +0 through +12 metrics from the actual enhan
 		const attacksPerSecond = 0.5 + level * 0.01;
 		assert.match(html, new RegExp(`<metric name="Damage">${damage}<\\/metric>`), `+${level} damage`);
 		assert.match(html, new RegExp(`<metric name="DPS">${damage * attacksPerSecond}<\\/metric>`), `+${level} DPS`);
-		assert.match(html, /<metric name="Shared Rank">3\/11<\/metric>/);
+		assert.match(html, /<metric name="Shared Rank">3\/7<\/metric>/);
 		assert.doesNotMatch(html, /Hit Damage|Base DPS|Strength|Intelligence|Dexterity|Vitality|Fortitude/, `+${level} uses direct properties`);
 	}
 });

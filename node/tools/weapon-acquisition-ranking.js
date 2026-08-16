@@ -12,7 +12,7 @@ const COMBAT_SKILLS = authority.COMBAT_SKILLS;
 
 function loadRankingFixture(filename = RANKING_FIXTURE_PATH) {
 	const fixture = JSON.parse(fs.readFileSync(filename, "utf8"));
-	if (!fixture || fixture.schema_version !== 6 || !fixture.policy || !Array.isArray(fixture.weapons) || fixture.counts?.weapons !== 83) throw new Error("Direct weapon acquisition fixture is invalid");
+	if (!fixture || fixture.schema_version !== 7 || !fixture.policy || !Array.isArray(fixture.weapons) || fixture.counts?.weapons !== 90) throw new Error("Direct weapon acquisition fixture is invalid");
 	return fixture;
 }
 

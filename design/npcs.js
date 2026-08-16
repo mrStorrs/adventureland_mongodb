@@ -809,7 +809,7 @@ var npcs={
 		"role":"merchant",
 		"items":[
 			"helmet","shoes","gloves","pants","coat",
-			"blade","claw","staff","bow","wshield",
+			"blade","claw","staff","wbook0","bow","wshield",
 			"wand","mace","wbasher",
 		],
 		"skin":"daggers",
