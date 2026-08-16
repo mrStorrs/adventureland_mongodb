@@ -177,7 +177,7 @@ var progression_pending_level_up = null;
 function report_progression_protocol_issue(code, message) {
 	if (progression_protocol_diagnostics[code]) return;
 	progression_protocol_diagnostics[code] = true;
-	if (typeof console != "undefined" && console.warn) console.warn("Protocol 3 progression rejected: " + message);
+	if (typeof console != "undefined" && console.warn) console.warn("Protocol 4 progression rejected: " + message);
 }
 
 function valid_skill_xp_payload(data) {
@@ -765,9 +765,9 @@ var asp_skip = {};
 
 function adopt_soft_properties(element, data) {
 	if (element.me) {
-		element.stats = {};
+		delete element.stats;
 		["str", "dex", "int", "vit", "for"].forEach(function (p) {
-			element.stats[p] = data[p];
+			delete element[p];
 		});
 		if (element.moving && element.speed && data.speed && element.speed != data.speed) {
 			element.speed = data.speed;
@@ -1524,7 +1524,7 @@ function init_socket(args) {
 		// add_greenlight_log();
 		if (gameplay == "hardcore") {
 			add_log(
-				"Pro Tips: You can transport to anywhere from the Beach Cave, Water Spirits drop stat belts, 3 monsters drop 3 new unique items, 3 monsters drop 50 times the gold they usually do!",
+				"Pro Tips: You can transport to anywhere from the Beach Cave, Water Spirits drop equipment belts, 3 monsters drop 3 new unique items, 3 monsters drop 50 times the gold they usually do!",
 				"#B2D5DF",
 			);
 			$(".saferespawn").show();
@@ -1850,9 +1850,9 @@ function init_socket(args) {
 				tut("upgrade");
 				ui_error("Item upgrade failed");
 				if (!data.stale) resolve_deferred("upgrade", { failed: true, success: false, level: data.level, num: data.num });
-			} else if (response == "upgrade_success_stat") {
+			} else if (response == "upgrade_success_direct_bonus") {
 				tut("addstats");
-				if (!data.stale) resolve_deferred("upgrade", { stat: true, stat_type: data.stat_type, num: data.num });
+				if (!data.stale) resolve_deferred("upgrade", { direct_bonus: data.direct_bonus, num: data.num });
 			} else if (response == "upgrade_offering_success") {
 				ui_log("Offering succeeded", "white");
 				if (!data.stale) resolve_deferred("upgrade", { success: true });
@@ -2256,7 +2256,7 @@ function init_socket(args) {
 				ui_log("Can't destat this item", "gray");
 			} else if (response == "scrollsmith_success") {
 				ui_log("Spent " + data.gold.toLocaleString() + " gold", "gray");
-				ui_log("De-statted the item", "gray");
+				ui_log("Removed the scroll bonus from the item", "gray");
 			} else if (response == "locksmith_cant") {
 				ui_log("Can't lock/unlock this item", "gray");
 			} else if (response == "locksmith_aunlocked") {

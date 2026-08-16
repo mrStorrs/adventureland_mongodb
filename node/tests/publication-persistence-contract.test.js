@@ -5,10 +5,18 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const { assertProtocol3Publication } = require("../game/release_readiness");
+const { assertProtocol4Publication } = require("../game/release_readiness");
 
 test("release readiness rejects a legacy publication shape", () => {
-	assert.throws(() => assertProtocol3Publication({ protocol: 2, classes: {}, skills: {}, abilities: {} }), {
+	assert.throws(() => assertProtocol4Publication({ protocol: 3, classes: {}, skills: {}, abilities: {} }), {
+		code: "WORLD_PUBLICATION",
+	});
+});
+
+test("release readiness accepts protocol 4 only when item publication is primary-free", () => {
+	const skills = Object.fromEntries(["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant"].map((id) => [id, {}]));
+	assert.doesNotThrow(() => assertProtocol4Publication({ protocol: 4, skills, abilities: {}, items: { blade: { damage: 1, attacks_per_second: 1 } } }));
+	assert.throws(() => assertProtocol4Publication({ protocol: 4, skills, abilities: {}, items: { blade: { attack: 1 } } }), {
 		code: "WORLD_PUBLICATION",
 	});
 });
@@ -31,4 +39,15 @@ test("progression events stay queued until a successful persistence boundary", (
 	assert.notEqual(saveIndex, -1);
 	assert.notEqual(flushIndex, -1);
 	assert.ok(saveIndex < flushIndex);
+});
+
+test("authoritative hydration and save boundaries reject unmigrated items at every persisted character and bank path", () => {
+	const root = path.resolve(__dirname, "../..");
+	const source = fs.readFileSync(path.join(root, "adventure_functions.js"), "utf8");
+	assert.match(source, /function assert_direct_character_items\(info\)/);
+	assert.match(source, /info\.p\.trade_history\[history_index\]\[2\]/);
+	assert.match(source, /assert_direct_character_items\(character\.info\)/);
+	assert.match(source, /assert_direct_character_items\(data\)/);
+	assert.match(source, /assert_direct_user_items\(user\.info\)/);
+	assert.match(source, /assert_direct_user_items\(data\)/);
 });

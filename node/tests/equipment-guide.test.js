@@ -23,9 +23,11 @@ function loadRenderers() {
 	const equipInfoEnd = source.indexOf("function render_item_help", helpersStart);
 	const renderItemStart = source.indexOf("var last_selector = \"\";");
 	const renderItemEnd = source.indexOf("function render_item_by_name", renderItemStart);
+	const directBonusStart = source.indexOf("function direct_effect_label(");
+	const directBonusEnd = source.indexOf("function guide_weapon_progression_metrics", directBonusStart);
 	const setStart = source.indexOf("function render_set");
 	const setEnd = source.indexOf("function render_condition", setStart);
-	assert.ok(helpersStart >= 0 && equipInfoEnd > helpersStart && renderItemStart >= 0 && renderItemEnd > renderItemStart && setStart >= 0 && setEnd > setStart, "equipment renderers are present");
+	assert.ok(helpersStart >= 0 && equipInfoEnd > helpersStart && renderItemStart >= 0 && renderItemEnd > renderItemStart && directBonusStart >= 0 && directBonusEnd > directBonusStart && setStart >= 0 && setEnd > setStart, "equipment renderers are present");
 	const skills = { warrior: { level: 42 }, paladin: { level: 0 } };
 	const items = {
 		placeholder: { type: "chest", skin: "placeholder", armor_weight: "heavy", placeholder_art: true, requirements: [{ any_skill: ["warrior", "paladin"], level: 42 }] },
@@ -39,7 +41,7 @@ function loadRenderers() {
 		item_container: ({ skin }) => `[${skin}]`, render_item: () => "<properties>", show_modal: (html) => { context.modalHtml = html; }, $: () => ({ html: (html) => { context.setHtml = html; } }),
 	};
 	vm.createContext(context);
-	vm.runInContext("String.prototype.toTitleCase = function () { return this.charAt(0).toUpperCase() + this.slice(1); };\n" + source.slice(helpersStart, equipInfoEnd) + source.slice(renderItemStart, renderItemEnd) + source.slice(setStart, setEnd) + "\nglobalThis.renderers={render_equip_info,render_item,render_set};", context, { filename: "html.js" });
+	vm.runInContext("String.prototype.toTitleCase = function () { return this.charAt(0).toUpperCase() + this.slice(1); };\n" + source.slice(helpersStart, equipInfoEnd) + source.slice(directBonusStart, directBonusEnd) + source.slice(renderItemStart, renderItemEnd) + source.slice(setStart, setEnd) + "\nglobalThis.renderers={render_equip_info,render_item,render_set};", context, { filename: "html.js" });
 	return context;
 }
 
@@ -94,4 +96,19 @@ test("Guide renderers display the approved grouped gates and armor-only set deta
 	assert.match(context.setHtml, /\[2\+ Equipped\]/);
 	assert.match(context.setHtml, /\[5\+ Equipped\]/);
 	assert.doesNotMatch(context.setHtml, /\[1\+ Equipped\]|\[6\+ Equipped\]/);
+});
+
+test("item tooltips render readable direct values, negative effects, and the applied-scroll distinction", () => {
+	const context = loadRenderers();
+	const tooltip = context.renderers.render_item("html", {
+		item: { name: "direct-gear", type: "chest" },
+		actual: { name: "direct-gear", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 1, throw_range: 3 } } },
+		pure: true,
+		prop: { damage: -2, attacks_per_second: 0.25, hp: -48, base_crit: 0.2, crit: 1, throw_range: 3, pvp_damage_reduction: 4.5 },
+	});
+	assert.match(tooltip, /\|Damage\|-2/);
+	assert.match(tooltip, /\|Attacks\/Sec\|0\.25/);
+	assert.match(tooltip, /\|Crit\|1\.2%/);
+	assert.match(tooltip, /\|Applied Scroll\|\+1 Damage, \+3 Throw Range/);
+	assert.doesNotMatch(tooltip, /Strength|Intelligence|Dexterity|Vitality|Fortitude|\|Stat\|/);
 });

@@ -1,10 +1,35 @@
 var crypto = require("crypto");
-var loadProtocol3CharacterState;
+var loadProtocol4CharacterState;
+var validateDirectItemBonus;
 try {
-	loadProtocol3CharacterState = require("./node/game/character_state").loadCharacterState;
+	loadProtocol4CharacterState = require("./node/game/character_state").loadCharacterState;
+	validateDirectItemBonus = require("./node/game/direct_bonus_migration").validateItemBonus;
 } catch (error) {
 	if (error?.code !== "MODULE_NOT_FOUND" || !String(error.message).includes("./node/game/character_state")) throw error;
-	loadProtocol3CharacterState = require("./game/character_state").loadCharacterState;
+	loadProtocol4CharacterState = require("./game/character_state").loadCharacterState;
+	validateDirectItemBonus = require("./game/direct_bonus_migration").validateItemBonus;
+}
+
+function assert_direct_item_boundary(value, path) {
+	if (!value || typeof value !== "object") return;
+	if (value.name) validateDirectItemBonus(value, { items: G.items, path: path });
+}
+
+function assert_direct_item_collection(items, path) {
+	for (var index = 0; index < (items || []).length; index++) assert_direct_item_boundary(items[index], path + "[" + index + "]");
+}
+
+function assert_direct_character_items(info) {
+	assert_direct_item_collection(info && info.items, "info.items");
+	for (var slot_name in (info && info.slots) || {}) assert_direct_item_boundary(info.slots[slot_name], "info.slots." + slot_name);
+	for (var history_index = 0; history_index < (((info && info.p) || {}).trade_history || []).length; history_index++) {
+		assert_direct_item_boundary(info.p.trade_history[history_index] && info.p.trade_history[history_index][2], "info.p.trade_history[" + history_index + "][2]");
+	}
+	for (var snapshot_name of ["u_item", "u_itemx", "c_item", "c_itemx"]) assert_direct_item_boundary(info && info.p && info.p[snapshot_name], "info.p." + snapshot_name);
+}
+
+function assert_direct_user_items(info) {
+	for (var pack_index = 0; pack_index < 48; pack_index++) assert_direct_item_collection(info && info["items" + pack_index], "info.items" + pack_index);
 }
 
 // ==================== TIME UTILITIES ====================
@@ -655,6 +680,7 @@ function characters_to_client(characters_data) {
 }
 
 function character_to_info(character, user, ip, guild) {
+	assert_direct_character_items(character.info);
 	var drm = false;
 	var drm_fail = false;
 	if (user && user.created > new Date(2019, 1, 1) && !gf(user, "legacy_override")) drm = true;
@@ -669,7 +695,6 @@ function character_to_info(character, user, ip, guild) {
 		death_sickness_until: character.info.death_sickness_until || null,
 		gold: character.info.gold,
 		items: character.info.items,
-		stats: character.info.stats,
 		slots: gf(character, "slots", {}),
 		skin: character.info.skin,
 		cx: gf(character, "cx", []),
@@ -710,13 +735,14 @@ function guild_to_info(guild) {
 }
 
 function update_character(character, data, owner) {
+	assert_direct_character_items(data);
 	character.info.x = data.x;
 	character.info.y = data.y;
 	character.info.s = data.s;
 	character.info.q = data.q || {};
 	character.info.map = data.map;
 	character.info["in"] = data["in"];
-	const loadedState = loadProtocol3CharacterState({ info: { skills: data.skills || character.info.skills } });
+	const loadedState = loadProtocol4CharacterState({ info: { skills: data.skills || character.info.skills } });
 	character.info.skills = loadedState.skills;
 	character.total_level = loadedState.total_level;
 	if (data.death_sickness_until !== undefined) character.info.death_sickness_until = data.death_sickness_until;
@@ -777,6 +803,7 @@ function update_pids(character, data, owner) {
 }
 
 function update_user_data(user, data) {
+	assert_direct_user_items(data);
 	user.info.gold = data.gold;
 	user.info.rewards = data.rewards || [];
 	user.info.unlocked = data.unlocked || {};
@@ -789,6 +816,7 @@ function update_user_data(user, data) {
 }
 
 function user_to_server(user) {
+	assert_direct_user_items(user.info);
 	var info = {
 		gold: gf(user, "gold", 1000),
 		rewards: gf(user, "rewards", []),

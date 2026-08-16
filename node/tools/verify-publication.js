@@ -2,7 +2,7 @@
 
 const http = require("node:http");
 const vm = require("node:vm");
-const { assertProtocol3Publication } = require("../game/release_readiness");
+const { assertProtocol4Publication } = require("../game/release_readiness");
 
 function parseArgs(argv) {
 	const result = {};
@@ -48,7 +48,7 @@ async function main(argv = process.argv.slice(2), env = process.env) {
 	const source = await readUrl(url);
 	const context = {};
 	vm.runInNewContext(source, context, { timeout: 5_000 });
-	const report = assertProtocol3Publication(context.G);
+	const report = assertProtocol4Publication(context.G);
 	process.stdout.write(`${JSON.stringify(report)}\n`);
 	return report;
 }

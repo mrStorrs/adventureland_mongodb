@@ -23,7 +23,7 @@ const ITEM_IDENTITY_FIELDS = Object.freeze([
 	"name",
 	"level",
 	"q",
-	"stat_type",
+	"direct_bonus",
 	"p",
 	"ps",
 	"m",

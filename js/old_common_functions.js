@@ -389,6 +389,7 @@ function can_stack(a,b,d,args)
 {
 	if(a && b && a.name && G.items[a.name].s && a.name==b.name && a.q+b.q+(d||0)<=(G.items[a.name].s===true&&9999||G.items[a.name].s))
 	{
+		if(JSON.stringify(a.direct_bonus||null)!=JSON.stringify(b.direct_bonus||null)) return false;
 		if((a.p || b.p) && a.p!=b.p) return false; // property
 		if(a.name=="cxjar" && a.data!=b.data) return false;
 		if(a.name=="emotionjar" && a.data!=b.data) return false;
@@ -845,25 +846,6 @@ function calculate_item_properties(item,args)
 		"set":null,
 		"class":null,
 	};
-	var mult={
-		"gold":0.5,
-		"luck":1,
-		"xp":0.5,
-		"armor":2.25,
-		"resistance":2.25,
-		"speed":0.325,
-		"evasion":0.325,
-		"reflection":0.150,
-		"lifesteal":0.15,
-		"manasteal":0.040,
-		"rpiercing":2.25,
-		"apiercing":2.25,
-		"crit":0.125,
-		"dreturn":0.5,
-		"attacks_per_second":0.00325,
-		"mp_cost":-0.6,
-		"output":0.175,
-	};
 	if(item.p=="shiny")
 	{
 		if(def.damage)
@@ -958,6 +940,11 @@ function calculate_item_properties(item,args)
 			if(def.legacy[name]===null) delete prop[name];
 			else prop[name]=(prop[name]||0)+def.legacy[name];
 		}
+	}
+	if(item.direct_bonus && item.direct_bonus.effects)
+	{
+		for(var bonus_key in item.direct_bonus.effects)
+			if(prop[bonus_key]!==undefined && typeof item.direct_bonus.effects[bonus_key]=="number") prop[bonus_key]+=item.direct_bonus.effects[bonus_key];
 	}
 	for(p in prop)
 		if(!in_arr(p,["damage","heal","attacks_per_second","base_crit","pvp_damage_reduction","throw_range","evasion","miss","reflection","dreturn","lifesteal","manasteal","attr0","attr1","crit","critdamage","set","class","breaks"])) prop[p]=round(prop[p]);

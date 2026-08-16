@@ -549,7 +549,7 @@ var abilities = {
 		skin: "skill_teleport",
 		name: "Magiport",
 		explanation: "Pull someone to your location using the magical paths that surround our world.",
-		complementary: "Unless the target doesn't have a T2+ helmet, high intelligence, or a low level, it can't resist being magiported. (Reverted [03/07/18])",
+		complementary: "Unless the target doesn't have a T2+ helmet, high MP, or a low level, it can't resist being magiported. (Reverted [03/07/18])",
 		mp: 900,
 		cooldown: 0,
 		target: "player",
@@ -1328,7 +1328,7 @@ var abilities = {
 	toggle_stats: {
 		type: "utility",
 		skin: "stats",
-		name: "Toggle Stats",
+		name: "Toggle Character Sheet",
 		explanation: "Toggles the character sheet",
 		ui: false,
 		applicability: "system",

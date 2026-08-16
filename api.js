@@ -469,7 +469,6 @@ async function create_character_api(args) {
 					gold: 0,
 					items: A.starter.items,
 					slots: A.starter.slots,
-					stats: {},
 					skin: A.character.appearances[A.look][0],
 					cx: A.character.appearances[A.look][1],
 					map: "main",

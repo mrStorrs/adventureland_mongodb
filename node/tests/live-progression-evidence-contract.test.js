@@ -7,8 +7,20 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-test("live progression release validation covers contribution maps, curves, events, and Merchant edges", () => {
+function hasIntegratedGameGitlink(root) {
+	try {
+		return /^160000 commit /m.test(execFileSync("git", ["ls-tree", "HEAD", "adventureland_mongodb"], { cwd: root, encoding: "utf8" }));
+	} catch {
+		return false;
+	}
+}
+
+test("live progression release validation covers contribution maps, curves, events, and Merchant edges", (t) => {
 	const root = path.resolve(__dirname, "../../..");
+	if (!hasIntegratedGameGitlink(root)) {
+		t.skip("requires an integrated root release checkout with an adventureland_mongodb gitlink");
+		return;
+	}
 	const validatorPath = path.join(root, "scripts/validate-release-gate.mjs");
 	const fixturePath = path.join(__dirname, "fixtures/live-progression-matrix-result.json");
 	const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "adventureland-live-contract-"));

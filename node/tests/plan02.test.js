@@ -135,11 +135,23 @@ test("equipment validates all requirements and atomically displaces incompatible
 				skills: advanced,
 			}),
 	);
-	assert.doesNotThrow(
+	assert.throws(
 		() =>
 			planEquipmentTransaction({
 				player: { slots: {}, items: [{ name: "blade", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 2 } } }] },
 				item: { name: "blade", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 3 } } },
+				itemIndex: 0,
+				items,
+				itemRequirements: requirements,
+				skills: advanced,
+			}),
+		(error) => error.code === "inventory_item_changed",
+	);
+	assert.doesNotThrow(
+		() =>
+			planEquipmentTransaction({
+				player: { slots: {}, items: [{ name: "blade", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 2 } } }] },
+				item: { name: "blade", direct_bonus: { version: 1, source: "strscroll", effects: { damage: 2 } } },
 				itemIndex: 0,
 				items,
 				itemRequirements: requirements,

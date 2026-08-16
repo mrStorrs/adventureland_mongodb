@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const { MongoClient } = require("mongodb");
 const { maps: DESIGN_MAPS } = require("../../design/maps");
 const { buildProgressionData, loadProgressionPublication } = require("../game/skill_domain");
-const { assertProtocol3Publication } = require("../game/release_readiness");
+const { assertProtocol4Publication } = require("../game/release_readiness");
 const { verifyWorldState } = require("../game/world_schema");
 const { readSeed } = require("./export-map-seed");
 
@@ -60,7 +60,7 @@ async function main(argv = process.argv.slice(2), env = process.env) {
 		const raw = loadProgression();
 		const progression = buildProgressionData(raw);
 		const publication = loadProgressionPublication({}, progression);
-		assertProtocol3Publication(publication);
+		assertProtocol4Publication(publication);
 		const report = {
 			protocol: publication.protocol,
 			mapCount: world.maps.mapCount,

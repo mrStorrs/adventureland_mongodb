@@ -519,7 +519,7 @@ function loadProgressionPublication(target, progressionData) {
 	delete publication.classes;
 	delete publication.levels;
 	return Object.assign(
-		{ ...publication, protocol: 3 },
+		{ ...publication, protocol: 4 },
 		{
 			items: next.items,
 			item_requirements: next.item_requirements,
