@@ -151,3 +151,18 @@ test("monster chest gold refreshes the character balance after loot", () => {
 	assert.match(chestLoot, /resend\(player, \(reopen && "reopen\+nc\+inv"\) \|\| "reopen"\);/);
 	assert.match(chestLoot, /resend\(current, \(reopen\[current\.id\] && "reopen\+nc\+inv"\) \|\| "reopen"\);/);
 });
+
+test("the main server doubles normal monster item and gold rewards", () => {
+	const dropStart = serverSource.indexOf("function drop_something(player, monster, share) {");
+	const dropEnd = serverSource.indexOf("\nfunction drop_something_hardcore", dropStart);
+	assert.notEqual(dropStart, -1);
+	assert.ok(dropEnd > dropStart);
+	const monsterDrops = serverSource.slice(dropStart, dropEnd);
+
+	assert.match(serverSource, /main_server_reward_multiplier = server_key == options\.default_server_key \? 2 : 1/);
+	assert.match(serverSource, /drop_rate_multiplier: main_server_reward_multiplier/);
+	assert.match(serverSource, /gold_multiplier: main_server_reward_multiplier/);
+	assert.match(monsterDrops, /monster_mult \* B\.drop_rate_multiplier/);
+	assert.match(monsterDrops, /drop\.gold = round\(drop\.gold \* B\.gold_multiplier\)/);
+	assert.match(monsterDrops, /drop\.egold \*= B\.gold_multiplier/);
+});

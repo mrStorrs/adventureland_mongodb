@@ -13,6 +13,7 @@ var server_key = process.argv[process.argv.length - 1];
 var server_def = options.servers[server_key];
 var region = server_def.region;
 var server_name = server_def.name;
+var main_server_reward_multiplier = server_key == options.default_server_key ? 2 : 1;
 var Dev = options.Dev && process.env.ADVENTURELAND_RELEASE_SAFE_LOGS !== "1";
 var Local = options.Local;
 var Prod = options.Prod;
@@ -195,6 +196,8 @@ var B = {
 	free_last_hits: false,
 	pause_instances: true,
 	global_drops: true,
+	drop_rate_multiplier: main_server_reward_multiplier,
+	gold_multiplier: main_server_reward_multiplier,
 	drop_table_multiplier: 1, // 2 means drop tables extended by their original selves, not %'s multiplied
 };
 var CC = {
@@ -1901,21 +1904,21 @@ function drop_something(player, monster, share) {
 	}
 	if (D.drops.maps.global_static && player.tskin != "konami" && B.global_drops) {
 		D.drops.maps.global_static.forEach(function (item) {
-			if (Math.random() / share / player.luckm / monster.luckx / global_mult < item[0] || mode.drop_all) {
+			if (Math.random() / share / player.luckm / monster.luckx / global_mult / B.drop_rate_multiplier < item[0] || mode.drop_all) {
 				drop_item_logic(drop, item, is_pvp);
 			}
 		});
 	}
 	if (D.drops.maps.global && player.tskin != "konami" && B.global_drops) {
 		D.drops.maps.global.forEach(function (item) {
-			if (Math.random() / share / player.luckm / hp_mult / monster.luckx / global_mult < item[0] || mode.drop_all) {
+			if (Math.random() / share / player.luckm / hp_mult / monster.luckx / global_mult / B.drop_rate_multiplier < item[0] || mode.drop_all) {
 				drop_item_logic(drop, item, is_pvp);
 			}
 		});
 	}
 	if (D.drops.maps[monster.map] && player.tskin != "konami") {
 		D.drops.maps[monster.map].forEach(function (item) {
-			if (Math.random() / share / player.luckm / hp_mult / monster.luckx < item[0] || mode.drop_all) {
+			if (Math.random() / share / player.luckm / hp_mult / monster.luckx / B.drop_rate_multiplier < item[0] || mode.drop_all) {
 				drop_item_logic(drop, item, is_pvp);
 			}
 		});
@@ -1937,7 +1940,7 @@ function drop_something(player, monster, share) {
 		// 3) item drops if the calculated falls below the drop rate threshold
 
 		let dropRate = item[0];
-		let rollModifier = share * player.luckm * monster.level * monster_mult;
+		let rollModifier = share * player.luckm * monster.level * monster_mult * B.drop_rate_multiplier;
 		let playerRoll = Math.random() / rollModifier;
 
 		return playerRoll < dropRate;
@@ -2001,6 +2004,8 @@ function drop_something(player, monster, share) {
 		drop.gold *= 50;
 		chest = "chest5";
 	} // previously 200
+	drop.gold = round(drop.gold * B.gold_multiplier);
+	if (drop.egold) drop.egold *= B.gold_multiplier;
 	if (drop.items.length || drop.cash) {
 		chest = "chest6";
 	}
