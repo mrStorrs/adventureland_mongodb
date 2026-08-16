@@ -786,7 +786,7 @@ function calculate_item_properties(item,args)
 	var def=args.def||G.items[item.name],cls="",map="";
 	if(args['class'] && def[args['class']]) cls=args['class'];
 	if(args['map'] && def[args['map']]) map=args['map'];
-	var prop_key=def.name+item.name+(def.card||"")+"|"+item.level+"|"+item.stat_type+"|"+item.p+"|"+cls+"|"+map;
+	var prop_key=def.name+item.name+(def.card||"")+"|"+item.level+"|"+JSON.stringify(item.direct_bonus||null)+"|"+item.p+"|"+cls+"|"+map;
 	if(prop_cache[prop_key]) return prop_cache[prop_key];
 	if(cls || map) def=clone(def);
 	if(cls) adopt_extras(def,def[cls]);
@@ -796,18 +796,14 @@ function calculate_item_properties(item,args)
 		"gold":0,
 		"luck":0,
 		"xp":0,
-		"int":0,
-		"str":0,
-		"dex":0,
-		"vit":0,
-		"for":0,
 		"charisma":0,
 		"cuteness":0,
 		"awesomeness":0,
 		"bling":0,
 		"hp":0,
 		"mp":0,
-		"attack":0,
+		"damage":0,
+		"heal":0,
 		"range":0,
 		"armor":0,
 		"incdmgamp":0,
@@ -821,7 +817,7 @@ function calculate_item_properties(item,args)
 		"blast":0,
 		"explosion":0,
 		"breaks":0,
-		"stat":0,
+		"scroll_value":0,
 		"speed":0,
 		"level":0,
 		"evasion":0,
@@ -836,7 +832,10 @@ function calculate_item_properties(item,args)
 		"crit":0,
 		"critdamage":0,
 		"dreturn":0,
-		"frequency":0,
+		"attacks_per_second":0,
+		"base_crit":0,
+		"pvp_damage_reduction":0,
+		"throw_range":0,
 		"mp_cost":0,
 		"mp_reduction":0,
 		"output":0,
@@ -850,11 +849,6 @@ function calculate_item_properties(item,args)
 		"gold":0.5,
 		"luck":1,
 		"xp":0.5,
-		"int":1,
-		"str":1,
-		"dex":1,
-		"vit":1,
-		"for":1,
 		"armor":2.25,
 		"resistance":2.25,
 		"speed":0.325,
@@ -866,20 +860,20 @@ function calculate_item_properties(item,args)
 		"apiercing":2.25,
 		"crit":0.125,
 		"dreturn":0.5,
-		"frequency":0.325,
+		"attacks_per_second":0.00325,
 		"mp_cost":-0.6,
 		"output":0.175,
 	};
 	if(item.p=="shiny")
 	{
-		if(def.attack)
+		if(def.damage)
 		{
-			prop.attack+=4;
-			if(doublehand_types.includes(G.items[item.name].wtype)) prop.attack+=3;
+			prop.damage+=4;
+			if(doublehand_types.includes(G.items[item.name].wtype)) prop.damage+=3;
 		}
-		else if(def.stat)
+		else if(def.scroll_value)
 		{
-			prop.stat+=2;
+			prop.scroll_value+=2;
 		}
 		else if(def.armor)
 		{
@@ -888,9 +882,10 @@ function calculate_item_properties(item,args)
 		}
 		else
 		{
-			prop.dex+=1;
-			prop['int']+=1;
-			prop.str+=1;
+			prop.base_crit+=0.2;
+			prop.attacks_per_second+=1/640+1/4000;
+			prop.damage+=2;
+			prop.throw_range+=3;
 		}
 	}
 	else if(item.p=="glitched")
@@ -898,15 +893,19 @@ function calculate_item_properties(item,args)
 		var roll=Math.random();
 		if(roll<0.33)
 		{
-			prop.dex+=1;
+			prop.base_crit+=0.2;
+			prop.attacks_per_second+=1/640;
 		}
 		else if(roll<0.66)
 		{
-			prop['int']+=1;
+			prop.damage+=1;
+			prop.mp+=15;
+			prop.attacks_per_second+=1/4000;
 		}
 		else
 		{
-			prop.str+=1;
+			prop.damage+=1;
+			prop.throw_range+=3;
 		}
 	}
 	else if(item.p && G.titles[item.p])
@@ -941,14 +940,14 @@ function calculate_item_properties(item,args)
 			}
 			for(p in u_def)
 			{
-				if(p=="stat") prop[p]+=round(u_def[p]*multiplier);
+				if(p=="scroll_value") prop[p]+=round(u_def[p]*multiplier);
 				else prop[p]+=u_def[p]*multiplier; // for weapons with float improvements [04/08/16]
-				if(p=="stat" && i>=7) prop.stat++;
+				if(p=="scroll_value" && i>=7) prop.scroll_value++;
 			}
 		}
 
 	}
-	if(item.level==10 && prop.stat && def.tier && def.tier>=3) prop.stat+=2;
+	if(item.level==10 && prop.scroll_value && def.tier && def.tier>=3) prop.scroll_value+=2;
 	for(p in def)
 		if(prop[p]===null) prop[p]=def[p];
 		else if(prop[p]!=undefined) prop[p]+=def[p];
@@ -961,12 +960,7 @@ function calculate_item_properties(item,args)
 		}
 	}
 	for(p in prop)
-		if(!in_arr(p,["evasion","miss","reflection","dreturn","lifesteal","manasteal","attr0","attr1","crit","critdamage","set","class","breaks"])) prop[p]=round(prop[p]);
-	if(def.stat && item.stat_type)
-	{
-		prop[item.stat_type]+=prop.stat*mult[item.stat_type];
-		prop.stat=0;
-	}
+		if(!in_arr(p,["damage","heal","attacks_per_second","base_crit","pvp_damage_reduction","throw_range","evasion","miss","reflection","dreturn","lifesteal","manasteal","attr0","attr1","crit","critdamage","set","class","breaks"])) prop[p]=round(prop[p]);
 	// for(p in prop) prop[p]=floor(prop[p]); - round probably came after this one, commenting out [13/09/16]
 	prop_cache[prop_key]=prop;
 	return prop;

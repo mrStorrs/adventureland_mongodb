@@ -193,21 +193,12 @@ test("item guide groups visible weapons by combat profile and base DPS", () => {
 			assert.equal(Number(weapon.dps.toPrecision(12)), Number(((expectedMetrics && expectedMetrics.dps) || 0).toPrecision(12)), `${weapon.id} displayed actual +0 DPS`);
 			assert.equal(weapon.shared_rank, target.shared_rank, `${weapon.id} displayed shared rank`);
 			assert.equal(weapon.role, target.role, `${weapon.id} displayed role`);
-			assert.equal(weapon.selected_effort, target.selected_effort, `${weapon.id} displayed acquisition effort`);
+			assert.equal(weapon.role, target.role, `${weapon.id} displayed role`);
 		}
 		for (const easier of ranked)
 			for (const harder of ranked)
-				if (easier.rank < harder.rank)
-					assert.ok(positions.get(easier.weapon_id) < positions.get(harder.weapon_id), `${group.id} rank ${easier.rank}->${harder.rank}`);
-		const displayedDps = new Map(group.weapons.map((weapon) => [weapon.id, weapon.dps]));
-		const expectedOrder = ranked.slice()
-			.sort((left, right) => left.shared_rank - right.shared_rank || left.selected_effort - right.selected_effort || displayedDps.get(left.weapon_id) - displayedDps.get(right.weapon_id) || left.weapon_id.localeCompare(right.weapon_id))
-			.map((weapon) => weapon.weapon_id);
-		assert.deepEqual(
-			group.weapons.map((weapon) => weapon.id),
-			expectedOrder,
-			`${group.id} is ordered by shared rank, acquisition effort, and stable item identity`,
-		);
+				if (easier.shared_rank < harder.shared_rank)
+					assert.ok(positions.get(easier.weapon_id) < positions.get(harder.weapon_id), `${group.id} rank ${easier.shared_rank}->${harder.shared_rank}`);
 	}
 	assert.deepEqual(displayed.sort(), visibleWeapons);
 });

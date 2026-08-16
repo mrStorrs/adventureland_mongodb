@@ -1,9 +1,12 @@
 "use strict";
 
+const { DIRECT_EFFECT_KEY_SET } = require("./direct_effects");
+
 const ARMOR_WEIGHTS = Object.freeze(["heavy", "medium", "light"]);
 const ARMOR_SLOTS = Object.freeze(["helmet", "chest", "pants", "gloves", "shoes"]);
 const CORE_ARMOR_TYPES = new Set([...ARMOR_SLOTS, "cape"]);
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+const LEGACY_CATALOG_KEYS = new Set(["str", "dex", "int", "vit", "for", "stat", "stat_type", "attack", "frequency"]);
 
 function fail(message, details = {}) {
 	const error = new Error(message);
@@ -27,6 +30,16 @@ function validatePlaceholder(itemId, item, items) {
 	}
 }
 
+function validateDirectProperties(sourceId, properties) {
+	if (!properties || typeof properties !== "object" || Array.isArray(properties)) return;
+	for (const [key, value] of Object.entries(properties)) {
+		if (LEGACY_CATALOG_KEYS.has(key)) fail(`Legacy equipment property ${key} remains on ${sourceId}`, { item: sourceId, key });
+		if (DIRECT_EFFECT_KEY_SET.has(key) && (typeof value !== "number" || !Number.isFinite(value))) {
+			fail(`Direct equipment property ${key} is invalid on ${sourceId}`, { item: sourceId, key, value });
+		}
+	}
+}
+
 function validateEquipmentSchema(items, sets) {
 	if (!items || typeof items !== "object") fail("Item catalog must be an object");
 	if (!sets || typeof sets !== "object") fail("Set catalog must be an object");
@@ -40,6 +53,18 @@ function validateEquipmentSchema(items, sets) {
 			fail(`Item ${itemId} has an invalid weight`, { item: itemId, weight: item.armor_weight });
 		}
 		validatePlaceholder(itemId, item, items);
+		validateDirectProperties(itemId, item);
+		validateDirectProperties(`${itemId}.upgrade`, item.upgrade);
+		validateDirectProperties(`${itemId}.compound`, item.compound);
+		validateDirectProperties(`${itemId}.legacy`, item.legacy);
+		if (item.type === "weapon") {
+			if (!Number.isFinite(item.damage) || item.damage <= 0) {
+				fail(`Weapon ${itemId} must publish positive direct damage`, { item: itemId });
+			}
+			if (!Number.isFinite(item.attacks_per_second) || item.attacks_per_second <= 0) {
+				fail(`Weapon ${itemId} must publish positive direct attacks per second`, { item: itemId });
+			}
+		}
 	}
 
 	const setIds = Object.keys(sets);
@@ -71,6 +96,7 @@ function validateEquipmentSchema(items, sets) {
 			if (!set[threshold] || typeof set[threshold] !== "object" || Array.isArray(set[threshold])) {
 				fail(`Set ${setId} threshold ${threshold} is invalid`, { set: setId, threshold });
 			}
+			validateDirectProperties(`${setId}.${threshold}`, set[threshold]);
 		}
 		if (!set.bonus_items || typeof set.bonus_items !== "object" || Array.isArray(set.bonus_items)) {
 			fail(`Set ${setId} is missing bonus slot membership`, { set: setId });

@@ -772,7 +772,7 @@ var abilities = {
 		mp: 180,
 		target: true,
 		requirements: {
-			int: 64,
+			max_mp: 1060,
 		},
 		warning: "Highly unbalanced skill, could get nerfed or modified",
 		hostile: true,

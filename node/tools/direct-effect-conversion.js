@@ -295,10 +295,93 @@ function verifyOracle({ sourceRevision = SOURCE_REVISION, fixturePath = FIXTURE_
 	return expected;
 }
 
+function loadCurrentCatalog() {
+	const context = { console, multipliers: { shells_to_gold: 1 } };
+	vm.createContext(context);
+	for (const sourcePath of SOURCE_FILES.filter((file) => file.startsWith("design/"))) {
+		vm.runInContext(fs.readFileSync(path.join(ROOT, sourcePath), "utf8"), context, { filename: sourcePath });
+	}
+	return context;
+}
+
+function currentSourceValue(catalog, row) {
+	if (row.source_kind === "item") return catalog.items?.[row.source_id]?.[row.state === "base" ? "__base__" : row.state] || (row.state === "base" ? catalog.items?.[row.source_id] : null);
+	if (row.source_kind === "set_threshold") return catalog.sets?.[row.source_id]?.[Number(row.state.slice("pieces:".length))];
+	if (row.source_kind === "condition") return catalog.conditions?.[row.source_id];
+	if (row.source_kind === "title") return catalog.titles?.[row.source_id];
+	if (row.source_kind === "ability_requirement") return catalog.abilities?.[row.source_id]?.requirements;
+	return null;
+}
+
+function currentItemState(catalog, row) {
+	const item = catalog.items?.[row.source_id];
+	if (!item) return null;
+	return row.state === "base" ? item : item[row.state];
+}
+
+function assertCurrentNumber(value, path) {
+	if (typeof value !== "number" || !Number.isFinite(value)) throw conversionError(`Current catalog has no finite ${path}`);
+}
+
+function verifyCurrent({ fixturePath = FIXTURE_PATH } = {}) {
+	const oracle = verifyOracle({ fixturePath });
+	const current = loadCurrentCatalog();
+	const legacyCatalog = loadSourceCatalog(SOURCE_REVISION);
+	const forbidden = [...PRIMARY_KEYS, "stat", "stat_type"];
+	const checkNoPrimary = (value, label) => {
+		if (!value || typeof value !== "object") return;
+		for (const key of forbidden) if (Object.hasOwn(value, key)) throw conversionError(`Current catalog retains ${key} at ${label}`);
+	};
+	for (const [itemId, item] of Object.entries(current.items || {})) {
+		checkNoPrimary(item, `item:${itemId}`);
+		checkNoPrimary(item.upgrade, `item:${itemId}:upgrade`);
+		checkNoPrimary(item.compound, `item:${itemId}:compound`);
+		if (item.type === "weapon" && item.progression) {
+			assertCurrentNumber(item.damage, `weapon damage ${itemId}`);
+			assertCurrentNumber(item.attacks_per_second, `weapon attacks_per_second ${itemId}`);
+			if (!(item.damage > 0 && item.attacks_per_second > 0)) throw conversionError(`Weapon ${itemId} must publish positive direct combat values`);
+		}
+	}
+	for (const [setId, set] of Object.entries(current.sets || {}))
+		for (const count of [2, 3, 4, 5]) checkNoPrimary(set[count], `set:${setId}:${count}`);
+	for (const [name, value] of Object.entries(current.conditions || {})) checkNoPrimary(value, `condition:${name}`);
+	for (const [name, value] of Object.entries(current.titles || {})) checkNoPrimary(value, `title:${name}`);
+	for (const [name, value] of Object.entries(current.abilities || {})) checkNoPrimary(value?.requirements, `ability:${name}:requirements`);
+	checkNoPrimary(current.character, "character");
+
+	for (const row of oracle.sources) {
+		const currentValue = row.source_kind === "item" ? currentItemState(current, row) : currentSourceValue(current, row);
+		if (!currentValue) throw conversionError(`Converted source is missing: ${row.source_kind}:${row.source_id}:${row.state}`);
+		if (row.source_kind === "ability_requirement") {
+			if (row.source_id === "mentalburst" && currentValue.max_mp !== 100 + Number(row.direct_delta.mp || 0))
+				throw conversionError("Mental Burst does not preserve its direct Max MP requirement");
+			continue;
+		}
+		for (const [key, value] of Object.entries(row.direct_delta)) {
+			assertCurrentNumber(currentValue[key], `${row.source_id}:${row.state}:${key}`);
+			const legacy = currentValue[key] - value;
+			if (!Number.isFinite(legacy)) throw conversionError(`Converted ${key} is invalid for ${row.source_id}:${row.state}`);
+		}
+		const legacyValue = row.source_kind === "item"
+			? (() => {
+				const source = legacyCatalog.items[row.source_id];
+				return row.state === "base" ? source : source?.[row.state];
+			})()
+			: null;
+		if (!legacyValue) continue;
+		for (const [key, value] of Object.entries(nonPrimaryEffects(legacyValue))) {
+			if (["hp", "mp", "attack", "frequency"].includes(key)) continue;
+			if (currentValue[key] !== value) throw conversionError(`Special effect drifted for ${row.source_id}:${row.state}:${key}`);
+		}
+	}
+	return { sources: oracle.sources.length, weapons: Object.values(current.items).filter((item) => item.type === "weapon" && item.progression).length };
+}
+
 function parseArguments(argv) {
 	const options = { mode: "verify", sourceRevision: SOURCE_REVISION };
 	for (const argument of argv) {
 		if (argument === "--verify") options.mode = "verify";
+		else if (argument === "--verify-current") options.mode = "verify-current";
 		else if (argument === "--write") options.mode = "write";
 		else if (argument.startsWith("--source-revision=")) options.sourceRevision = argument.slice("--source-revision=".length);
 		else throw conversionError(`Unknown argument ${argument}`);
@@ -311,6 +394,11 @@ function main(argv = process.argv.slice(2)) {
 	if (options.mode === "verify") {
 		const oracle = verifyOracle({ sourceRevision: options.sourceRevision });
 		process.stdout.write(`${JSON.stringify({ status: "verified", sources: oracle.sources.length, scroll_profiles: oracle.scroll_profiles.length })}\n`);
+		return;
+	}
+	if (options.mode === "verify-current") {
+		const result = verifyCurrent();
+		process.stdout.write(`${JSON.stringify({ status: "current-verified", ...result })}\n`);
 		return;
 	}
 	if (options.sourceRevision !== SOURCE_REVISION) {
@@ -336,5 +424,6 @@ module.exports = {
 	buildOracle,
 	conversionError,
 	serialize,
+	verifyCurrent,
 	verifyOracle,
 };

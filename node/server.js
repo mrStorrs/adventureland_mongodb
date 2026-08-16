@@ -932,11 +932,8 @@ function player_to_client(player, stranger) {
 
 	if (!stranger) {
 		[
-			"int",
-			"str",
-			"dex",
-			"vit",
-			"for",
+			"throw_range",
+			"pvp_damage_reduction",
 			"mp_cost",
 			"mp_reduction",
 			"goldm",
@@ -3371,8 +3368,8 @@ function complete_attack(attacker, target, info) {
 					}
 				}
 				var dmg_mult = 1;
-				if (attacker.is_player && target["for"]) {
-					dmg_mult = damage_multiplier(target["for"] * 5);
+				if (attacker.is_player && target.pvp_damage_reduction) {
+					dmg_mult = 1 - Math.max(0, Math.min(100, target.pvp_damage_reduction)) / 100;
 				}
 				i_attack = attack = ceil(combo_m * attack * (0.9 + ((attack && Math.random() * 0.2) || 0)));
 				attack =
@@ -8410,7 +8407,7 @@ function init_io() {
 				}
 				var x = parseFloat(data.x) || 0;
 				var y = parseFloat(data.y) || 0;
-				if (distance(player, { map: player.map, in: player.in, x: x, y: y }) > player.str * 3) {
+				if (distance(player, { map: player.map, in: player.in, x: x, y: y }) > player.throw_range) {
 					fail_response("too_far");
 				}
 				consume_one(player, data.num);
@@ -8805,7 +8802,11 @@ function init_io() {
 			if (gSkill.requirements) {
 				for (const requirement in gSkill.requirements) {
 					if (!player[requirement] || player[requirement] < gSkill.requirements[requirement]) {
-						return fail_response("skill_cant_requirements", data.name);
+						return fail_response("skill_cant_requirements", data.name, {
+							requirement: requirement === "max_mp" ? "Max MP" : requirement,
+							required: gSkill.requirements[requirement],
+							actual: player[requirement] || 0,
+						});
 					}
 				}
 			}
