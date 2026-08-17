@@ -32,10 +32,14 @@ test("deterministic compact equipment fixtures stay outside Prettier and GitHub 
 		"equipment-acquisition-ranking.json",
 		"equipment-balance-contract.json",
 		"equipment-combat-matrix.json",
+		"hunter-weapon-economy.json",
 		"vanilla-equipment-baseline.json",
 		"weapon-acquisition-ranking.json",
 		"weapon-loadout-balance.json",
+		"monster-combat-tiers.json",
+		"protected-monster-loot-baseline.json",
 		"weapon-progression-parity.json",
+		"weapon-progression-economy.json",
 	];
 	for (const fixture of fixtures) {
 		assert.ok(ignoredPaths.includes(`tests/fixtures/${fixture}`), `${fixture} Prettier ignore`);

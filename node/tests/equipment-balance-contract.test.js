@@ -13,7 +13,7 @@ const fixturePath = path.join(__dirname, "fixtures", "weapon-loadout-balance.jso
 
 test("the direct balance contract keeps the approved ranks, class multipliers, and weapon-owned cadence", () => {
 	const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
-	assert.equal(fixture.schema_version, 3);
+	assert.equal(fixture.schema_version, 4);
 	assert.deepEqual(fixture.policy.class_multipliers, {
 		warrior: 1,
 		paladin: 0.9,
@@ -23,6 +23,7 @@ test("the direct balance contract keeps the approved ranks, class multipliers, a
 		rogue: 1.1,
 	});
 	assert.equal(fixture.policy.cadence_owner, "weapon_definition");
+	assert.deepEqual(fixture.policy.shared_rank_requirements, [1, 20, 40, 60, 80, 90, 99]);
 	for (const profile of Object.values(WEAPON_PROFILES)) {
 		assert.ok(!Object.hasOwn(profile, "frequency"));
 		assert.ok(!Object.hasOwn(profile, "frequency_modifier"));

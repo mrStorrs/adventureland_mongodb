@@ -1967,44 +1967,25 @@ var item_requirements = {
 	],
 };
 
-var acquisition_ranked_weapon_requirements={"basher":70,"bataxe":80,"blade":1,"bow":1,"bowofthedead":50,"broom":70,"candycanesword":30,"carrotsword":50,"cclaw":10,"claw":1,"crossbow":60,"cupid":60,"dagger":50,"daggerofthedead":40,"dartgun":90,"dragondagger":99,"fclaw":30,"fireblade":10,"firebow":10,"firestaff":20,"firestars":60,"frostbow":40,"froststaff":40,"fsword":20,"gbow":99,"glolipop":40,"gstaff":90,"hammer":60,"harbringer":30,"harpybow":70,"hbow":20,"hdagger":90,"heartwood":90,"lmace":99,"mace":1,"maceofthedead":50,"merry":40,"mushroomstaff":30,"ololipop":20,"oozingterror":60,"ornamentstaff":50,"pclaw":70,"pinkie":99,"pmace":30,"pmaceofthedead":60,"pouchbow":30,"rapier":80,"scythe":90,"slimestaff":10,"snowflakes":50,"sparkstaff":70,"spear":10,"spearofthedead":40,"staff":1,"staffofthedead":50,"stinger":20,"swifty":40,"sword":60,"swordofthedead":60,"t2bow":10,"t3bow":80,"throwingstars":50,"vdagger":90,"vhammer":90,"vstaff":80,"vsword":99,"wand":10,"wbasher":10,"wblade":90,"wbook0":1,"wbook1":50,"wbook2":10,"wbook3":20,"wbook4":30,"wbook5":40,"wbook6":60,"wbook7":70,"wbook8":80,"wbook9":90,"wbookhs":99,"weaver":90,"woodensword":70,"xmace":80};
+item_requirements.arcstaff=[{skill:"mage",level:60}];
+var acquisition_ranked_weapon_requirements={"arcstaff":60,"basher":70,"bataxe":80,"blade":1,"bow":1,"bowofthedead":50,"broom":70,"candycanesword":30,"carrotsword":50,"cclaw":10,"claw":1,"crossbow":60,"cupid":60,"dagger":50,"daggerofthedead":40,"dartgun":90,"dragondagger":99,"fclaw":30,"fireblade":10,"firebow":10,"firestaff":20,"firestars":60,"frostbow":40,"froststaff":40,"fsword":20,"gbow":99,"glolipop":40,"gstaff":90,"hammer":60,"harbringer":30,"harpybow":70,"hbow":20,"hdagger":90,"heartwood":90,"lmace":99,"mace":1,"maceofthedead":50,"merry":40,"mhspear":80,"mhhammer":80,"mhwand":80,"mhbook":80,"mhcrossbow":80,"mhdagger":80,"mushroomstaff":30,"ololipop":20,"oozingterror":60,"ornamentstaff":50,"pclaw":70,"pinkie":99,"pmace":30,"pmaceofthedead":60,"pouchbow":30,"rapier":80,"scythe":90,"slimestaff":10,"snowflakes":50,"sparkstaff":70,"spear":10,"spearofthedead":40,"staff":1,"staffofthedead":50,"stinger":20,"swifty":40,"sword":60,"swordofthedead":60,"t2bow":10,"t3bow":80,"throwingstars":50,"vdagger":90,"vhammer":90,"vstaff":80,"vsword":99,"wand":10,"wbasher":10,"wblade":90,"wbook0":1,"wbook1":50,"wbook2":10,"wbook3":20,"wbook4":30,"wbook5":40,"wbook6":60,"wbook7":70,"wbook8":80,"wbook9":90,"wbookhs":99,"weaver":90,"woodensword":70,"xmace":80};
+var acquisition_seven_rank_requirements={1:1,10:20,20:20,30:40,40:40,50:60,60:60,70:80,80:80,90:90,99:99};
+for(var acquisition_ranked_weapon_id in acquisition_ranked_weapon_requirements)
+	acquisition_ranked_weapon_requirements[acquisition_ranked_weapon_id]=acquisition_seven_rank_requirements[acquisition_ranked_weapon_requirements[acquisition_ranked_weapon_id]];
+var hunter_weapon_requirements={mhspear:"warrior",mhhammer:"paladin",mhwand:"mage",mhbook:"priest",mhcrossbow:"ranger",mhdagger:"rogue"};
+for(var hunter_weapon_id in hunter_weapon_requirements)
+	item_requirements[hunter_weapon_id]=[{skill:hunter_weapon_requirements[hunter_weapon_id],level:80}];
 for(var acquisition_weapon_id in acquisition_ranked_weapon_requirements){
 	if(!item_requirements[acquisition_weapon_id] || item_requirements[acquisition_weapon_id].length!=1)
 		throw new Error("Missing acquisition-ranked weapon requirement: "+acquisition_weapon_id);
 	item_requirements[acquisition_weapon_id][0].level=acquisition_ranked_weapon_requirements[acquisition_weapon_id];
 }
 
-var equipment_set_requirement_levels={tiger:91,fury:91,mwarrior:9,mpaladin:9,wt3:34,legends:58,wt4:58,holidays:8,wanderers:8,rugged:29,swift:43,mmerchant:71,mranger:71,mrogue:71,vampires:99,bunny:50,mmage:50,mpriest:50,mpx:50};
-var equipment_standalone_unlocks={phelmet:1,spikedhelmet:50,gphelmet:99,tshirt0:11,tshirt1:11,tshirt2:11,tshirt3:30,tshirt4:40,tshirt6:55,tshirt7:55,tshirt8:75,tshirt9:75,tshirt88:89,luckyt:99,handofmidas:31,partyhat:1,cyber:99,coat:75,gloves:50,helmet:13,pants:99,shoes:13,angelwings:40,horsecape:1,cape:26,bcape:50,stealthcape:75,vcape:99};
-
-function finalize_equipment_requirements(items,sets,item_requirements,equipment_set_requirement_levels,equipment_standalone_unlocks){
-	var equipment_requirement_types={helmet:true,chest:true,pants:true,gloves:true,shoes:true,cape:true};
-	var equipment_requirement_skills={heavy:["warrior","paladin"],medium:["ranger","rogue"],light:["mage","priest"]};
-	var equipment_requirement_sets={};
-	for(var equipment_requirement_set_id in sets) (sets[equipment_requirement_set_id].items||[]).forEach(function(equipment_requirement_item_id){
-		if(equipment_requirement_types[items[equipment_requirement_item_id]&&items[equipment_requirement_item_id].type]) equipment_requirement_sets[equipment_requirement_item_id]=equipment_requirement_set_id;
-	});
+function finalize_equipment_requirements(items,item_requirements){
+	var ungated_equipment_types={helmet:true,pants:true,chest:true,amulet:true,earring:true,shoes:true,gloves:true,ring:true,shield:true,belt:true,source:true,orb:true,quiver:true,cape:true,misc_offhand:true,tool:true};
 	for(var equipment_requirement_item_id in items){
 		var equipment_requirement_item=items[equipment_requirement_item_id];
-		if(!equipment_requirement_types[equipment_requirement_item.type]) continue;
-		var equipment_requirement_set_id=equipment_requirement_sets[equipment_requirement_item_id];
-		var equipment_requirement_level=equipment_requirement_set_id ? equipment_set_requirement_levels[equipment_requirement_set_id] : equipment_standalone_unlocks[equipment_requirement_item_id] || Math.max.apply(null,(item_requirements[equipment_requirement_item_id]||[{level:1}]).map(function(requirement){return requirement.level||1;}));
-		if(equipment_requirement_set_id=="mmerchant") item_requirements[equipment_requirement_item_id]=[{skill:"merchant",level:equipment_requirement_level}];
-		else item_requirements[equipment_requirement_item_id]=[{any_skill:equipment_requirement_skills[equipment_requirement_item.armor_weight],level:equipment_requirement_level}];
-	}
-	var equipment_offhand_requirement_levels={wshield:1,shield:26,sshield:50,mshield:75,xshield:99,quiver:1,t2quiver:50,alloyquiver:99,lantern:1,exoarm:99,tigershield:11};
-	var equipment_offhand_requirement_skills={
-		shield:["warrior","paladin","priest"],
-		source:["paladin","mage","priest"],
-		misc_offhand:["warrior","paladin","mage","priest","rogue"],
-		quiver:["ranger"]
-	};
-	for(var equipment_offhand_requirement_id in equipment_offhand_requirement_levels){
-		var equipment_offhand_requirement_item=items[equipment_offhand_requirement_id];
-		if(!equipment_offhand_requirement_item) throw new Error("Missing acquisition-ranked offhand requirement: "+equipment_offhand_requirement_id);
-		var equipment_offhand_requirement_skills_for_type=equipment_offhand_requirement_skills[equipment_offhand_requirement_item.type];
-		if(!equipment_offhand_requirement_skills_for_type) throw new Error("Unsupported acquisition-ranked offhand type: "+equipment_offhand_requirement_item.type);
-		item_requirements[equipment_offhand_requirement_id]=[{any_skill:equipment_offhand_requirement_skills_for_type,level:equipment_offhand_requirement_levels[equipment_offhand_requirement_id]}];
+		if(ungated_equipment_types[equipment_requirement_item.type] && equipment_requirement_item_id.indexOf("wbook")!==0) item_requirements[equipment_requirement_item_id]=[];
 	}
 }
 

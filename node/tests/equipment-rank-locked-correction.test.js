@@ -9,8 +9,8 @@ const forbidden = new Set(["str", "dex", "int", "vit", "for", "stat", "stat_type
 
 test("all direct weapon rows cover approved ranks and preserve hard endpoints", () => {
 	const fixture = buildWeaponLoadoutBalanceFixture();
-	assert.equal(fixture.counts.weapons, 83);
-	assert.equal(fixture.counts.rank_bands, 11);
+	assert.equal(fixture.counts.weapons, 90);
+	assert.equal(fixture.counts.rank_bands, 7);
 	for (const band of fixture.rank_bands) {
 		assert.ok(band.requirement >= 1);
 		for (const target of Object.values(band.targets_by_skill)) assert.ok(target > 0);

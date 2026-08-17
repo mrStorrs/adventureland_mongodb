@@ -12,7 +12,9 @@ const {
 	validateRequirements,
 	validateSkillRegistry,
 	validateXpTable,
+	buildProgressionData,
 } = require("../game/skill_domain");
+const { loadBenchmarkData } = require("../tools/progression-benchmark");
 
 const registry = {
 	warrior: {
@@ -216,4 +218,25 @@ test("any-skill requirements are canonical, duplicate-free, and compatible with 
 			code: "invalid_equipment_requirements",
 		});
 	}
+});
+
+test("publication rejects a level gate on nonweapon equipment", () => {
+	const source = loadBenchmarkData();
+	const items = structuredClone(source.items);
+	const itemRequirements = structuredClone(source.itemRequirements);
+	items.helmet.requirements = [{ skill: "warrior", level: 2 }];
+	itemRequirements.helmet = [{ skill: "warrior", level: 2 }];
+
+	assert.throws(
+		() =>
+			buildProgressionData({
+				items,
+				skills: source.skills,
+				skill_xp: source.skillXp,
+				abilities: source.abilities,
+				character: source.character,
+				item_requirements: itemRequirements,
+			}),
+		(error) => error.code === "invalid_game_data" && error.item === "helmet",
+	);
 });

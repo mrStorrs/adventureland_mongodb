@@ -126,6 +126,77 @@ test("browser character and appearance surfaces use skill progression", () => {
 	assert.match(fs.readFileSync(path.join(root, "main.js"), "utf8"), /character_view\(character\)/);
 });
 
+test("active class XP HUD displays exact persisted progress", () => {
+	const code = source();
+	const rendered = new Map();
+	const styles = new Map();
+	const cache = new Map();
+	const context = {
+		character: {
+			active_skill: "mage",
+			attack: 10,
+			esize: 0,
+			isize: 42,
+			hp: 100,
+			max_hp: 100,
+			mp: 100,
+			max_mp: 100,
+			total_level: 7,
+			skills: { mage: { level: 1, xp: 1600, max_xp: 93711 } },
+		},
+		X: { tutorial: { step: 0, task: 0 } },
+		S: {},
+		cached: (key, ...values) => {
+			const nextValue = JSON.stringify(values);
+			if (cache.get(key) === nextValue) return true;
+			cache.set(key, nextValue);
+			return false;
+		},
+		ctarget: null,
+		floor: Math.floor,
+		inventory: false,
+		light_logic: () => {},
+		map: { real_x: 0, real_y: 0 },
+		mode: { dom_tests: false },
+		no_html: false,
+		options: {},
+		round: Math.round,
+		send_target_logic: () => {},
+		showhide_quirks_logic: () => {},
+		stage: {},
+		topleft_npc: true,
+		topright_npc: null,
+		to_pretty_num: (value) => String(value),
+		update_tutorial_ui: () => {},
+		window: {},
+		$: (selector) => ({
+			html(value) {
+				rendered.set(selector, value);
+				return this;
+			},
+			css(property, value) {
+				styles.set(selector + ":" + property, value);
+				return this;
+			},
+		}),
+	};
+	vm.createContext(context);
+	const updateOverlays = vm.runInContext(`(${functionSource(code, "update_overlays", "showhide_quirks_logic")})`, context);
+	updateOverlays();
+	assert.equal(rendered.get("#xpui"), "TL7 MAGE 1600/93711 XP 1%");
+	assert.equal(styles.get("#xpslider:width"), "1%");
+
+	context.character.skills.mage.xp = 1700;
+	updateOverlays();
+	assert.equal(rendered.get("#xpui"), "TL7 MAGE 1700/93711 XP 1%");
+
+	context.character.skills.mage = { level: 99, xp: 900000000, max_xp: null };
+	context.character.total_level = 105;
+	updateOverlays();
+	assert.equal(rendered.get("#xpui"), "TL105 MAGE 900000000/MAX XP 100%");
+	assert.equal(styles.get("#xpslider:width"), "100%");
+});
+
 test("browser consumes direct-bonus scroll responses and discards primary player aliases", () => {
 	const game = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
 	const html = fs.readFileSync(path.join(root, "js/html.js"), "utf8");

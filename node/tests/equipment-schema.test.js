@@ -13,6 +13,7 @@ const designRoot = path.resolve(__dirname, "../../design");
 const acquisitionFixturePath = path.join(__dirname, "fixtures/equipment-acquisition-ranking.json");
 const slots = ["helmet", "chest", "pants", "gloves", "shoes"];
 const expectedPlaceholders = {
+	arcstaff: ["weapon", "Arcane Staff", undefined, undefined, "staff"],
 	tigerarmor: ["chest", "Armor of the Tiger", "tiger", "heavy", "tigerhelmet"],
 	tigerpants: ["pants", "Pants of the Tiger", "tiger", "heavy", "tigerhelmet"],
 	tigergloves: ["gloves", "Gloves of the Tiger", "tiger", "heavy", "tigerhelmet"],
@@ -38,6 +39,12 @@ const expectedPlaceholders = {
 	mpalpants: ["pants", "Underarmor of the Hunter Paladin", "mpaladin", "heavy", "mwpants"],
 	mpalgloves: ["gloves", "Gloves of the Hunter Paladin", "mpaladin", "heavy", "mwgloves"],
 	mpalboots: ["shoes", "Boots of the Hunter Paladin", "mpaladin", "heavy", "mwboots"],
+	mhbook: ["weapon", "Hunter's Codex", undefined, undefined, "wbook0"],
+	mhcrossbow: ["weapon", "Hunter's Crossbow", undefined, undefined, "crossbow"],
+	mhdagger: ["weapon", "Hunter's Dagger", undefined, undefined, "dagger"],
+	mhhammer: ["weapon", "Hunter's Hammer", undefined, undefined, "hammer"],
+	mhspear: ["weapon", "Hunter's Spear", undefined, undefined, "spear"],
+	mhwand: ["weapon", "Hunter's Wand", undefined, undefined, "wand"],
 	wbook2: ["source", "Primer of Insight", undefined, undefined, "wbook0"],
 	wbook3: ["source", "Manual of Insight", undefined, undefined, "wbook0"],
 	wbook4: ["source", "Tome of Insight", undefined, undefined, "wbook1"],

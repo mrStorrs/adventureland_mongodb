@@ -17,8 +17,8 @@ test("direct weapon acquisition authority preserves stable identities and rank c
 	const fixture = loadRankingFixture();
 	assert.doesNotThrow(() => validateRankingFixture(fixture));
 	assert.deepEqual(fixture, buildAcquisitionRanking());
-	assert.equal(fixture.counts.weapons, 83);
-	assert.equal(fixture.counts.ranks, 11);
+	assert.equal(fixture.counts.weapons, 90);
+	assert.equal(fixture.counts.ranks, 7);
 	for (const weapon of fixture.weapons) {
 		assert.ok(weapon.weapon_id && weapon.skill && weapon.wtype);
 		assert.ok(Number.isInteger(weapon.requirement) && weapon.requirement >= 1);

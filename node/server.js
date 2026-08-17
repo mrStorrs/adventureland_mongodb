@@ -13,6 +13,7 @@ var server_key = process.argv[process.argv.length - 1];
 var server_def = options.servers[server_key];
 var region = server_def.region;
 var server_name = server_def.name;
+var main_server_reward_multiplier = server_key == options.default_server_key ? 2 : 1;
 var Dev = options.Dev && process.env.ADVENTURELAND_RELEASE_SAFE_LOGS !== "1";
 var Local = options.Local;
 var Prod = options.Prod;
@@ -27,6 +28,7 @@ const {
 } = require("./game/skill_domain");
 const { validateEquipmentSchema } = require("./game/equipment_schema");
 const { progression } = require("../design/progression");
+const { calculateHuntCount, chooseHuntCandidate, createHuntRecord, huntPopulation, normalizeHunt, resolveHuntWeapon, rewardQuantity } = require("./game/monster_progression");
 const { createCharacterState, loadCharacterState } = require("./game/character_state");
 const { WEAPON_PROFILES, deriveActiveSkill, weaponProfile } = require("./game/active_skill");
 const { merchantTax, merchantSlots, isOpenMerchantStand } = require("./game/merchant_progression");
@@ -194,6 +196,8 @@ var B = {
 	free_last_hits: false,
 	pause_instances: true,
 	global_drops: true,
+	drop_rate_multiplier: main_server_reward_multiplier,
+	gold_multiplier: main_server_reward_multiplier,
 	drop_table_multiplier: 1, // 2 means drop tables extended by their original selves, not %'s multiplied
 };
 var CC = {
@@ -1900,21 +1904,21 @@ function drop_something(player, monster, share) {
 	}
 	if (D.drops.maps.global_static && player.tskin != "konami" && B.global_drops) {
 		D.drops.maps.global_static.forEach(function (item) {
-			if (Math.random() / share / player.luckm / monster.luckx / global_mult < item[0] || mode.drop_all) {
+			if (Math.random() / share / player.luckm / monster.luckx / global_mult / B.drop_rate_multiplier < item[0] || mode.drop_all) {
 				drop_item_logic(drop, item, is_pvp);
 			}
 		});
 	}
 	if (D.drops.maps.global && player.tskin != "konami" && B.global_drops) {
 		D.drops.maps.global.forEach(function (item) {
-			if (Math.random() / share / player.luckm / hp_mult / monster.luckx / global_mult < item[0] || mode.drop_all) {
+			if (Math.random() / share / player.luckm / hp_mult / monster.luckx / global_mult / B.drop_rate_multiplier < item[0] || mode.drop_all) {
 				drop_item_logic(drop, item, is_pvp);
 			}
 		});
 	}
 	if (D.drops.maps[monster.map] && player.tskin != "konami") {
 		D.drops.maps[monster.map].forEach(function (item) {
-			if (Math.random() / share / player.luckm / hp_mult / monster.luckx < item[0] || mode.drop_all) {
+			if (Math.random() / share / player.luckm / hp_mult / monster.luckx / B.drop_rate_multiplier < item[0] || mode.drop_all) {
 				drop_item_logic(drop, item, is_pvp);
 			}
 		});
@@ -1936,7 +1940,7 @@ function drop_something(player, monster, share) {
 		// 3) item drops if the calculated falls below the drop rate threshold
 
 		let dropRate = item[0];
-		let rollModifier = share * player.luckm * monster.level * monster_mult;
+		let rollModifier = share * player.luckm * monster.level * monster_mult * B.drop_rate_multiplier;
 		let playerRoll = Math.random() / rollModifier;
 
 		return playerRoll < dropRate;
@@ -2000,6 +2004,8 @@ function drop_something(player, monster, share) {
 		drop.gold *= 50;
 		chest = "chest5";
 	} // previously 200
+	drop.gold = round(drop.gold * B.gold_multiplier);
+	if (drop.egold) drop.egold *= B.gold_multiplier;
 	if (drop.items.length || drop.cash) {
 		chest = "chest6";
 	}
@@ -4735,51 +4741,35 @@ function init_io() {
 					hunted.push(server.s[id].id);
 				}
 			}
-			if (player.s.monsterhunt && player.s.monsterhunt.c) {
+			if (player.s.monsterhunt && player.s.monsterhunt.c > 0) {
 				return fail_response("monsterhunt_already");
 			} else if (player.s.monsterhunt) {
+				var completed_hunt = normalizeHunt(player.s.monsterhunt, progression);
+				var reward_quantity = completed_hunt && rewardQuantity(completed_hunt.tier, gameplay == "hardcore", progression);
+				if (!reward_quantity) {
+					return fail_response("monsterhunt_invalid");
+				}
 				delete server.s["monsterhunt_" + player.s.monsterhunt.id];
 				delete player.s.monsterhunt;
-				add_item(player, "monstertoken", { log: true, q: (gameplay == "hardcore" && 100) || 1 });
+				add_item(player, "monstertoken", { log: true, q: reward_quantity });
 				resend(player, "u+cid+reopen");
 				return success_response({ completed: true });
 			}
-			var mmax = -1;
-			var name = "goo";
-			var count = 100;
-			var times = 0;
-			var the_hp = 0;
-			for (var id in instances) {
-				if (instances[id].name != id || !G.maps[id] || G.maps[id].irregular) {
-					continue;
-				}
-				for (var mid in instances[id].monsters) {
-					var monster = instances[id].monsters[mid];
-					if (monster.level > mmax && !in_arr(monster.type, hunted) && !monster.target) {
-						// added the target condition [21/07/23]
-						name = monster.type;
-						mmax = monster.level;
-						the_hp = monster.max_hp / 1000.0;
-					}
-				}
+			var weapon = resolveHuntWeapon(player.slots, G.items, progression);
+			if (!weapon) {
+				return fail_response("monsterhunt_weapon");
 			}
-			for (var id in G.maps) {
-				if (G.maps[id].irregular || !G.maps[id].monsters) {
-					continue;
-				}
-				G.maps[id].monsters.forEach(function (p) {
-					if (p.type == name) {
-						times += p.count;
-					}
-				});
+			var candidate = chooseHuntCandidate({ instances: instances, maps: G.maps, progression: progression, maximum_tier: weapon.maximum_tier, hunted_ids: new Set(hunted) });
+			if (!candidate) {
+				return fail_response("monsterhunt_unavailable");
 			}
-			// console.log(times);
-			count = max(1, min(500, parseInt((20 * 60 * max(1, times)) / the_hp / (G.monsters[name].respawn + 0.25))));
-			if (gameplay == "hardcore") {
-				count = max(1, parseInt(count / 10));
+			var count = calculateHuntCount({ population: huntPopulation(G.maps, candidate.monster_id), max_hp: candidate.max_hp, respawn: G.monsters[candidate.monster_id] && G.monsters[candidate.monster_id].respawn, hardcore: gameplay == "hardcore" });
+			var hunt = count && createHuntRecord({ server_name: region + " " + server_name, monster_id: candidate.monster_id, tier: candidate.tier, count: count });
+			if (!hunt) {
+				return fail_response("monsterhunt_unavailable");
 			}
-			player.s.monsterhunt = { sn: region + " " + server_name, id: name, c: count, ms: 30 * 60 * 1000, dl: true };
-			server.s["monsterhunt_" + name] = { name: player.name, id: name, ms: 20 * 60 * 1000, type: "monsterhunt" };
+			player.s.monsterhunt = hunt;
+			server.s["monsterhunt_" + candidate.monster_id] = { name: player.name, id: candidate.monster_id, ms: 20 * 60 * 1000, type: "monsterhunt" };
 			player.hitchhikers.push(["game_response", "monsterhunt_started"]);
 			resend(player, "u+cid");
 			success_response({ started: true });

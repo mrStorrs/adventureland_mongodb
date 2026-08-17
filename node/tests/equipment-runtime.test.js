@@ -186,3 +186,27 @@ test("equipment runtime accepts a highest-skill armor gate and reports each fail
 		(error) => error.code === "skill_level_required" && error.item === "pairedhelm" && error.skill === undefined && error.required === 2 && error.actual_by_skill.warrior === 1 && error.actual_by_skill.paladin === 0,
 	);
 });
+
+test("ungated equipment equips at any skill level while weapons retain their rank gate", () => {
+	const items = {
+		leatherhelm: { type: "helmet" },
+		leatherring: { type: "ring" },
+		blade: { type: "weapon", wtype: "short_sword" },
+	};
+	const requirements = {
+		leatherhelm: [],
+		leatherring: [],
+		blade: [{ skill: "warrior", level: 20 }],
+	};
+	const player = { slots: {}, items: [{ name: "leatherhelm" }, { name: "leatherring" }, { name: "blade" }] };
+	const skills = { warrior: { level: 1 } };
+
+	const helmet = planEquipmentTransaction({ player, item: player.items[0], itemIndex: 0, items, itemRequirements: requirements, skills });
+	assert.equal(helmet.slots.helmet.name, "leatherhelm");
+	const ring = planEquipmentTransaction({ player, item: player.items[1], itemIndex: 1, items, itemRequirements: requirements, skills });
+	assert.equal(ring.slots.ring1.name, "leatherring");
+	assert.throws(
+		() => planEquipmentTransaction({ player, item: player.items[2], itemIndex: 2, items, itemRequirements: requirements, skills }),
+		(error) => error.code === "skill_level_required" && error.item === "blade" && error.required === 20,
+	);
+});

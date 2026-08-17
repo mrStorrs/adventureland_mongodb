@@ -553,6 +553,13 @@ function render_monster(monster) {
 	if (max_hp >= 1000000) (hp = to_pretty_num(hp)), (max_hp = to_pretty_num(max_hp));
 	if (xp >= 1000000) xp = to_pretty_num(xp);
 	html += info_line({ line: name, color: "gray", onclick: "render_monster_info('" + monster.mtype + "')" });
+	var monster_progression = G.progression && G.progression.MONSTER_PROGRESSION && G.progression.MONSTER_PROGRESSION[monster.mtype];
+	if (monster_progression) {
+		html += info_line({ name: "TIER", color: "#C3C3C3", value: monster_progression.tier });
+		html += info_line({ name: "PROGRESSION", color: "#C3C3C3", value: monster_progression.progression_eligible ? "ELIGIBLE" : "NOT ELIGIBLE" });
+		html += info_line({ name: "MECHANICS", color: "#C3C3C3", value: monster_progression.mechanics && monster_progression.mechanics.length ? monster_progression.mechanics.join(", ") : "None" });
+		if (!monster_progression.progression_eligible) html += info_line({ name: "REASON", color: "#C3C3C3", value: monster_progression.reason });
+	}
 	html += info_line({
 		name: "HP",
 		color: colors.hp,
@@ -2930,18 +2937,30 @@ function render_all_items() {
 function render_all_monsters() {
 	var html = "";
 	html += "<div style='width: 480px'>";
+	var tiers = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], unassigned: [] },
+		progression = (G.progression && G.progression.MONSTER_PROGRESSION) || {};
 	object_sort(G.monsters, "hpsort").forEach(function (e) {
 		if (((e[1].stationary || e[1].cute) && !e[1].achievements) || e[1].hide) return;
-		html +=
-			"<div style='background-color:#575983; border: 2px solid #9F9FB0; position: relative; display: inline-block; margin: 2px; /*" +
-			e[0] +
-			"*/' class='clickable' onclick='pcs(event); render_monster_info(\"" +
-			e[0] +
-			"\")'>";
-		html += sprite(e[0], { scale: 1.5 });
-		if (G.drops && G.drops.monsters && G.drops.monsters[e[0]] && G.drops.monsters[e[0]].length)
+		var tier = progression[e[0]] && progression[e[0]].tier;
+		(tiers[tier] || tiers.unassigned).push(e[0]);
+	});
+	[1, 2, 3, 4, 5, 6, 7, "unassigned"].forEach(function (tier) {
+		if (!tiers[tier].length) return;
+		html += "<div style='clear: both; margin: 12px 0; padding: 6px; border: 2px solid #9F9FB0; background-color: #33334F'>";
+		html += "<div class='gamebutton gamebutton-small' style='display: block; margin: 0 0 6px; text-align: left'>" + (tier == "unassigned" ? "Unassigned" : "Tier " + tier) + "</div>";
+		tiers[tier].forEach(function (mname) {
 			html +=
-				"<div style='background-color:#FD79B0; border: 2px solid #9F9FB0; position: absolute; bottom: -2px; right: -2px; display: inline-block; padding: 1px 1px 1px 1px; height: 2px; width: 2px'></div>";
+				"<div style='background-color:#575983; border: 2px solid #9F9FB0; position: relative; display: inline-block; margin: 2px; /*" +
+				mname +
+				"*/' class='clickable' onclick='pcs(event); render_monster_info(\"" +
+				mname +
+				"\")'>";
+			html += sprite(mname, { scale: 1.5 });
+			if (G.drops && G.drops.monsters && G.drops.monsters[mname] && G.drops.monsters[mname].length)
+				html +=
+					"<div style='background-color:#FD79B0; border: 2px solid #9F9FB0; position: absolute; bottom: -2px; right: -2px; display: inline-block; padding: 1px 1px 1px 1px; height: 2px; width: 2px'></div>";
+			html += "</div>";
+		});
 		html += "</div>";
 	});
 	html += "</div>";
@@ -3571,10 +3590,19 @@ function render_item(selector, args) {
 		if (prop.critdamage) html += bold_prop_line("Crit Damage", "+" + to_pretty_float(prop.critdamage) + "%", "#A8214E");
 		var guide_metrics = args.guide && item.type == "weapon" && guide_weapon_progression_metrics(item, prop);
 		if (guide_metrics && guide_metrics.progression) {
-			html += bold_prop_line("Shared Rank", guide_metrics.progression.shared_rank + "/11", "#C3C3C3");
+			var guide_rank_count = (G.progression && G.progression.WEAPON_RANK_REQUIREMENTS && G.progression.WEAPON_RANK_REQUIREMENTS.length) || 7;
+			html += bold_prop_line("Shared Rank", guide_metrics.progression.shared_rank + "/" + guide_rank_count, "#C3C3C3");
 			html += bold_prop_line("Progression Role", guide_metrics.progression.role.toTitleCase(), "#C3C3C3");
+			if (guide_metrics.progression.role == "hunter_sidegrade") html += bold_prop_line("Hunter", "Rank 5 Sidegrade", "#C3C3C3");
+			if (item.placeholder_art) html += bold_prop_line("Artwork", "Placeholder", "#C3C3C3");
 			if (guide_metrics.progression.historical_rank != null) html += bold_prop_line("Historical Rank", guide_metrics.progression.historical_rank, "#C3C3C3");
 			html += bold_prop_line("Reference Level", guide_metrics.progression.reference_level, "#C3C3C3");
+		}
+		if (args.monster && G.progression && G.progression.MONSTER_PROGRESSION && G.progression.MONSTER_PROGRESSION[args.monster]) {
+			var guide_monster_progression = G.progression.MONSTER_PROGRESSION[args.monster];
+			html += bold_prop_line("Progression Tier", guide_monster_progression.tier, "#C3C3C3");
+			html += bold_prop_line("Progression", guide_monster_progression.progression_eligible ? "Eligible" : "Not eligible", "#C3C3C3");
+			if (guide_monster_progression.mechanics && guide_monster_progression.mechanics.length) html += bold_prop_line("Mechanics", guide_monster_progression.mechanics.join(", "), "#C3C3C3");
 		}
 		var displayed_damage = prop.damage || (args.monster && prop.attack);
 		if (displayed_damage) html += bold_prop_line("Damage", to_pretty_float(displayed_damage), colors.attack);

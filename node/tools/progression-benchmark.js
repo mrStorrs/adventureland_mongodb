@@ -265,7 +265,9 @@ function benchmarkItemChoices(slot, skillLevels, data) {
 		})
 		.filter(([itemId]) => {
 			const requirements = data.itemRequirements[itemId];
-			return Array.isArray(requirements) && requirements.length && requirements.every((requirement) => {
+			return Array.isArray(requirements) && requirements.every((requirement) => {
+				if (Array.isArray(requirement.any_skill))
+					return requirement.any_skill.some((skill) => Number(skillLevels[skill] || 0) >= requirement.level);
 				return Number(skillLevels[requirement.skill] || 0) >= requirement.level;
 			});
 		})
@@ -419,12 +421,14 @@ function validateItemRoute(skill, slots, skillLevels, data, context) {
 		if (isExcludedBenchmarkItem(item, itemId))
 			throw new Error(`Benchmark route ${context} uses excluded item ${itemId}`);
 		const requirements = data.itemRequirements[itemId];
-		if (!Array.isArray(requirements) || !requirements.length)
+		if (!Array.isArray(requirements) || (item.type === "weapon" && !requirements.length))
 			throw new Error(`Benchmark route ${context} has no normalized requirements for ${itemId}`);
 		for (const requirement of requirements) {
 			if (!Number.isSafeInteger(requirement.level))
 				throw new Error(`Benchmark route ${context} has invalid requirement for ${itemId}`);
-			const actual = Number((skillLevels && skillLevels[requirement.skill]) || 0);
+			const actual = requirement.any_skill
+				? Math.max(...requirement.any_skill.map((skill) => Number((skillLevels && skillLevels[skill]) || 0)))
+				: Number((skillLevels && skillLevels[requirement.skill]) || 0);
 			if (actual < requirement.level) {
 				throw new Error(
 					`Benchmark route ${context} is illegal: ${itemId} requires ${requirement.skill} ${requirement.level}`,
@@ -1344,6 +1348,7 @@ module.exports = {
 	FIXTURE_PATH,
 	MERCHANT_PROFILES,
 	abilityDamageAgainst,
+	benchmarkItemChoices,
 	chooseCandidate,
 	enumerateCanonicalCandidates,
 	evaluateCombatPlan,
@@ -1355,4 +1360,5 @@ module.exports = {
 	runBenchmark,
 	simulateSoloKill,
 	stableJson,
+	validateItemRoute,
 };

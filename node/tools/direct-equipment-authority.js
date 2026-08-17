@@ -10,10 +10,11 @@ const { isCompatibleOffhand } = require("../game/equipment");
 const { calculateStats } = require("../game/stats");
 const { loadSourceData } = require("./acquisition-ranking");
 const { serializeFixture } = require("./fixture-serialization");
+const { progression } = require("../../design/progression");
 
 const FIXTURE_DIRECTORY = path.resolve(__dirname, "../tests/fixtures");
 const COMBAT_SKILLS = Object.freeze(["warrior", "paladin", "mage", "priest", "ranger", "rogue"]);
-const REQUIREMENTS = Object.freeze([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]);
+const REQUIREMENTS = progression.WEAPON_RANK_REQUIREMENTS;
 
 function canonical(value) {
 	if (Array.isArray(value)) return value.map(canonical);
@@ -93,16 +94,28 @@ function buildWeaponLoadoutBalanceFixture(data = loadSourceData()) {
 		.map((group) => ({ shared_rank: group[0].shared_rank, requirement: group[0].requirement, targets_by_skill: Object.fromEntries(group.map((weapon) => [weapon.skill, weapon.target_dps])), weapon_ids: group.map((weapon) => weapon.weapon_id) }))
 		.sort((left, right) => left.shared_rank - right.shared_rank);
 	const layouts = legalLayouts(data);
+	const class_rank_rows = COMBAT_SKILLS.flatMap((skill) => REQUIREMENTS.map((requirement, index) => ({ skill, shared_rank: index + 1, requirement, weapon_ids: weapons.filter((weapon) => weapon.skill === skill && weapon.shared_rank === index + 1).map((weapon) => weapon.weapon_id) })));
+	const violations = [];
+	for (const skill of COMBAT_SKILLS) {
+		for (let level = 0; level <= 12; level += 1) {
+			for (let rank = 1; rank < REQUIREMENTS.length; rank += 1) {
+				const lower = states.filter((state) => state.skill === skill && state.shared_rank === rank && state.level === level).map((state) => state.dps);
+				const higher = states.filter((state) => state.skill === skill && state.shared_rank === rank + 1 && state.level === level).map((state) => state.dps);
+				if (lower.length && higher.length && !(Math.min(...higher) > Math.max(...lower))) violations.push({ skill, lower_rank: rank, higher_rank: rank + 1, level, lower_max_dps: Math.max(...lower), higher_min_dps: Math.min(...higher) });
+			}
+		}
+	}
 	return {
-		schema_version: 3,
-		policy: { shared_rank_requirements: REQUIREMENTS, class_multipliers: { warrior: 1, paladin: .9, priest: .9, mage: 1.1, ranger: 1.1, rogue: 1.1 }, cadence_owner: "weapon_definition" },
-		counts: { weapons: weapons.length, rank_bands: rank_bands.length, legal_layouts: layouts.length },
+		schema_version: 4,
+		policy: { combat_skills: COMBAT_SKILLS, shared_rank_requirements: REQUIREMENTS, class_multipliers: { warrior: 1, paladin: .9, priest: .9, mage: 1.1, ranger: 1.1, rogue: 1.1 }, cadence_owner: "weapon_definition" },
+		counts: { weapons: weapons.length, rank_bands: rank_bands.length, class_rank_rows: class_rank_rows.length, legal_layouts: layouts.length },
 		hashes: { weapon_states_sha256: hash(states), legal_layouts_sha256: hash(layouts) },
 		weapons,
 		rank_bands,
+		class_rank_rows,
 		weapon_states: states,
 		legal_layouts: layouts,
-		violations: [],
+		violations,
 	};
 }
 
@@ -114,7 +127,7 @@ function buildArmorSetBalanceFixture(data = loadSourceData()) {
 function buildBalanceContract(data = loadSourceData()) {
 	const weapons = buildWeaponLoadoutBalanceFixture(data);
 	return {
-		schema_version: 3,
+		schema_version: 4,
 		failure_policy: "fail-closed",
 		direct_effect_keys: [...DIRECT_EFFECT_KEYS],
 		weapon_authority: { fixture: "weapon-loadout-balance.json", weapon_count: weapons.counts.weapons, rank_count: weapons.counts.rank_bands, cadence_owner: weapons.policy.cadence_owner, endpoint_tolerance: 1e-9 },
@@ -127,7 +140,7 @@ function buildBalanceContract(data = loadSourceData()) {
 function buildAcquisitionRanking(data = loadSourceData()) {
 	const weapons = combatWeapons(data).map(({ definition, ...row }) => ({ ...row, wtype: definition.wtype, requirement: (data.itemRequirements[row.weapon_id] || [])[0]?.level ?? row.requirement }));
 	return {
-		schema_version: 6,
+		schema_version: 7,
 		policy: { combat_skills: COMBAT_SKILLS, shared_rank_requirements: REQUIREMENTS, identity: "direct-effects" },
 		counts: { weapons: weapons.length, ranks: REQUIREMENTS.length },
 		weapons,
@@ -148,13 +161,7 @@ function buildParityFixture(data = loadSourceData()) {
 }
 
 function buildCombatMatrixFixture(data = loadSourceData()) {
-	const states = weaponStates(data);
-	return {
-		schema_version: 2,
-		policy: { direct_combat: "diagnostic-only; approved weapon endpoints remain hard", failure_policy: "fail-closed" },
-		weapon_states: states,
-		hashes: { weapon_states_sha256: hash(states) },
-	};
+	return require("./monster-combat-tiers").buildEquipmentCombatMatrix(data, { weapon_states: weaponStates(data) });
 }
 
 function fixturePath(name) {
@@ -191,8 +198,8 @@ function main(argv = process.argv.slice(2)) {
 	verifyFixture(name, definitions[name]);
 }
 
+module.exports = { COMBAT_SKILLS, REQUIREMENTS, buildAcquisitionRanking, buildArmorSetBalanceFixture, buildBalanceContract, buildCombatMatrixFixture, buildParityFixture, buildWeaponLoadoutBalanceFixture, combatWeapons, fixturePath, hash, legalLayouts, loadPropertyCalculators, main, verifyFixture, weaponStates, writeFixture };
+
 if (require.main === module) {
 	try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }
 }
-
-module.exports = { COMBAT_SKILLS, REQUIREMENTS, buildAcquisitionRanking, buildArmorSetBalanceFixture, buildBalanceContract, buildCombatMatrixFixture, buildParityFixture, buildWeaponLoadoutBalanceFixture, combatWeapons, fixturePath, hash, legalLayouts, loadPropertyCalculators, main, verifyFixture, weaponStates, writeFixture };
