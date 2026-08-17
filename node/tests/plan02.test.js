@@ -10,6 +10,7 @@ const { STYLE_BOUND_ABILITY_IDS, tagStyleEffect, invalidateStyleEffects } = requ
 const { calculateStats } = require("../game/stats");
 const { loadBenchmarkData } = require("../tools/progression-benchmark");
 const { RANKING_FIXTURE_PATH, loadRankingFixture } = require("../tools/weapon-acquisition-ranking");
+const { maxXpForSkill } = require("../game/skill_domain");
 
 const skills = createCharacterState().skills;
 
@@ -61,7 +62,7 @@ test("character state is complete, ordered, derived, and rejects legacy shape", 
 		() => validateSkillState({ ...fresh.skills, rogue: { level: 1, xp: 0 }, old: { level: 1, xp: 0 } }),
 		(error) => error.code === "invalid_character_skill_state",
 	);
-	const all99 = Object.fromEntries(Object.keys(fresh.skills).map((skill) => [skill, { level: 99, xp: 900000000 }]));
+	const all99 = Object.fromEntries(Object.keys(fresh.skills).map((skill) => [skill, { level: 99, xp: maxXpForSkill(skill) }]));
 	assert.equal(
 		Object.values(all99).reduce((sum, progress) => sum + progress.level, 0),
 		693,

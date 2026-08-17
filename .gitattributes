@@ -10,3 +10,4 @@ node/tests/fixtures/weapon-acquisition-ranking.json linguist-generated=true
 node/tests/fixtures/weapon-loadout-balance.json linguist-generated=true
 node/tests/fixtures/weapon-progression-economy.json linguist-generated=true
 node/tests/fixtures/weapon-progression-parity.json linguist-generated=true
+node/tests/fixtures/combat-xp-pacing.json linguist-generated=true

@@ -23,3 +23,4 @@ tests/fixtures/weapon-acquisition-ranking.json
 tests/fixtures/weapon-loadout-balance.json
 tests/fixtures/weapon-progression-economy.json
 tests/fixtures/weapon-progression-parity.json
+tests/fixtures/combat-xp-pacing.json

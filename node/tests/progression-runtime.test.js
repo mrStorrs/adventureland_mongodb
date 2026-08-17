@@ -72,6 +72,17 @@ test("runtime requires persisted info.skills and repairs only the flattened alia
 	}
 });
 
+test("runtime rejects mismatched combat levels once the current curve marker is persisted", () => {
+	const character = player();
+	initializePlayerProgression(character, 0);
+	assert.equal(character.info.skill_curve_version, progression.COMBAT_XP_CURVE_VERSION);
+	character.info.skills.warrior = { level: 2, xp: 0 };
+	assert.throws(
+		() => initializePlayerProgression(character, 0),
+		(error) => error.code === "invalid_character_skill_state" && error.path === "skills.warrior.xp",
+	);
+});
+
 test("runtime awards persist complete skill deltas and reject replay", () => {
 	const character = player();
 	initializePlayerProgression(character, 0);
@@ -101,8 +112,8 @@ test("runtime awards persist complete skill deltas and reject replay", () => {
 		["accepted_xp", "discarded_xp", "from_level", "max_xp", "skill", "skills", "to_level", "total_level", "xp"].sort(),
 	);
 	assert.equal(skillXp.levels_gained, undefined);
-	assert.deepEqual(skillXp.skills.warrior, { level: 1, xp: 100, max_xp: 93711 });
-	assert.deepEqual(skillXp.skills.merchant, { level: 1, xp: 0, max_xp: 93711 });
+	assert.deepEqual(skillXp.skills.warrior, { level: 1, xp: 100, max_xp: cumulativeXp(2, "warrior") });
+	assert.deepEqual(skillXp.skills.merchant, { level: 1, xp: 0, max_xp: cumulativeXp(2, "merchant") });
 	const duplicate = awardPlayerSkillXp(character, "warrior", 100, {
 		source: "pve_damage",
 		sourceId: "encounter:1:warrior",
@@ -113,10 +124,10 @@ test("runtime awards persist complete skill deltas and reject replay", () => {
 
 test("runtime emits exact multi-level snapshots and suppresses replay events", () => {
 	const character = player();
-	character.info.skills.warrior = { level: 1, xp: cumulativeXp(2) - 1 };
+	character.info.skills.warrior = { level: 1, xp: cumulativeXp(2, "warrior") - 1 };
 	character.total_level = 7;
 	initializePlayerProgression(character, 0);
-	const requestedXp = cumulativeXp(4) - character.skills.warrior.xp + 1;
+	const requestedXp = cumulativeXp(4, "warrior") - character.skills.warrior.xp + 1;
 	const delta = awardPlayerSkillXp(character, "warrior", requestedXp, {
 		source: "pve_damage",
 		sourceId: "encounter:multi-level",
@@ -128,8 +139,8 @@ test("runtime emits exact multi-level snapshots and suppresses replay events", (
 		from_level: 1,
 		to_level: 4,
 		levels_gained: 3,
-		xp: cumulativeXp(4) + 1,
-		max_xp: cumulativeXp(5),
+		xp: cumulativeXp(4, "warrior") + 1,
+		max_xp: cumulativeXp(5, "warrior"),
 		total_level: 10,
 	});
 	assert.equal(flushPlayerProgressionEvents(character), 1);
@@ -141,18 +152,18 @@ test("runtime emits exact multi-level snapshots and suppresses replay events", (
 				discarded_xp: 0,
 				from_level: 1,
 				to_level: 4,
-				xp: cumulativeXp(4) + 1,
-				max_xp: cumulativeXp(5),
+				xp: cumulativeXp(4, "warrior") + 1,
+				max_xp: cumulativeXp(5, "warrior"),
 				total_level: 10,
 				skill: "warrior",
 				skills: {
-					warrior: { level: 4, xp: cumulativeXp(4) + 1, max_xp: cumulativeXp(5) },
-					paladin: { level: 1, xp: 0, max_xp: cumulativeXp(2) },
-					mage: { level: 1, xp: 0, max_xp: cumulativeXp(2) },
-					priest: { level: 1, xp: 0, max_xp: cumulativeXp(2) },
-					ranger: { level: 1, xp: 0, max_xp: cumulativeXp(2) },
-					rogue: { level: 1, xp: 0, max_xp: cumulativeXp(2) },
-					merchant: { level: 1, xp: 0, max_xp: cumulativeXp(2) },
+					warrior: { level: 4, xp: cumulativeXp(4, "warrior") + 1, max_xp: cumulativeXp(5, "warrior") },
+					paladin: { level: 1, xp: 0, max_xp: cumulativeXp(2, "paladin") },
+					mage: { level: 1, xp: 0, max_xp: cumulativeXp(2, "mage") },
+					priest: { level: 1, xp: 0, max_xp: cumulativeXp(2, "priest") },
+					ranger: { level: 1, xp: 0, max_xp: cumulativeXp(2, "ranger") },
+					rogue: { level: 1, xp: 0, max_xp: cumulativeXp(2, "rogue") },
+					merchant: { level: 1, xp: 0, max_xp: cumulativeXp(2, "merchant") },
 				},
 			},
 		],

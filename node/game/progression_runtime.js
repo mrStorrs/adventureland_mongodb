@@ -116,10 +116,14 @@ function initializePlayerProgression(player, now = Date.now()) {
 		}
 	}
 	ensurePlayerContainers(player, now);
-	const state = loadCharacterState({ info: { skills: player.info.skills }, total_level: player.total_level });
+	const state = loadCharacterState({
+		info: { skills: player.info.skills, skill_curve_version: player.info.skill_curve_version },
+		total_level: player.total_level,
+	});
 	player.skills = state.skills;
 	player.info.skills = player.skills;
 	player.total_level = state.total_level;
+	player.info.skill_curve_version = state.skill_curve_version;
 	validateMerchantAccrual(player.info.merchant_accrual, now);
 	player.info.merchant_accrual = pruneMerchantAccrual(player.info.merchant_accrual, now);
 	rehydrateDeathSickness(player, now);
@@ -152,7 +156,7 @@ function publicSkillMap(skills) {
 				{
 					level: progress.level,
 					xp: progress.xp,
-					max_xp: progress.level >= 99 ? null : cumulativeXp(progress.level + 1),
+					max_xp: progress.level >= 99 ? null : cumulativeXp(progress.level + 1, skill),
 				},
 			];
 		}),

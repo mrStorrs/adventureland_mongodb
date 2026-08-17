@@ -992,7 +992,7 @@ function evaluateCombatPlan(profile, skill, plan, data, baselineRate) {
 			);
 		}
 		const targetLevel = Number(band.target_level || band.to_level || progression.MAX_LEVEL);
-		const targetXp = targetLevel >= progression.MAX_LEVEL ? MAX_XP : cumulativeXp(targetLevel);
+		const targetXp = cumulativeXp(targetLevel, skill);
 		const skillLevels = skillLevelsSnapshot(player);
 		const candidates =
 			useCanonicalEnumeration

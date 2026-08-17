@@ -53,6 +53,19 @@ test("public progression publication is protocol 4 and contains no class or leve
 	);
 });
 
+test("browser skill-XP table validation rejects malformed per-skill publications", () => {
+	const source = read("js/game.js");
+	const start = source.indexOf("function skill_xp_table(skill)");
+	const end = source.indexOf("\n/* */", start);
+	assert.ok(start >= 0 && end > start);
+	const { skill_xp } = require("../../design/skill_xp");
+	const valid = vm.runInNewContext(`${source.slice(start, end)}\nvalid_skill_xp_tables();`, { G: { skill_xp } });
+	assert.equal(valid, true);
+	const malformed = structuredClone(skill_xp);
+	delete malformed.combat[40];
+	assert.equal(vm.runInNewContext(`${source.slice(start, end)}\nvalid_skill_xp_tables();`, { G: { skill_xp: malformed } }), false);
+});
+
 test("server, API, and browser producers expose only the protocol-4 vocabulary", () => {
 	const server = read("node/server.js");
 	const serverFunctions = read("node/server_functions.js");
