@@ -43,6 +43,7 @@ var progression = {
 		legacy_cap_floor: 900000000,
 		base_xpm: 1,
 		party_share: 1,
+		target_xp_multiplier: .9,
 		final_route: Object.freeze({
 			tier: 6,
 			availability: Object.freeze(["permanent", "ordinary"]),

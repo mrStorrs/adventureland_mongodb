@@ -122,6 +122,7 @@ function build(overrides = {}) {
 	const { policy, economy, combatEvidence, monsters, population, source } = inputs;
 	requireValid(policy?.reference_skill === "warrior", "Combat XP policy must use Warrior as its reference skill");
 	requireValid(policy.base_xpm === 1 && policy.party_share === 1, "Combat XP policy must use unboosted solo rewards");
+	requireValid(Number.isFinite(policy.target_xp_multiplier) && policy.target_xp_multiplier > 0 && policy.target_xp_multiplier <= 1, "Combat XP policy must use a valid target XP multiplier");
 	requireValid(Array.isArray(policy.stages) && policy.stages.length === 6, "Combat XP policy must define six pacing stages");
 	const final = finalRoute(policy, combatEvidence, monsters, population);
 	const combat = { 1: 0 };
@@ -137,10 +138,11 @@ function build(overrides = {}) {
 		requireValid(Number.isSafeInteger(xp) && xp > 0 && Number.isFinite(kills) && kills > 0, `Invalid Warrior pacing source: ${route.monster_id}`);
 		const stageHours = stage.cumulative_active_hours - previousHours;
 		const ratePerHour = xp * kills;
-		const targetXp = previousXp + Math.round(ratePerHour * stageHours);
+		const pacingXpPerHour = ratePerHour * policy.target_xp_multiplier;
+		const targetXp = previousXp + Math.round(pacingXpPerHour * stageHours);
 		for (let level = previousLevel + 1; level <= stage.target_level; level += 1)
 			combat[level] = previousXp + Math.round(((targetXp - previousXp) * (level - previousLevel)) / (stage.target_level - previousLevel));
-		stages.push({ target_level: stage.target_level, cumulative_active_hours: stage.cumulative_active_hours, monster_id: route.monster_id, stage_active_hours: stageHours, monster_xp: xp, kills_per_hour: kills, base_xp_per_hour: ratePerHour, cumulative_xp: targetXp });
+		stages.push({ target_level: stage.target_level, cumulative_active_hours: stage.cumulative_active_hours, monster_id: route.monster_id, stage_active_hours: stageHours, monster_xp: xp, kills_per_hour: kills, base_xp_per_hour: ratePerHour, pacing_xp_per_hour: pacingXpPerHour, cumulative_xp: targetXp });
 		previousLevel = stage.target_level;
 		previousHours = stage.cumulative_active_hours;
 		previousXp = targetXp;
@@ -152,7 +154,7 @@ function build(overrides = {}) {
 		tables: { combat, merchant },
 		fixture: {
 			schema_version: 1,
-			policy: { reference_skill: policy.reference_skill, bonus_xpm: policy.base_xpm, party_share: policy.party_share, final_tier: policy.final_route.tier, final_target_hours: policy.stages.at(-1).cumulative_active_hours, final_route: policy.final_route.selection },
+			policy: { reference_skill: policy.reference_skill, bonus_xpm: policy.base_xpm, party_share: policy.party_share, target_xp_multiplier: policy.target_xp_multiplier, final_tier: policy.final_route.tier, final_target_hours: policy.stages.at(-1).cumulative_active_hours, final_route: policy.final_route.selection },
 			source_hashes: { "design/monsters.js": sha256(source), "weapon-progression-economy.json": sha256(fs.readFileSync(ECONOMY_PATH)), "equipment-combat-matrix.json": sha256(fs.readFileSync(COMBAT_EVIDENCE_PATH)) },
 			stages,
 			combat_cap: combat[99],

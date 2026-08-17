@@ -12,6 +12,8 @@ const { progression } = require("../../design/progression");
 test("Warrior pacing table has the approved timing endpoints and a safe endgame cap", () => {
 	const { fixture, tables } = build();
 	assert.deepEqual(fixture.stages.map((stage) => [stage.target_level, stage.cumulative_active_hours]), [[20, 72], [40, 336], [60, 1008], [80, 2190], [90, 4380], [99, 8760]]);
+	assert.equal(fixture.policy.target_xp_multiplier, .9);
+	assert.ok(fixture.stages.every((stage) => stage.pacing_xp_per_hour === stage.base_xp_per_hour * .9));
 	assert.equal(tables.combat[1], 0);
 	assert.ok(tables.combat[99] >= 900000000);
 	for (let level = 2; level <= 99; level += 1) assert.ok(tables.combat[level] > tables.combat[level - 1]);

@@ -285,8 +285,8 @@ monster ID, so no migration is required.
 Warrior, Paladin, Mage, Priest, Ranger, and Rogue share one generated combat
 XP curve. It is calibrated from the existing monster XP rewards and Warrior's
 base solo route; XP bonuses, party share, and server multipliers are not part of
-the baseline. The curve aligns the shared weapon gates to these cumulative
-active-play targets:
+the baseline. A 10% XP buffer allows for normal farming downtime. The curve
+aligns the shared weapon gates to these cumulative active-play targets:
 
 | Skill level | Cumulative active time |
 |---:|---:|
