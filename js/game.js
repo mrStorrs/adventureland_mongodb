@@ -947,8 +947,9 @@ function update_overlays() {
 		var activeXp = (activeProgress && activeProgress.xp) || 0;
 		var activeMaxXp = activeProgress && activeProgress.max_xp;
 		var activePercent = activeMaxXp ? floor((activeXp * 100) / activeMaxXp) : activeProgress ? 100 : 0;
-		if (!cached("xptop", character.total_level + "|" + character.active_skill + "|" + activePercent)) {
-			$("#xpui").html("TL" + character.total_level + (character.active_skill ? " " + character.active_skill.toUpperCase() + " " + activePercent + "%" : ""));
+		var activeXpLabel = activeProgress ? " " + character.active_skill.toUpperCase() + " " + to_pretty_num(activeXp) + "/" + (activeMaxXp === null ? "MAX" : to_pretty_num(activeMaxXp)) + " XP " + activePercent + "%" : "";
+		if (!cached("xptop", character.total_level + "|" + character.active_skill + "|" + activeXp + "|" + activeMaxXp)) {
+			$("#xpui").html("TL" + character.total_level + activeXpLabel);
 			$("#xpslider").css("width", activePercent + "%");
 		}
 		if (!cached("tutorialtop", X.tutorial.step + "|" + X.tutorial.task)) {
