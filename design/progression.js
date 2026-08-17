@@ -37,6 +37,28 @@ Object.freeze(monster_progression);
 var progression = {
 	MAX_LEVEL: 99,
 	MAX_XP: 900000000,
+	COMBAT_XP_CURVE_VERSION: 2,
+	COMBAT_XP_PACING: Object.freeze({
+		reference_skill: "warrior",
+		legacy_cap_floor: 900000000,
+		base_xpm: 1,
+		party_share: 1,
+		target_xp_multiplier: .9,
+		final_route: Object.freeze({
+			tier: 6,
+			availability: Object.freeze(["permanent", "ordinary"]),
+			requires_progression_eligibility: true,
+			selection: "highest_sustained_base_xp_per_hour_then_monster_id",
+		}),
+		stages: Object.freeze([
+			Object.freeze({ target_level: 20, cumulative_active_hours: 72, route_monster_id: "osnake" }),
+			Object.freeze({ target_level: 40, cumulative_active_hours: 336, route_monster_id: "armadillo" }),
+			Object.freeze({ target_level: 60, cumulative_active_hours: 1008, route_monster_id: "bat" }),
+			Object.freeze({ target_level: 80, cumulative_active_hours: 2190, route_monster_id: "cgoo" }),
+			Object.freeze({ target_level: 90, cumulative_active_hours: 4380, route_monster_id: "ghost" }),
+			Object.freeze({ target_level: 99, cumulative_active_hours: 8760 }),
+		]),
+	}),
 	STAND_HOUR_MS: 3600000,
 	STAND_SETTLEMENT_MS: 300000,
 	DEATH_SICKNESS_MS: 300000,

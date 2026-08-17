@@ -182,7 +182,7 @@ function report_progression_protocol_issue(code, message) {
 
 function valid_skill_xp_payload(data) {
 	var skill_ids = Object.keys(G.skills || {});
-	if (!data || !data.skills || !data.skill || skill_ids.indexOf(data.skill) == -1) {
+	if (!valid_skill_xp_tables() || !data || !data.skills || !data.skill || skill_ids.indexOf(data.skill) == -1) {
 		report_progression_protocol_issue("unknown_skill", (data && data.skill) || "missing skill");
 		return false;
 	}
@@ -196,9 +196,12 @@ function valid_skill_xp_payload(data) {
 	}
 	var total = 0;
 	for (var i = 0; i < skill_ids.length; i++) {
-		var progress = data.skills[skill_ids[i]],
-			max = progress && progress.level >= 99 ? null : progress && G.skill_xp && G.skill_xp[progress.level + 1];
-		if (!progress || !Number.isSafeInteger(progress.level) || progress.level < 1 || progress.level > 99 || !Number.isSafeInteger(progress.xp) || progress.xp < 0 || (progress.max_xp !== null && progress.max_xp !== max) || (progress.max_xp === null && progress.level < 99) || (progress.level >= 99 && progress.xp !== 900000000) || progress.level != skill_level_for_xp(progress.xp)) {
+		var skill_id = skill_ids[i],
+			progress = data.skills[skill_id],
+			table = skill_xp_table(skill_id),
+			cap = table && table[99],
+			max = progress && progress.level >= 99 ? null : progress && table && table[progress.level + 1];
+		if (!progress || !table || !Number.isSafeInteger(cap) || !Number.isSafeInteger(progress.level) || progress.level < 1 || progress.level > 99 || !Number.isSafeInteger(progress.xp) || progress.xp < 0 || progress.xp > cap || (progress.max_xp !== null && progress.max_xp !== max) || (progress.max_xp === null && progress.level < 99) || (progress.level >= 99 && progress.xp !== cap) || progress.level != skill_level_for_xp(skill_id, progress.xp)) {
 			report_progression_protocol_issue("invalid_skill_map", "skill threshold state is invalid");
 			return false;
 		}
@@ -206,7 +209,8 @@ function valid_skill_xp_payload(data) {
 	}
 	var previous = character.skills && character.skills[data.skill];
 	var current = data.skills[data.skill];
-	if (!previous || data.from_level > data.to_level || data.from_level !== previous.level || data.xp !== previous.xp + data.accepted_xp || data.to_level !== current.level || data.total_level !== total || data.total_level !== character.total_level + (data.to_level - data.from_level) || (data.discarded_xp && data.xp !== 900000000) || skill_ids.some(function (id) {
+	var current_cap = skill_xp_table(data.skill)[99];
+	if (!previous || data.from_level > data.to_level || data.from_level !== previous.level || data.xp !== previous.xp + data.accepted_xp || data.to_level !== current.level || data.total_level !== total || data.total_level !== character.total_level + (data.to_level - data.from_level) || (data.discarded_xp && data.xp !== current_cap) || skill_ids.some(function (id) {
 		var prior = character.skills[id], next = data.skills[id];
 		return !prior || (id != data.skill && (prior.level !== next.level || prior.xp !== next.xp || prior.max_xp !== next.max_xp));
 	})) {
@@ -222,10 +226,29 @@ function valid_skill_xp_payload(data) {
 	return true;
 }
 
-function skill_level_for_xp(xp) {
+function skill_xp_table(skill) {
+	return G.skill_xp && G.skill_xp[skill == "merchant" ? "merchant" : "combat"];
+}
+
+function valid_skill_xp_tables() {
+	if (!G.skill_xp || Object.keys(G.skill_xp).join("\0") != "combat\0merchant") return false;
+	for (var table_id of ["combat", "merchant"]) {
+		var table = G.skill_xp[table_id], previous = -1;
+		if (!table || typeof table != "object" || Object.keys(table).length != 99) return false;
+		for (var level = 1; level <= 99; level++) {
+			var threshold = table[level];
+			if (Object.keys(table)[level - 1] != String(level) || !Number.isSafeInteger(threshold) || threshold < 0 || (level == 1 && threshold != 0) || (level > 1 && threshold <= previous)) return false;
+			previous = threshold;
+		}
+	}
+	return true;
+}
+
+function skill_level_for_xp(skill, xp) {
 	var level = 1;
+	var table = skill_xp_table(skill);
 	for (var candidate = 2; candidate <= 99; candidate++) {
-		if (!G.skill_xp || xp < G.skill_xp[candidate]) break;
+		if (!table || xp < table[candidate]) break;
 		level = candidate;
 	}
 	return level;

@@ -1,6 +1,6 @@
 "use strict";
 
-const { SKILL_IDS, MAX_LEVEL, MAX_XP, cumulativeXp } = require("./skill_domain");
+const { SKILL_IDS, MAX_LEVEL, cumulativeXp, maxXpForSkill } = require("./skill_domain");
 const { computeTotalLevel, validateSkillState } = require("./character_state");
 
 function progressionError(code, message, fields = {}) {
@@ -10,14 +10,14 @@ function progressionError(code, message, fields = {}) {
 	return error;
 }
 
-function threshold(level, xpTable) {
-	return (xpTable && xpTable[level]) || cumulativeXp(level);
+function threshold(skillId, level, xpTable) {
+	return (xpTable && xpTable[level]) || cumulativeXp(level, skillId);
 }
 
-function levelForXp(xp, xpTable) {
+function levelForXp(skillId, xp, xpTable) {
 	let level = 1;
 	for (let candidate = 2; candidate <= MAX_LEVEL; candidate += 1) {
-		if (threshold(candidate, xpTable) > xp) break;
+		if (threshold(skillId, candidate, xpTable) > xp) break;
 		level = candidate;
 	}
 	return level;
@@ -54,19 +54,19 @@ function awardSkillXp(state, skillId, requestedXp, options = {}) {
 				to_level: current.level,
 				levels_gained: 0,
 				xp: current.xp,
-				max_xp: current.level >= MAX_LEVEL ? null : threshold(current.level + 1, options.xpTable),
+				max_xp: current.level >= MAX_LEVEL ? null : threshold(skillId, current.level + 1, options.xpTable),
 				total_level: state.total_level || computeTotalLevel(state.skills, registry),
 				duplicate: true,
 			},
 		};
 	}
 	const current = state.skills[skillId];
-	const available = Math.max(0, MAX_XP - current.xp);
+	const available = Math.max(0, maxXpForSkill(skillId) - current.xp);
 	const accepted_xp = Math.min(requestedXp, available);
 	const discarded_xp = requestedXp - accepted_xp;
 	const nextSkills = JSON.parse(JSON.stringify(state.skills));
 	const cumulative = current.xp + accepted_xp;
-	const to_level = levelForXp(cumulative, options.xpTable);
+	const to_level = levelForXp(skillId, cumulative, options.xpTable);
 	nextSkills[skillId] = { level: to_level, xp: cumulative };
 	const total_level = computeTotalLevel(nextSkills, registry);
 	if (options.sourceId && options.seenSources) options.seenSources.add(options.sourceId);
@@ -80,7 +80,7 @@ function awardSkillXp(state, skillId, requestedXp, options = {}) {
 			to_level,
 			levels_gained: Math.max(0, to_level - current.level),
 			xp: cumulative,
-			max_xp: to_level >= MAX_LEVEL ? null : threshold(to_level + 1, options.xpTable),
+			max_xp: to_level >= MAX_LEVEL ? null : threshold(skillId, to_level + 1, options.xpTable),
 			total_level,
 		},
 	};

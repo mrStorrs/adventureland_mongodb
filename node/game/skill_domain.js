@@ -4,6 +4,7 @@ const crypto = require("node:crypto");
 const { skills: DESIGN_SKILLS } = require("../../design/skills");
 const { character: CHARACTER_DEFINITION } = require("../../design/character");
 const { progression } = require("../../design/progression");
+const { skill_xp: DESIGN_SKILL_XP } = require("../../design/skill_xp");
 
 const SKILL_IDS = Object.freeze(Object.keys(DESIGN_SKILLS));
 const SKILL_DEFINITIONS = DESIGN_SKILLS;
@@ -12,6 +13,7 @@ const COMBAT_SKILL_IDS = Object.freeze(
 );
 const MAX_LEVEL = progression.MAX_LEVEL;
 const MAX_XP = progression.MAX_XP;
+const COMBAT_SKILL_SET = new Set(COMBAT_SKILL_IDS);
 const STARTER_WEAPONS = Object.freeze([...(CHARACTER_DEFINITION.starter?.weapons || [])]);
 const EXPECTED_BASELINE = Object.freeze({ ...(CHARACTER_DEFINITION.baseline || {}) });
 const EQUIPPABLE_TYPES = new Set([
@@ -44,11 +46,20 @@ function fail(code, message, details) {
 	return error;
 }
 
-function cumulativeXp(level) {
+function tableForSkill(skillId) {
+	const key = COMBAT_SKILL_SET.has(skillId) ? "combat" : "merchant";
+	return DESIGN_SKILL_XP[key];
+}
+
+function maxXpForSkill(skillId) {
+	return tableForSkill(skillId)[MAX_LEVEL];
+}
+
+function cumulativeXp(level, skillId = "merchant") {
 	if (!Number.isInteger(level) || level < 1 || level > MAX_LEVEL) {
 		throw fail("invalid_skill_level", `Skill level must be an integer from 1 to ${MAX_LEVEL}`, { level });
 	}
-	return Math.round(MAX_XP * Math.pow((level - 1) / (MAX_LEVEL - 1), 2));
+	return tableForSkill(skillId)[level];
 }
 
 function tierToRequiredLevel(tier) {
@@ -143,7 +154,7 @@ function validateSkillRegistry(registry) {
 	return weaponOwners;
 }
 
-function validateXpTable(table) {
+function validateXpTable(table, skillId = "merchant") {
 	if (!table || typeof table !== "object") throw fail("invalid_skill_xp", "Skill XP table must be an object");
 	const keys = Object.keys(table);
 	if (keys.length !== MAX_LEVEL || keys[0] !== "1" || keys[keys.length - 1] !== String(MAX_LEVEL)) {
@@ -152,13 +163,23 @@ function validateXpTable(table) {
 	let previous = -1;
 	for (let level = 1; level <= MAX_LEVEL; level += 1) {
 		const actual = table[level];
-		const expected = cumulativeXp(level);
+		const expected = cumulativeXp(level, skillId);
 		if (!Number.isSafeInteger(actual) || actual !== expected || actual < previous) {
 			throw fail("invalid_skill_xp", `Skill XP threshold mismatch at level ${level}`, { level, actual, expected });
 		}
 		previous = actual;
 	}
 	return table;
+}
+
+function validateSkillXpTables(tables) {
+	if (!tables || typeof tables !== "object" || Object.keys(tables).join("\0") !== "combat\0merchant")
+		throw fail("invalid_skill_xp", "Skill XP tables must contain combat and merchant tables in order");
+	validateXpTable(tables.combat, "warrior");
+	validateXpTable(tables.merchant, "merchant");
+	if (tables.merchant[MAX_LEVEL] !== progression.MAX_XP)
+		throw fail("invalid_skill_xp", "Merchant XP cap must retain the legacy cap");
+	return tables;
 }
 
 function validateRequirements(itemId, requirements, registry = null) {
@@ -478,7 +499,7 @@ function validateCharacterDefinition(character, items) {
 function validateProgressionData(data) {
 	if (!data || typeof data !== "object") throw fail("invalid_game_data", "Progression data must be an object");
 	const weaponOwners = validateSkillRegistry(data.skills);
-	validateXpTable(data.skill_xp);
+	validateSkillXpTables(data.skill_xp);
 	validateAbilityCatalog(data.abilities, data.skills);
 	validateItemRequirements(data.items, data.item_requirements, data.skills, weaponOwners);
 	validateCharacterDefinition(data.character, data.items);
@@ -538,9 +559,12 @@ module.exports = {
 	MAX_LEVEL,
 	MAX_XP,
 	cumulativeXp,
+	tableForSkill,
+	maxXpForSkill,
 	tierToRequiredLevel,
 	validateSkillRegistry,
 	validateXpTable,
+	validateSkillXpTables,
 	validateRequirements,
 	validateAbilityCatalog,
 	validateItemRequirements,

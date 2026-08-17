@@ -837,7 +837,7 @@ function player_to_client(player, stranger) {
 				max_xp:
 					progress.level >= MAX_LEVEL
 						? null
-						: (G.skill_xp && G.skill_xp[progress.level + 1]) || cumulativeXp(progress.level + 1),
+						: cumulativeXp(progress.level + 1, skill),
 			};
 		}
 	}

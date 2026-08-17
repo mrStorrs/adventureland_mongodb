@@ -1,6 +1,7 @@
 "use strict";
 
-const { SKILL_IDS, MAX_LEVEL, MAX_XP, cumulativeXp } = require("./skill_domain");
+const { SKILL_IDS, MAX_LEVEL, cumulativeXp, maxXpForSkill } = require("./skill_domain");
+const { progression } = require("../../design/progression");
 
 function stateError(path, reason, details = {}) {
 	const error = new Error(`Invalid character skill state at ${path}: ${reason}`);
@@ -17,9 +18,9 @@ function registryIds(registry) {
 	return SKILL_IDS.slice();
 }
 
-function nextThreshold(level, xpTable) {
+function nextThreshold(skillId, level, xpTable) {
 	if (level >= MAX_LEVEL) return null;
-	return (xpTable && xpTable[level + 1]) || cumulativeXp(level + 1);
+	return (xpTable && xpTable[level + 1]) || cumulativeXp(level + 1, skillId);
 }
 
 function createSkillState(registry = SKILL_IDS) {
@@ -53,11 +54,13 @@ function validateSkillState(skills, options = {}) {
 		if (!Number.isInteger(record.level) || record.level < 1 || record.level > MAX_LEVEL) {
 			throw stateError(`skills.${id}.level`, "must be an integer from 1 through 99");
 		}
-		if (!Number.isSafeInteger(record.xp) || record.xp < 0 || record.xp > MAX_XP) {
-			throw stateError(`skills.${id}.xp`, `must be a safe integer from 0 through ${MAX_XP}`);
+		const cap = maxXpForSkill(id);
+		if (!Number.isSafeInteger(record.xp) || record.xp < 0 || record.xp > cap) {
+			throw stateError(`skills.${id}.xp`, `must be a safe integer from 0 through ${cap}`);
 		}
-		const minimum = (xpTable && xpTable[record.level]) || cumulativeXp(record.level);
-		const next = nextThreshold(record.level, xpTable);
+		const table = xpTable || null;
+		const minimum = (table && table[record.level]) || cumulativeXp(record.level, id);
+		const next = nextThreshold(id, record.level, table);
 		if (record.xp < minimum || (next !== null && record.xp >= next)) {
 			throw stateError(`skills.${id}.xp`, "does not belong to its declared level", { level: record.level });
 		}
@@ -83,16 +86,29 @@ function projectPersistenceState(state, registry = null) {
 function loadCharacterState(character, options = {}) {
 	if (!character || !character.info) throw stateError("info.skills", "is missing");
 	const registry = options.registry || SKILL_IDS;
-	const skills = character.info.skills;
+	const ids = registryIds(registry);
+	const skills = JSON.parse(JSON.stringify(character.info.skills));
+	const legacyCurve = character.info.skill_curve_version !== progression.COMBAT_XP_CURVE_VERSION;
+	if (legacyCurve) {
+		for (const id of ids) {
+			if (id === "merchant" || !skills[id] || !Number.isSafeInteger(skills[id].xp)) continue;
+			let level = 1;
+			for (let candidate = 2; candidate <= MAX_LEVEL; candidate += 1) {
+				if (cumulativeXp(candidate, id) > skills[id].xp) break;
+				level = candidate;
+			}
+			skills[id].level = level;
+		}
+	}
 	validateSkillState(skills, { registry, xpTable: options.xpTable });
 	const total_level = computeTotalLevel(skills, registry);
-	if (character.total_level !== undefined && character.total_level !== total_level) {
+	if (!legacyCurve && character.total_level !== undefined && character.total_level !== total_level) {
 		throw stateError("total_level", "does not equal the sum of registered skill levels", {
 			actual: character.total_level,
 			expected: total_level,
 		});
 	}
-	return { skills: JSON.parse(JSON.stringify(skills)), total_level };
+	return { skills, total_level, skill_curve_version: progression.COMBAT_XP_CURVE_VERSION };
 }
 
 function withSkillState(state, skills, registry = null) {

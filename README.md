@@ -280,6 +280,33 @@ tier 1–6 quantities `1, 1, 2, 3, 4, 5`; Hardcore preserves the existing 100×
 multiplier. Older in-progress hunt records are resolved from their server-owned
 monster ID, so no migration is required.
 
+## Combat skill progression
+
+Warrior, Paladin, Mage, Priest, Ranger, and Rogue share one generated combat
+XP curve. It is calibrated from the existing monster XP rewards and Warrior's
+base solo route; XP bonuses, party share, and server multipliers are not part of
+the baseline. A 10% XP buffer allows for normal farming downtime. The curve
+aligns the shared weapon gates to these cumulative active-play targets:
+
+| Skill level | Cumulative active time |
+|---:|---:|
+| 20 | 72 hours |
+| 40 | 336 hours |
+| 60 | 1,008 hours |
+| 80 | 2,190 hours |
+| 90 | 4,380 hours |
+| 99 | 8,760 hours |
+
+The final stretch uses eligible permanent ordinary Tier-6 monsters. Merchant
+keeps its existing quadratic XP curve and 900,000,000 cap. On first load after
+the curve rollout, persisted combat XP is retained and its displayed level is
+reclassified; no database reset or respec is required. Verify the checked-in
+calibration evidence from the `node/` directory with:
+
+```sh
+node tools/combat-xp-pacing.js --verify
+```
+
 ## Default server monster rewards
 
 The game server derives its reward multiplier from
