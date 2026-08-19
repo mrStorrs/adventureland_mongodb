@@ -51,7 +51,7 @@ var progression = {
 			selection: "highest_sustained_base_xp_per_hour_then_monster_id",
 		}),
 		stages: Object.freeze([
-			Object.freeze({ target_level: 20, cumulative_active_hours: 72, route_monster_id: "osnake" }),
+			Object.freeze({ target_level: 20, cumulative_active_hours: 72, route_monster_id: "arcticbee" }),
 			Object.freeze({ target_level: 40, cumulative_active_hours: 336, route_monster_id: "armadillo" }),
 			Object.freeze({ target_level: 60, cumulative_active_hours: 1008, route_monster_id: "bat" }),
 			Object.freeze({ target_level: 80, cumulative_active_hours: 2190, route_monster_id: "cgoo" }),
