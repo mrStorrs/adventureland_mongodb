@@ -85,7 +85,7 @@ function projectPersistenceState(state, registry = null) {
 }
 
 function loadCharacterState(character, options = {}) {
-	if (!character || !character.info) throw stateError("info.skills", "is missing");
+	if (!character || !character.info || !character.info.skills) throw stateError("info.skills", "is missing");
 	const registry = options.registry || SKILL_IDS;
 	const ids = registryIds(registry);
 	const skills = JSON.parse(JSON.stringify(character.info.skills));

@@ -81,9 +81,7 @@ function ensurePlayerContainers(player, now = Date.now()) {
 	if (!player.info.skills) throw runtimeError("invalid_character_skill_state", "Persisted info.skills is required");
 	// Runtime code may use the flattened alias, but the persisted document is authoritative.
 	player.skills = player.info.skills;
-	if (!Object.prototype.hasOwnProperty.call(player, "progression_client_skills")) {
-		setClientSkillState(player, player.info.skills);
-	}
+	if (!player.progression_events?.length) setClientSkillState(player, player.info.skills);
 	if (player.info.merchant_accrual === undefined && player.merchant_accrual !== undefined)
 		player.info.merchant_accrual = player.merchant_accrual;
 	if (player.info.death_sickness_until === undefined && player.death_sickness_until !== undefined)
@@ -115,16 +113,12 @@ function initializePlayerProgression(player, now = Date.now()) {
 			);
 		}
 	}
-	ensurePlayerContainers(player, now);
-	const state = loadCharacterState({
-		info: { skills: player.info.skills, skill_curve_version: player.info.skill_curve_version },
-		total_level: player.total_level,
-	});
+	const state = loadCharacterState(player);
 	player.skills = state.skills;
 	player.info.skills = player.skills;
-	if (!player.progression_events?.length) setClientSkillState(player, state.skills);
 	player.total_level = state.total_level;
 	player.info.skill_curve_version = state.skill_curve_version;
+	ensurePlayerContainers(player, now);
 	validateMerchantAccrual(player.info.merchant_accrual, now);
 	player.info.merchant_accrual = pruneMerchantAccrual(player.info.merchant_accrual, now);
 	rehydrateDeathSickness(player, now);

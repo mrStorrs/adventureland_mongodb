@@ -83,6 +83,18 @@ test("runtime rejects mismatched combat levels once the current curve marker is 
 	);
 });
 
+test("runtime creates the client snapshot only after canonical skill loading succeeds", () => {
+	const character = player();
+	character.info.skill_curve_version = progression.COMBAT_XP_CURVE_VERSION;
+	character.info.skills.warrior = { level: 2, xp: 0 };
+
+	assert.throws(
+		() => initializePlayerProgression(character, 0),
+		(error) => error.code === "invalid_character_skill_state" && error.path === "skills.warrior.xp",
+	);
+	assert.equal(Object.hasOwn(character, "progression_client_skills"), false);
+});
+
 test("runtime awards persist complete skill deltas and reject replay", () => {
 	const character = player();
 	initializePlayerProgression(character, 0);
