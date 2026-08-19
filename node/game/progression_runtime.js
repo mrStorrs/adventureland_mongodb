@@ -122,6 +122,7 @@ function initializePlayerProgression(player, now = Date.now()) {
 	});
 	player.skills = state.skills;
 	player.info.skills = player.skills;
+	if (!player.progression_events?.length) setClientSkillState(player, state.skills);
 	player.total_level = state.total_level;
 	player.info.skill_curve_version = state.skill_curve_version;
 	validateMerchantAccrual(player.info.merchant_accrual, now);

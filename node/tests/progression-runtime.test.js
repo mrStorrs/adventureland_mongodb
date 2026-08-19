@@ -195,6 +195,45 @@ test("runtime keeps full player snapshots at the last emitted progression state"
 	assert.equal(clientSkillState(character).warrior.xp, 100);
 });
 
+test("runtime refreshes the client snapshot when legacy skills gain Mining before queued XP", () => {
+	const character = player();
+	delete character.info.skills.mining;
+	character.total_level -= 1;
+
+	initializePlayerProgression(character, 0);
+	assert.deepEqual(character.info.skills.mining, { level: 1, xp: 0 });
+
+	awardPlayerSkillXp(character, "warrior", 1, {
+		source: "pve_damage",
+		sourceId: "migration:queued-xp",
+	});
+	const pending = clientSkillState(character);
+	assert.deepEqual(pending.mining, { level: 1, xp: 0 });
+	assert.equal(pending.warrior.xp, 0);
+
+	assert.equal(flushPlayerProgressionEvents(character), 1);
+	assert.deepEqual(clientSkillState(character).mining, { level: 1, xp: 0 });
+	assert.equal(clientSkillState(character).warrior.xp, 1);
+});
+
+test("runtime reinitialization preserves the withheld snapshot while XP is queued", () => {
+	const character = player();
+	initializePlayerProgression(character, 0);
+
+	awardPlayerSkillXp(character, "warrior", 1, {
+		source: "pve_damage",
+		sourceId: "reinitialize:queued-xp",
+	});
+	assert.equal(clientSkillState(character).warrior.xp, 0);
+
+	initializePlayerProgression(character, 1);
+	assert.equal(character.progression_events.length, 1);
+	assert.equal(clientSkillState(character).warrior.xp, 0);
+
+	assert.equal(flushPlayerProgressionEvents(character), 1);
+	assert.equal(clientSkillState(character).warrior.xp, 1);
+});
+
 test("queued multi-style progression preserves protocol snapshots and excludes runtime state", () => {
 	const character = player();
 	initializePlayerProgression(character, 0);
