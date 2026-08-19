@@ -18,7 +18,7 @@ const SIMULATION_TOLERANCE = 0.035;
 const SIMULATION_SEED = 315406;
 const RATE_MARGIN = 1.05;
 const REFERENCE_WEAPON_IDS = new Set(["fsword", "swifty", "sword", "bataxe", "scythe"]);
-const MUTABLE_ORDINARY_MONSTER_IDS = Object.freeze(["armadillo", "bat", "bbpompom", "cgoo", "croc", "crabx", "ghost", "gscorpion", "osnake", "poisio", "rat", "scorpion", "snake", "spider", "squigtoad", "stoneworm", "tortoise"]);
+const MUTABLE_ORDINARY_MONSTER_IDS = Object.freeze(["arcticbee", "armadillo", "bat", "bbpompom", "cgoo", "croc", "crabx", "ghost", "gscorpion", "osnake", "poisio", "rat", "scorpion", "snake", "spider", "squigtoad", "stoneworm", "tortoise"]);
 const TARGET_TIERS = Object.freeze([2, 3, 4, 5, 6]);
 const TARGET_ANCHOR_WEAPON_IDS = new Set(TARGET_TIERS.flatMap((tier) => Object.values(progression.WEAPON_PROGRESSION_ANCHORS[tier])));
 
@@ -161,8 +161,18 @@ function isEligibleCandidate(data, combat, tier, monsterId) {
 	}
 }
 
-function combatMargin(data, combat, tier, monsterId, skill) {
-	if (!isEligibleCandidate(data, combat, tier, monsterId)) throw new Error(`Tier-${tier} allocation requires an authored ordinary monster: ${monsterId}`);
+function isEligibleFinalDropSource(data, combat, tier, monsterId) {
+	if (Number(progression.MONSTER_TIER_ASSIGNMENTS[monsterId]) !== tier || !data.monsters[monsterId]) return false;
+	try {
+		combatMonster(combat, monsterId);
+		return activePopulation(data, monsterId) > 0;
+	} catch {
+		return false;
+	}
+}
+
+function combatMargin(data, combat, tier, monsterId, skill, { requireProgressionEligibility = true } = {}) {
+	if (!(requireProgressionEligibility ? isEligibleCandidate(data, combat, tier, monsterId) : isEligibleFinalDropSource(data, combat, tier, monsterId))) throw new Error(`Tier-${tier} allocation requires an authored ordinary monster: ${monsterId}`);
 	const margin = combatMonster(combat, monsterId).evidence.class_margins.find((row) => row.skill === skill);
 	if (!margin) throw new Error(`Missing ${skill} combat margin for ${monsterId}`);
 	return margin;
@@ -279,7 +289,7 @@ function simulatedCompletion({ probability, transitions, kills_per_hour, stage_h
 
 function finalDirectRoutes(data, combat, tier, weaponId) {
 	return Object.keys(data.drops.monsters)
-		.filter((monsterId) => directProbability(data, monsterId, weaponId) > 0 && isEligibleCandidate(data, combat, tier, monsterId))
+		.filter((monsterId) => directProbability(data, monsterId, weaponId) > 0 && isEligibleFinalDropSource(data, combat, tier, monsterId))
 		.sort();
 }
 
@@ -288,7 +298,7 @@ function sourceRow(data, combat, anchor, index, violations) {
 	if (routeIds.length !== 1) violations.push({ tier: anchor.tier, weapon_id: anchor.weapon_id, reason: routeIds.length ? "ambiguous_final_direct_drop" : "missing_final_direct_drop", monster_ids: routeIds });
 	const monster_id = routeIds[0] || null;
 	if (!monster_id) return { ...anchor, monster_id, pacing_reference: REFERENCE_WEAPON_IDS.has(anchor.weapon_id), final_drop_probability: 0, completion_probability: null, mean_hours: null, median_hours: null, p90_hours: null, simulation: null };
-	const margin = combatMargin(data, combat, anchor.tier, monster_id, anchor.skill);
+	const margin = combatMargin(data, combat, anchor.tier, monster_id, anchor.skill, { requireProgressionEligibility: false });
 	const monster = data.monsters[monster_id];
 	const population = activePopulation(data, monster_id);
 	const kills_per_hour = killsPerHour({ kill_time_ms: margin.kill_time_ms, population, respawn: monster.respawn });

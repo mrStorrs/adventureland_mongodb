@@ -1511,7 +1511,7 @@ drops["monsters"]["cutebee"] = [[1, "open", "lglitch"]];
 drops["monsters"]["cutebee"].push([1, "funtoken"]);
 
 var ordinary_progression_weapon_drops={
-	osnake:[[.0001,"fsword"],[.00009,"wbook3"]],
+	arcticbee:[[.0002,"fsword"],[.00014,"wbook3"]],
 	rat:[[.00015,"ololipop"],[.00012,"firestaff"]],
 	snake:[[.00009,"hbow"],[.0001,"stinger"]],
 	armadillo:[[.000025,"swifty"],[.00005,"glolipop"]],

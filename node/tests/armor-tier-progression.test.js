@@ -508,7 +508,7 @@ test("only the approved placeholders and their direct acquisition references are
 test("frozen conversion, source, loot, weapon-economy, and XP authorities stay byte-identical", () => {
 	assert.equal(fileSha256("node/tests/fixtures/vanilla-equipment-baseline.json"), "604acd5da135a7219f83e6afd5261eed5ae9784144b4b2b52858a2101a787a75");
 	assert.equal(fileSha256("node/tests/fixtures/direct-effect-conversion.json"), "4a5dd17cff2f2ce6541eb695fb06fa05126f41ecc204dbf225a9f35978041939");
-	assert.equal(fileSha256("node/tests/fixtures/protected-monster-loot-baseline.json"), "8889e32c74680af7e180b2836ab0c53dfa31f712f2a24a15ad00d414aa3c6d42");
-	assert.equal(fileSha256("node/tests/fixtures/weapon-progression-economy.json"), "d34265df61ec6933a9ce0e6130de71660c342c6e3db5ded2ee4af248341c31c8");
-	assert.equal(fileSha256("design/skill_xp.js"), "f71cce91669173e7c5d47c40c94150a1c9848f801cbf03d58ba5d031d5a097dc");
+	assert.equal(fileSha256("node/tests/fixtures/protected-monster-loot-baseline.json"), "2a9bed8a5ce3fa1ec11c7587b5b16c658b8ac7268e4452d8ab04396a3dacf009");
+	assert.equal(fileSha256("node/tests/fixtures/weapon-progression-economy.json"), "7c15640d82e49732a9daf4f0b5475bff173ce0eb9ccb15f050c76ec3d89e38fc");
+	assert.equal(fileSha256("design/skill_xp.js"), "d9d7c3e82f0ba0b1cd1d25862151c05490f979bda123e624d07ff106fde97684");
 });

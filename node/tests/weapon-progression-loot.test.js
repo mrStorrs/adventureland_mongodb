@@ -6,6 +6,16 @@ const test = require("node:test");
 const { loadSourceData } = require("../tools/acquisition-ranking");
 const { buildEconomyEvidence, buildRecommendation, loadProtectedBaseline, validateEconomyEvidence } = require("../tools/weapon-progression-economy");
 
+test("Arctic Bee drops the Frost Sword and Manual of Insight instead of Osnake", () => {
+	const { drops } = loadSourceData();
+	const expectedDrops = [
+		[0.0002, "fsword"],
+		[0.00014, "wbook3"],
+	];
+	assert.deepEqual(drops.monsters.arcticbee.filter((entry) => expectedDrops.some((drop) => entry[1] === drop[1])), expectedDrops);
+	assert.equal(drops.monsters.osnake.some((entry) => expectedDrops.some((drop) => entry[1] === drop[1])), false);
+});
+
 test("ordinary progression drops cover every rank-two through rank-six anchor without overloading a monster", () => {
 	const data = loadSourceData();
 	const recommendation = buildRecommendation(data);
@@ -48,7 +58,7 @@ test("the allocator reports protected candidates instead of recommending a basel
 test("the final-source verifier rejects a missing direct anchor drop", () => {
 	const data = loadSourceData();
 	const altered = { ...data, drops: JSON.parse(JSON.stringify(data.drops)) };
-	altered.drops.monsters.osnake = altered.drops.monsters.osnake.filter((entry) => entry[1] !== "fsword");
+	altered.drops.monsters.arcticbee = altered.drops.monsters.arcticbee.filter((entry) => entry[1] !== "fsword");
 	const evidence = buildEconomyEvidence(altered);
 	assert.ok(evidence.violations.some((violation) => violation.weapon_id === "fsword" && violation.reason === "missing_final_direct_drop"));
 	assert.throws(() => validateEconomyEvidence(evidence), /infeasible/);
