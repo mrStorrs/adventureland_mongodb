@@ -370,6 +370,34 @@ node --test node/tests/mining-domain.test.js node/tests/mining-runtime.test.js n
 node --test node/tests/*.test.js
 ```
 
+## Smelting skill
+
+Smelting is a per-character, noncombat skill independent of Mining, with levels
+1–99 and the same 900,000,000-XP curve used by Mining and Merchant. For
+Smelting, the existing Craftsman exposes six zero-gold recipes that each refine
+ten matching ores into one stackable, exclusive bar:
+
+| Bar | Smelting unlock | Ore input | XP per bar | Bar value |
+|---|---:|---:|---:|---:|
+| Copper Bar | 1 | 10 Copper Ore | 8,000 | 200g |
+| Iron Bar | 15 | 10 Iron Ore | 12,000 | 1,000g |
+| Gold Bar | 30 | 10 Gold Ore | 18,000 | 5,000g |
+| Mithril Bar | 55 | 10 Mithril Ore | 28,000 | 20,000g |
+| Adamantite Bar | 70 | 10 Adamantite Ore | 40,000 | 80,000g |
+| Runite Bar | 85 | 10 Runite Ore | 60,000 | 320,000g |
+
+Bar value equals the ten consumed ores, so refining does not create gold. The
+Craftsman validates Smelting level before consuming materials. Existing
+characters receive `smelting: { level: 1, xp: 0 }` during normal skill-state
+loading; malformed skill records remain rejected.
+
+Run the deterministic Smelting contracts with:
+
+```sh
+node --test node/tests/smelting-domain.test.js node/tests/smelting-runtime.test.js node/tests/browser-smelting-contract.test.js
+node --test node/tests/*.test.js
+```
+
 ## Default server monster rewards
 
 The game server derives its reward multiplier from

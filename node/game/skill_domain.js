@@ -7,6 +7,7 @@ const { progression } = require("../../design/progression");
 const { skill_xp: DESIGN_SKILL_XP } = require("../../design/skill_xp");
 const { mining: DESIGN_MINING } = require("../../design/mining");
 const { validateMiningData } = require("./mining");
+const { validateSmeltingData } = require("./smelting");
 
 const SKILL_IDS = Object.freeze(Object.keys(DESIGN_SKILLS));
 const SKILL_DEFINITIONS = DESIGN_SKILLS;
@@ -518,6 +519,7 @@ function validateProgressionData(data) {
 	validateItemRequirements(data.items, data.item_requirements, data.skills, weaponOwners);
 	validateCharacterDefinition(data.character, data.items);
 	validateMiningData(data.mining, { items: data.items });
+	validateSmeltingData(data.smelting, { items: data.items });
 	return data;
 }
 
@@ -538,6 +540,7 @@ function buildProgressionData(data) {
 		character: JSON.parse(JSON.stringify(data.character)),
 		item_requirements: JSON.parse(JSON.stringify(data.item_requirements)),
 		mining: JSON.parse(JSON.stringify(data.mining)),
+		smelting: JSON.parse(JSON.stringify(data.smelting)),
 	};
 	validateProgressionData(normalized);
 	Object.defineProperty(normalized, VALIDATED_PUBLICATION, { value: true });
@@ -564,6 +567,7 @@ function loadProgressionPublication(target, progressionData) {
 			// canonical character definition underneath it.
 			character: { ...next.character, xcx: [] },
 			mining: next.mining,
+			smelting: next.smelting,
 		},
 	);
 }

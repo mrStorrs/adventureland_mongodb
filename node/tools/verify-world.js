@@ -22,6 +22,7 @@ function loadProgression() {
 		"abilities.js",
 		"character.js",
 		"mining.js",
+		"smelting.js",
 	])
 		vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../../design", file), "utf8"), context, {
 			filename: file,

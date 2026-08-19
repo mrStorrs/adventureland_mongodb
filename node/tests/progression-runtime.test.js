@@ -116,6 +116,7 @@ test("runtime awards persist complete skill deltas and reject replay", () => {
 		"rogue",
 		"merchant",
 		"mining",
+		"smelting",
 	]);
 	assert.equal(flushPlayerProgressionEvents(character), 1);
 	assert.equal(character.socket.events[0][0], "skill_xp");
@@ -127,6 +128,7 @@ test("runtime awards persist complete skill deltas and reject replay", () => {
 	assert.equal(skillXp.levels_gained, undefined);
 	assert.deepEqual(skillXp.skills.warrior, { level: 1, xp: 100, max_xp: cumulativeXp(2, "warrior") });
 	assert.deepEqual(skillXp.skills.merchant, { level: 1, xp: 0, max_xp: cumulativeXp(2, "merchant") });
+	assert.deepEqual(skillXp.skills.smelting, { level: 1, xp: 0, max_xp: cumulativeXp(2, "smelting") });
 	const duplicate = awardPlayerSkillXp(character, "warrior", 100, {
 		source: "pve_damage",
 		sourceId: "encounter:1:warrior",
@@ -135,10 +137,24 @@ test("runtime awards persist complete skill deltas and reject replay", () => {
 	assert.equal(character.skills.warrior.xp, 100);
 });
 
+test("Smelting uses the allowlisted progression source and publishes its complete snapshot", () => {
+	const character = player();
+	initializePlayerProgression(character, 0);
+	const delta = awardPlayerSkillXp(character, "smelting", 8000, {
+		source: "smelting",
+		sourceId: "craft:copper:1",
+	});
+	assert.equal(delta.skill, "smelting");
+	assert.equal(delta.accepted_xp, 8000);
+	assert.equal(character.skills.smelting.xp, 8000);
+	assert.equal(flushPlayerProgressionEvents(character), 1);
+	assert.equal(character.socket.events[0][1].skills.smelting.xp, 8000);
+});
+
 test("runtime emits exact multi-level snapshots and suppresses replay events", () => {
 	const character = player();
 	character.info.skills.warrior = { level: 1, xp: cumulativeXp(2, "warrior") - 1 };
-	character.total_level = 8;
+	character.total_level = 9;
 	initializePlayerProgression(character, 0);
 	const requestedXp = cumulativeXp(4, "warrior") - character.skills.warrior.xp + 1;
 	const delta = awardPlayerSkillXp(character, "warrior", requestedXp, {
@@ -154,7 +170,7 @@ test("runtime emits exact multi-level snapshots and suppresses replay events", (
 		levels_gained: 3,
 		xp: cumulativeXp(4, "warrior") + 1,
 		max_xp: cumulativeXp(5, "warrior"),
-		total_level: 11,
+		total_level: 12,
 	});
 	assert.equal(flushPlayerProgressionEvents(character), 1);
 	assert.deepEqual(character.socket.events, [
@@ -167,7 +183,7 @@ test("runtime emits exact multi-level snapshots and suppresses replay events", (
 				to_level: 4,
 				xp: cumulativeXp(4, "warrior") + 1,
 				max_xp: cumulativeXp(5, "warrior"),
-				total_level: 11,
+				total_level: 12,
 				skill: "warrior",
 				skills: {
 					warrior: { level: 4, xp: cumulativeXp(4, "warrior") + 1, max_xp: cumulativeXp(5, "warrior") },
@@ -178,10 +194,11 @@ test("runtime emits exact multi-level snapshots and suppresses replay events", (
 					rogue: { level: 1, xp: 0, max_xp: cumulativeXp(2, "rogue") },
 					merchant: { level: 1, xp: 0, max_xp: cumulativeXp(2, "merchant") },
 					mining: { level: 1, xp: 0, max_xp: cumulativeXp(2, "mining") },
+					smelting: { level: 1, xp: 0, max_xp: cumulativeXp(2, "smelting") },
 				},
 			},
 		],
-		["skill_level_up", { skill: "warrior", from_level: 1, to_level: 4, levels_gained: 3, total_level: 11 }],
+		["skill_level_up", { skill: "warrior", from_level: 1, to_level: 4, levels_gained: 3, total_level: 12 }],
 	]);
 	const duplicate = awardPlayerSkillXp(character, "warrior", requestedXp, {
 		source: "pve_damage",
@@ -207,13 +224,15 @@ test("runtime keeps full player snapshots at the last emitted progression state"
 	assert.equal(clientSkillState(character).warrior.xp, 100);
 });
 
-test("runtime refreshes the client snapshot when legacy skills gain Mining before queued XP", () => {
+test("runtime refreshes the client snapshot when legacy skills gain Mining and Smelting before queued XP", () => {
 	const character = player();
 	delete character.info.skills.mining;
-	character.total_level -= 1;
+	delete character.info.skills.smelting;
+	character.total_level -= 2;
 
 	initializePlayerProgression(character, 0);
 	assert.deepEqual(character.info.skills.mining, { level: 1, xp: 0 });
+	assert.deepEqual(character.info.skills.smelting, { level: 1, xp: 0 });
 
 	awardPlayerSkillXp(character, "warrior", 1, {
 		source: "pve_damage",
@@ -221,10 +240,12 @@ test("runtime refreshes the client snapshot when legacy skills gain Mining befor
 	});
 	const pending = clientSkillState(character);
 	assert.deepEqual(pending.mining, { level: 1, xp: 0 });
+	assert.deepEqual(pending.smelting, { level: 1, xp: 0 });
 	assert.equal(pending.warrior.xp, 0);
 
 	assert.equal(flushPlayerProgressionEvents(character), 1);
 	assert.deepEqual(clientSkillState(character).mining, { level: 1, xp: 0 });
+	assert.deepEqual(clientSkillState(character).smelting, { level: 1, xp: 0 });
 	assert.equal(clientSkillState(character).warrior.xp, 1);
 });
 
@@ -287,7 +308,7 @@ test("queued multi-style progression preserves protocol snapshots and excludes r
 	for (const label of labels) {
 		assert.equal(pending[label].skills.warrior.xp, 0);
 		assert.equal(pending[label].skills.rogue.xp, 0);
-		assert.equal(pending[label].total_level, 8);
+		assert.equal(pending[label].total_level, 9);
 	}
 	const serializedPlayer = playerToServer(character);
 	assert.equal(Object.hasOwn(serializedPlayer, "progression_events"), false);
@@ -307,7 +328,7 @@ test("queued multi-style progression preserves protocol snapshots and excludes r
 	for (const label of labels) {
 		assert.equal(after[label].skills.warrior.xp, 100);
 		assert.equal(after[label].skills.rogue.xp, 200);
-		assert.equal(after[label].total_level, 8);
+		assert.equal(after[label].total_level, 9);
 	}
 });
 
@@ -395,7 +416,7 @@ test("runtime enhancement awards remain uncapped by action rate and reject unkno
 test("runtime enhancement awards retain the common Merchant XP cap", () => {
 	const character = player();
 	character.info.skills.merchant = { level: 99, xp: progression.MAX_XP };
-	character.total_level = 106;
+	character.total_level = 107;
 	initializePlayerProgression(character, 0);
 	const delta = awardMerchantEnhancementXp(character, "compound");
 	assert.equal(delta.accepted_xp, 0);
@@ -442,7 +463,7 @@ test("runtime stand settlement feeds Merchant through the common award path", ()
 	assert.equal(settled.xp, Math.floor(3125000 / 7));
 	assert.equal(character.skills.merchant.xp, settled.xp);
 	assert.equal(character.skills.merchant.level, 3);
-	assert.equal(character.total_level, 10);
+	assert.equal(character.total_level, 11);
 	assert.equal(flushPlayerProgressionEvents(character), 1);
 });
 
@@ -840,7 +861,7 @@ test("runtime stand settlement remains exact across close, logout, death, and re
 	}
 	assert.equal(xp, 900000000);
 	assert.equal(character.skills.merchant.xp, 900000000);
-	assert.equal(character.total_level, 106);
+	assert.equal(character.total_level, 107);
 	assert.equal(character.info.merchant_accrual.eligible_stand_ms, 2016 * progression.STAND_HOUR_MS);
 });
 

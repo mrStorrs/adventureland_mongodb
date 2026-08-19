@@ -2,6 +2,7 @@ var fs = require("fs"),
 	path = require("path");
 var { buildProgressionData, loadProgressionPublication } = require("./node/game/skill_domain");
 var { validateMiningData } = require("./node/game/mining");
+var { validateSmeltingData } = require("./node/game/smelting");
 var { ensureWorldIndexes, verifyWorldState } = require("./node/game/world_schema");
 var { rankingSort } = require("./node/game/rankings");
 var { assertProtocol4Publication } = require("./node/game/release_readiness");
@@ -77,6 +78,7 @@ eval("" + fs.readFileSync(path.resolve(__dirname, "design/skill_xp.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/abilities.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/character.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/mining.js")));
+eval("" + fs.readFileSync(path.resolve(__dirname, "design/smelting.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/progression.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/events.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/recipes.js")));
@@ -87,6 +89,7 @@ eval("" + fs.readFileSync(path.resolve(__dirname, "design/emotions.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/precomputed_images.js")));
 
 validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
+validateSmeltingData(smelting, { items: items, craft: craft });
 
 var progression_data = buildProgressionData({
 	items: items,
@@ -96,6 +99,7 @@ var progression_data = buildProgressionData({
 	abilities: abilities,
 	character: character,
 	mining: mining,
+	smelting: smelting,
 });
 
 // docs
@@ -348,6 +352,7 @@ app.all("/data.js", async (req, res, next) => {
 		if (map) geometry[id] = map.info.data;
 	}
 	validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites, geometry: geometry });
+	validateSmeltingData(smelting, { items: items, craft: craft });
 	var G = loadProgressionPublication(
 		{
 			version: Version,

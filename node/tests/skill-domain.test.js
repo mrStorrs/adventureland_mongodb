@@ -55,6 +55,7 @@ const registry = {
 	},
 	merchant: { id: "merchant", name: "Merchant", kind: "noncombat", max_level: 99 },
 	mining: { id: "mining", name: "Mining", kind: "noncombat", max_level: 99 },
+	smelting: { id: "smelting", name: "Smelting", kind: "noncombat", max_level: 99 },
 };
 const expectedXp = (level) => Math.round(900000000 * Math.pow((level - 1) / 98, 2));
 
@@ -64,8 +65,8 @@ test("player-facing ability copy uses direct terminology", () => {
 	assert.doesNotMatch(abilities.magiport.complementary, /intelligence/i);
 });
 
-test("canonical skill registry is eight ordered skills with six combat tracks", () => {
-	assert.deepEqual(SKILL_IDS, ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining"]);
+test("canonical skill registry is nine ordered skills with six combat tracks", () => {
+	assert.deepEqual(SKILL_IDS, ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smelting"]);
 	assert.deepEqual(COMBAT_SKILL_IDS, SKILL_IDS.slice(0, 6));
 	assert.equal(MAX_LEVEL, 99);
 	assert.equal(MAX_XP, 900000000);
@@ -238,6 +239,7 @@ test("publication rejects a level gate on nonweapon equipment", () => {
 				character: source.character,
 				item_requirements: itemRequirements,
 				mining: source.mining,
+				smelting: source.smelting,
 			}),
 		(error) => error.code === "invalid_game_data" && error.item === "helmet",
 	);

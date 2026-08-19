@@ -2904,7 +2904,7 @@ function auto_craft(name, code) {
 				}
 			}
 		});
-		socket.emit("craft", { items: items });
+		socket.emit("craft", { items: items, craft_id: randomStr(16) });
 		return push_deferred("craft");
 	}
 }
@@ -3151,7 +3151,7 @@ function craft() {
 		d_text("INVALID", character);
 		return rejecting_promise({ reason: "invalid" });
 	} else {
-		socket.emit("craft", { items: items });
+		socket.emit("craft", { items: items, craft_id: randomStr(16) });
 		return push_deferred("craft");
 	}
 }

@@ -148,17 +148,17 @@ test("[AC-11] Tunnel rock helpers render all rocks, enforce private depletion, c
 	assert.equal(Object.keys(context.mining_rock_sprites).length, 18);
 });
 
-test("[AC-2] fresh-character onboarding derives the canonical eight-skill state", () => {
+test("[AC-2] fresh-character onboarding derives the canonical nine-skill state", () => {
 	const context = {
-		G: { skills: { warrior: {}, paladin: {}, mage: {}, priest: {}, ranger: {}, rogue: {}, merchant: {}, mining: {} } },
+		G: { skills: { warrior: {}, paladin: {}, mage: {}, priest: {}, ranger: {}, rogue: {}, merchant: {}, mining: {}, smelting: {} } },
 	};
 	vm.createContext(context);
 	const isFresh = vm.runInContext(`(${functionSource(game, "is_fresh_progression_character", "set_mining_state")})`, context);
 	const skills = Object.fromEntries(Object.keys(context.G.skills).map((id) => [id, { level: 1, xp: 0 }]));
-	assert.equal(isFresh({ skills, total_level: 8 }), true);
-	assert.equal(isFresh({ skills, total_level: 7 }), false);
-	assert.equal(isFresh({ skills: { ...skills, mining: { level: 2, xp: 1 } }, total_level: 9 }), false);
-	assert.doesNotMatch(game, /character\.total_level == 7/);
+	assert.equal(isFresh({ skills, total_level: 9 }), true);
+	assert.equal(isFresh({ skills, total_level: 8 }), false);
+	assert.equal(isFresh({ skills: { ...skills, smelting: { level: 2, xp: 1 } }, total_level: 10 }), false);
+	assert.doesNotMatch(game, /character\.total_level == 8/);
 });
 
 test("[AC-11] Mining state is private wire data rather than a public map timestamp", () => {

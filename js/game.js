@@ -2398,6 +2398,7 @@ function init_socket(args) {
 			else if (response == "temporalsurge_none") ui_log("Temporal surge failed", "gray");
 			else if (response == "temporalsurge") ui_log("Temporal surge hastened respawns!", "gray");
 			else if (response == "craft") {
+				if (data.replayed) return;
 				var def = G.craft[data.name];
 				if (def.cost) ui_log("Spent " + to_pretty_num(def.cost) + " gold", "gray");
 				ui_log("Received " + G.items[data.name].name, "white");
@@ -2410,6 +2411,7 @@ function init_socket(args) {
 				ui_log("Defeated by " + G.monsters[data.monster].name, "#571F1B");
 			} else if (response == "dismantle_cant") ui_log("Can't dismantle", "gray");
 			else if (response == "inv_size") ui_log("Need more empty space", "gray");
+			else if (response == "smelting_level") ui_log("Requires Smelting level " + data.required_level, "gray");
 			else if (response == "craft_cant") ui_log("Can't craft", "gray");
 			else if (response == "craft_cant_quantity") ui_log("Not enough materials", "gray");
 			else if (response == "craft_atleast2") ui_log("You need to provide at least 2 items", "gray");

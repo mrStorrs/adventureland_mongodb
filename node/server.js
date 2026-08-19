@@ -51,6 +51,7 @@ const {
 	publicRockState,
 	validateMiningData,
 } = require("./game/mining");
+const { prepareSmeltingCraft, validateSmeltingData } = require("./game/smelting");
 const { createAtomicMiningRewardCommit, createMiningRuntime } = require("./game/mining_runtime");
 const {
 	initializePlayerProgression,
@@ -296,7 +297,7 @@ function clone_mining_reward_value(value) {
 	return value === undefined ? undefined : structuredClone(value);
 }
 
-function snapshot_mining_rewards(player) {
+function snapshot_progression_rewards(player) {
 	return {
 		items: clone_mining_reward_value(player.items),
 		citems: clone_mining_reward_value(player.citems),
@@ -307,10 +308,11 @@ function snapshot_mining_rewards(player) {
 		skill_xp: clone_mining_reward_value(player.t && player.t.skill_xp),
 		total_skill_xp: player.t && player.t.total_skill_xp,
 		progression_events: clone_mining_reward_value(player.progression_events),
+		progression_client_skills: clone_mining_reward_value(player.progression_client_skills),
 	};
 }
 
-function restore_mining_rewards(player, snapshot) {
+function restore_progression_rewards(player, snapshot) {
 	player.items = snapshot.items;
 	player.citems = snapshot.citems;
 	player.esize = snapshot.esize;
@@ -322,11 +324,20 @@ function restore_mining_rewards(player, snapshot) {
 	player.t.total_skill_xp = snapshot.total_skill_xp;
 	if (snapshot.progression_events === undefined) delete player.progression_events;
 	else player.progression_events = snapshot.progression_events;
+	if (snapshot.progression_client_skills === undefined) delete player.progression_client_skills;
+	else {
+		Object.defineProperty(player, "progression_client_skills", {
+			configurable: true,
+			enumerable: false,
+			value: snapshot.progression_client_skills,
+			writable: true,
+		});
+	}
 }
 
 var commit_mining_rewards = createAtomicMiningRewardCommit({
-	snapshot: snapshot_mining_rewards,
-	restore: restore_mining_rewards,
+	snapshot: snapshot_progression_rewards,
+	restore: restore_progression_rewards,
 	addItem: function (player, item_name) {
 		add_item(player, create_new_item(item_name), { announce: false });
 	},
@@ -732,6 +743,7 @@ async function init_game() {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/abilities.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/character.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/mining.js")));
+		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/smelting.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/progression.js")));
 		const progression_data = buildProgressionData({
 			items: items,
@@ -741,6 +753,7 @@ async function init_game() {
 			abilities: abilities,
 			character: character,
 			mining: mining,
+			smelting: smelting,
 		});
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/events.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/recipes.js")));
@@ -750,6 +763,7 @@ async function init_game() {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/emotions.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/precomputed_images.js")));
 		validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
+		validateSmeltingData(smelting, { items: items, craft: craft });
 
 		// Load geometry from MongoDB (parallel fetch, following qwazy pattern)
 		var geometry = {};
@@ -931,6 +945,7 @@ async function reload_server(to_broadcast, change) {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/abilities.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/character.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/mining.js")));
+		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/smelting.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/progression.js")));
 		const progression_data = buildProgressionData({
 			items: items,
@@ -940,6 +955,7 @@ async function reload_server(to_broadcast, change) {
 			abilities: abilities,
 			character: character,
 			mining: mining,
+			smelting: smelting,
 		});
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/events.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/recipes.js")));
@@ -949,6 +965,7 @@ async function reload_server(to_broadcast, change) {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/emotions.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/precomputed_images.js")));
 		validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
+		validateSmeltingData(smelting, { items: items, craft: craft });
 
 		// Reload geometry from MongoDB
 		var geometry = {};
@@ -6075,6 +6092,22 @@ function init_io() {
 			if (!player || player.user) {
 				return fail_response("cant_in_bank");
 			}
+			var smelting_craft_id =
+				typeof data.craft_id === "string" && /^[A-Za-z0-9]{1,64}$/.test(data.craft_id)
+					? data.craft_id
+					: randomStr(12);
+			var smelting_source_id = `${server_id}:smelting:${player.id}:${smelting_craft_id}`;
+			var smelting_replayed = Boolean(
+				player.p &&
+					Array.isArray(player.p.skill_xp_sources) &&
+					player.p.skill_xp_sources.some(function (entry) {
+						return entry && entry.source_id === smelting_source_id && entry.expires_at > Date.now();
+					}),
+			);
+			if (smelting_replayed) {
+				resend(player, "reopen+nc+inv");
+				return success_response("craft", { cevent: true, replayed: true });
+			}
 			data.items.forEach(function (x) {
 				if (!player.items[x[1]]) {
 					check = false;
@@ -6139,6 +6172,34 @@ function init_io() {
 			}
 			if (!enough) {
 				return fail_response("craft_cant_quantity");
+			}
+			var smelting_tier;
+			try {
+				smelting_tier = prepareSmeltingCraft(G.smelting, { output: name, level: player.skills && player.skills.smelting && player.skills.smelting.level });
+			} catch (error) {
+				if (error && error.code === "smelting_level") return fail_response("smelting_level", { required_level: error.required_level });
+				throw error;
+			}
+			if (smelting_tier) {
+				var smelting_before = snapshot_progression_rewards(player);
+				try {
+					consume(player, place[smelting_tier.ore], smelting_tier.ore_quantity);
+					var smelting_item_index = add_item(player, smelting_tier.bar, {
+						r: 1,
+						p: Object.keys(p).length && random_one(p),
+					});
+					awardPlayerSkillXp(player, "smelting", smelting_tier.xp, { source: "smelting", sourceId: smelting_source_id });
+				} catch (error) {
+					restore_progression_rewards(player, smelting_before);
+					throw error;
+				}
+				resend(player, "reopen+nc+inv");
+				return success_response("craft", {
+					num: smelting_item_index,
+					name: name,
+					cevent: true,
+					replayed: smelting_replayed,
+				});
 			}
 			player.gold -= G.craft[name].cost;
 			G.craft[name].items.forEach(function (x) {

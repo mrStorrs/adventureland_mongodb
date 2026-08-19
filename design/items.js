@@ -3796,6 +3796,24 @@ var items={
 	"runiteore": {
 		"type": "material", "skin": "platinumnugget", "name": "Runite Ore", "s": 9999, "g": 32000, "exclusive": true
 	},
+	"copperbar": {
+		"type": "material", "skin": "gemfragment", "name": "Copper Bar", "s": 9999, "g": 200, "exclusive": true
+	},
+	"ironbar": {
+		"type": "material", "skin": "gemfragment", "name": "Iron Bar", "s": 9999, "g": 1000, "exclusive": true
+	},
+	"goldbar": {
+		"type": "material", "skin": "goldnugget", "name": "Gold Bar", "s": 9999, "g": 5000, "exclusive": true
+	},
+	"mithrilbar": {
+		"type": "material", "skin": "gemfragment", "name": "Mithril Bar", "s": 9999, "g": 20000, "exclusive": true
+	},
+	"adamantitebar": {
+		"type": "material", "skin": "gemfragment", "name": "Adamantite Bar", "s": 9999, "g": 80000, "exclusive": true
+	},
+	"runitebar": {
+		"type": "material", "skin": "platinumnugget", "name": "Runite Bar", "s": 9999, "g": 320000, "exclusive": true
+	},
 	"bow": {
 		"type": "weapon",
 		"wtype": "bow",
