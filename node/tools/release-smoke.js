@@ -99,7 +99,7 @@ async function main() {
 	assert.equal(player.info.skills, player.skills);
 	assert.equal(player.skills.warrior.xp, 120_000);
 	assert.equal(player.skills.warrior.level, 2);
-	assert.equal(player.total_level, 8);
+	assert.equal(player.total_level, 10);
 	assert.equal(player.info.active_skill, undefined);
 	assert.ok(player.socket.events.some(([name]) => name === "skill_xp"));
 	assert.ok(player.socket.events.some(([name]) => name === "skill_level_up"));

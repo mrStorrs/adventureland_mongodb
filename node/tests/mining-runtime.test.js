@@ -16,6 +16,7 @@ const { skills } = require("../../design/skills");
 const { skill_xp } = require("../../design/skill_xp");
 const { createCharacterState, loadCharacterState } = require("../game/character_state");
 const { validateRequirements } = require("../game/equipment");
+const { cumulativeXp } = require("../game/skill_domain");
 const {
 	claimRock,
 	completeMiningAttempt,
@@ -59,30 +60,53 @@ function makeAttempt(character = readyCharacter(), overrides = {}) {
 	});
 }
 
-test("[AC-2] fresh characters publish eight ordered skills and Mining uses the 900m noncombat curve", () => {
-	assert.deepEqual(Object.keys(skills), ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining"]);
+test("[AC-2] fresh characters publish nine ordered skills and Mining uses the 900m noncombat curve", () => {
+	assert.deepEqual(Object.keys(skills), ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smelting"]);
 	assert.equal(skills.mining.kind, "noncombat");
+	assert.equal(skills.smelting.kind, "noncombat");
 	assert.equal(skill_xp.merchant[99], 900000000);
-	assert.deepEqual(createCharacterState(), { skills: characterDefinition.skills, total_level: 8 });
+	assert.deepEqual(createCharacterState(), { skills: characterDefinition.skills, total_level: 9 });
 });
 
-test("[AC-3] only the exact seven-skill predecessor receives the additive Mining backfill", () => {
-	const oldSkills = Object.fromEntries(Object.entries(characterDefinition.skills).filter(([id]) => id !== "mining"));
-	const migrated = loadCharacterState({ info: { skills: oldSkills, skill_curve_version: 2 }, total_level: 7 });
-	assert.deepEqual(migrated.skills.mining, { level: 1, xp: 0 });
-	assert.equal(migrated.total_level, 8);
+test("[AC-3] exact predecessor shapes receive only their additive Mining or Smelting backfill", () => {
+	const preSmeltingSkills = Object.fromEntries(Object.entries(characterDefinition.skills).filter(([id]) => id !== "smelting"));
+	const smeltingMigrated = loadCharacterState({ info: { skills: preSmeltingSkills, skill_curve_version: 2 }, total_level: 8 });
+	assert.deepEqual(smeltingMigrated.skills.smelting, { level: 1, xp: 0 });
+	assert.equal(smeltingMigrated.total_level, 9);
 
-	const reordered = Object.fromEntries([...Object.entries(oldSkills)].reverse());
-	assert.throws(() => loadCharacterState({ info: { skills: reordered, skill_curve_version: 2 }, total_level: 7 }), {
+	const progressedPreSmeltingSkills = structuredClone(preSmeltingSkills);
+	progressedPreSmeltingSkills.warrior = { level: 4, xp: cumulativeXp(4, "warrior") };
+	progressedPreSmeltingSkills.merchant = { level: 7, xp: cumulativeXp(7, "merchant") };
+	progressedPreSmeltingSkills.mining = { level: 15, xp: cumulativeXp(15, "mining") };
+	const progressedTotal = Object.values(progressedPreSmeltingSkills).reduce((total, progress) => total + progress.level, 0);
+	const progressedMigration = loadCharacterState({
+		info: { skills: progressedPreSmeltingSkills, skill_curve_version: 2 },
+		total_level: progressedTotal,
+	});
+	assert.deepEqual(
+		Object.fromEntries(Object.entries(progressedMigration.skills).filter(([id]) => id !== "smelting")),
+		progressedPreSmeltingSkills,
+	);
+	assert.deepEqual(progressedMigration.skills.smelting, { level: 1, xp: 0 });
+	assert.equal(progressedMigration.total_level, progressedTotal + 1);
+
+	const preMiningSkills = Object.fromEntries(Object.entries(preSmeltingSkills).filter(([id]) => id !== "mining"));
+	const miningMigrated = loadCharacterState({ info: { skills: preMiningSkills, skill_curve_version: 2 }, total_level: 7 });
+	assert.deepEqual(miningMigrated.skills.mining, { level: 1, xp: 0 });
+	assert.deepEqual(miningMigrated.skills.smelting, { level: 1, xp: 0 });
+	assert.equal(miningMigrated.total_level, 9);
+
+	const reordered = Object.fromEntries([...Object.entries(preSmeltingSkills)].reverse());
+	assert.throws(() => loadCharacterState({ info: { skills: reordered, skill_curve_version: 2 }, total_level: 8 }), {
 		code: "invalid_character_skill_state",
 	});
-	assert.throws(() => loadCharacterState({ info: { skills: { ...oldSkills, unknown: { level: 1, xp: 0 } }, skill_curve_version: 2 } }), {
+	assert.throws(() => loadCharacterState({ info: { skills: { ...preSmeltingSkills, unknown: { level: 1, xp: 0 } }, skill_curve_version: 2 } }), {
 		code: "invalid_character_skill_state",
 	});
-	assert.throws(() => loadCharacterState({ info: { skills: { ...oldSkills, mining: { level: 1 } }, skill_curve_version: 2 } }), {
+	assert.throws(() => loadCharacterState({ info: { skills: { ...preSmeltingSkills, smelting: { level: 1 } }, skill_curve_version: 2 } }), {
 		code: "invalid_character_skill_state",
 	});
-	assert.throws(() => loadCharacterState({ info: { skills: { ...oldSkills, merchant: { level: 2, xp: 0 } }, skill_curve_version: 2 } }), {
+	assert.throws(() => loadCharacterState({ info: { skills: { ...preSmeltingSkills, merchant: { level: 2, xp: 0 } }, skill_curve_version: 2 } }), {
 		code: "invalid_character_skill_state",
 	});
 });
@@ -665,8 +689,6 @@ test("[AC-13] Mine Heathcliff retains the quest and gates all Mining stock at th
 	assert.equal(items.miningcape.exclusive, true);
 	const server = fs.readFileSync(path.join(root, "node/server.js"), "utf8");
 	assert.match(server, /if \(def\.purchase_requirement\)[\s\S]*validateRequirements\(name, \[def\.purchase_requirement\], player\.skills\)/);
-	const recipes = fs.readFileSync(path.join(root, "design/recipes.js"), "utf8");
-	for (const tier of mining.tiers) assert.doesNotMatch(recipes, new RegExp(`\\b${tier.ore}\\b`));
 });
 
 test("[AC-13] production buy and sell socket adapters enforce Mining gates and the 0.6 ore sale value", () => {

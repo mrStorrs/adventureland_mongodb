@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const { buildProgressionData, loadProgressionPublication } = require("../game/skill_domain");
+const { validateSmeltingData } = require("../game/smelting");
 
 const root = path.resolve(__dirname, "../..");
 
@@ -25,9 +26,76 @@ function loadRawProgression() {
 		"abilities.js",
 		"character.js",
 		"mining.js",
+		"smelting.js",
 	])
 		vm.runInContext(read(`design/${file}`), context, { filename: file });
 	return context;
+}
+
+function packageDataRoute(context) {
+	const main = read("main.js");
+	const routeStart = main.indexOf('app.all("/data.js", async (req, res, next) => {');
+	const functionStart = main.indexOf("async (req, res, next) => {", routeStart);
+	const routeEnd = main.indexOf("\n});\n\n// Shells / Payment page", functionStart);
+	assert.ok(routeStart >= 0 && functionStart > routeStart && routeEnd > functionStart, "package data route is present");
+	return vm.runInNewContext(`(${main.slice(functionStart, routeEnd + 2).trim()})`, context);
+}
+
+function runPackageDataRoute({ smelting = loadRawProgression().smelting } = {}) {
+	const raw = loadRawProgression();
+	vm.runInContext(read("design/recipes.js"), raw, { filename: "recipes.js" });
+	const progression_data = buildProgressionData(raw);
+	const response = {
+		status() {
+			return this;
+		},
+		set() {
+			return this;
+		},
+		send(body) {
+			this.body = body;
+			return this;
+		},
+	};
+	const route = packageDataRoute({
+		maps: {},
+		get: async () => undefined,
+		get_domain: async () => ({}),
+		validateMiningData: () => {},
+		validateSmeltingData,
+		mining: raw.mining,
+		smelting,
+		items: raw.items,
+		craft: raw.craft,
+		loadProgressionPublication,
+		progression_data,
+		Version: 2603,
+		achievements: {},
+		animations: {},
+		monsters: {},
+		sprites: {},
+		npcs: {},
+		tilesets: {},
+		imagesets: {},
+		sets: {},
+		titles: {},
+		tokens: {},
+		dismantle: {},
+		conditions: {},
+		cosmetics: {},
+		emotions: {},
+		projectiles: {},
+		dimensions: {},
+		positions: {},
+		games: {},
+		events: {},
+		precomputed: { images: {} },
+		multipliers: {},
+		docs: {},
+		drops: {},
+		progression: {},
+	});
+	return route({ query: {}, body: {} }, response).then(() => response);
 }
 
 test("public progression publication is protocol 4 and contains no class or level catalogs", () => {
@@ -47,12 +115,46 @@ test("public progression publication is protocol 4 and contains no class or leve
 		"rogue",
 		"merchant",
 		"mining",
+		"smelting",
 	]);
+	assert.equal(publication.smelting.version, 1);
 	assert.equal(publication.character.appearances.length, 28);
 	assert.deepEqual(
 		Object.values(publication.character.skills).map(({ level, xp }) => [level, xp]),
-		Array(8).fill([1, 0]),
+		Array(9).fill([1, 0]),
 	);
+});
+
+test("the package backend loads and validates canonical Smelting data", () => {
+	const main = read("main.js");
+	assert.match(main, /require\("\.\/node\/game\/smelting"\)/);
+	assert.match(main, /design\/smelting\.js/);
+	assert.match(main, /validateSmeltingData\(smelting, \{ items: items, craft: craft \}\)/);
+	const progressionStart = main.indexOf("var progression_data = buildProgressionData({");
+	const progressionEnd = main.indexOf("});", progressionStart);
+	assert.ok(progressionStart >= 0 && progressionEnd > progressionStart);
+	assert.match(main.slice(progressionStart, progressionEnd), /smelting: smelting/);
+});
+
+test("the package /data.js route publishes Smelting and rejects malformed data before delivery", async () => {
+	const response = await runPackageDataRoute();
+	const publication = JSON.parse(response.body.slice("var G=".length, -2));
+	assert.deepEqual(Object.keys(publication.skills), [
+		"warrior",
+		"paladin",
+		"mage",
+		"priest",
+		"ranger",
+		"rogue",
+		"merchant",
+		"mining",
+		"smelting",
+	]);
+	assert.equal(publication.smelting.version, 1);
+
+	const malformed = structuredClone(loadRawProgression().smelting);
+	malformed.tiers[0].ore = "ironore";
+	await assert.rejects(() => runPackageDataRoute({ smelting: malformed }), /Invalid Smelting tier copper/);
 });
 
 test("browser skill-XP table validation rejects malformed per-skill publications", () => {

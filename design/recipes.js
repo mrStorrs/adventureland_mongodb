@@ -57,6 +57,30 @@ var craft={
 		],
 		"cost":100,
 	},
+	"copperbar":{
+		"items":[[10,"copperore"]],
+		"cost":0,
+	},
+	"ironbar":{
+		"items":[[10,"ironore"]],
+		"cost":0,
+	},
+	"goldbar":{
+		"items":[[10,"goldore"]],
+		"cost":0,
+	},
+	"mithrilbar":{
+		"items":[[10,"mithrilore"]],
+		"cost":0,
+	},
+	"adamantitebar":{
+		"items":[[10,"adamantiteore"]],
+		"cost":0,
+	},
+	"runitebar":{
+		"items":[[10,"runiteore"]],
+		"cost":0,
+	},
 	"stealthcape":{
 		"items":[
 			[1,"bcape",7],

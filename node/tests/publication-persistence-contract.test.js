@@ -14,9 +14,9 @@ test("release readiness rejects a legacy publication shape", () => {
 });
 
 test("release readiness accepts protocol 4 only when item publication is primary-free", () => {
-	const skills = Object.fromEntries(["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining"].map((id) => [id, {}]));
-	assert.doesNotThrow(() => assertProtocol4Publication({ protocol: 4, skills, abilities: {}, mining: { version: 1 }, items: { blade: { damage: 1, attacks_per_second: 1 } } }));
-	assert.throws(() => assertProtocol4Publication({ protocol: 4, skills, abilities: {}, mining: { version: 1 }, items: { blade: { attack: 1 } } }), {
+	const skills = Object.fromEntries(["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smelting"].map((id) => [id, {}]));
+	assert.doesNotThrow(() => assertProtocol4Publication({ protocol: 4, skills, abilities: {}, mining: { version: 1 }, smelting: { version: 1 }, items: { blade: { damage: 1, attacks_per_second: 1 } } }));
+	assert.throws(() => assertProtocol4Publication({ protocol: 4, skills, abilities: {}, mining: { version: 1 }, smelting: { version: 1 }, items: { blade: { attack: 1 } } }), {
 		code: "WORLD_PUBLICATION",
 	});
 });

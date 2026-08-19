@@ -2,7 +2,8 @@
 
 const { SKILL_IDS, MAX_LEVEL, cumulativeXp, maxXpForSkill } = require("./skill_domain");
 const { progression } = require("../../design/progression");
-const PRE_MINING_SKILL_IDS = Object.freeze(SKILL_IDS.filter((id) => id !== "mining"));
+const PRE_MINING_SKILL_IDS = Object.freeze(SKILL_IDS.slice(0, SKILL_IDS.indexOf("mining")));
+const PRE_SMELTING_SKILL_IDS = Object.freeze(SKILL_IDS.slice(0, SKILL_IDS.indexOf("smelting")));
 
 function stateError(path, reason, details = {}) {
 	const error = new Error(`Invalid character skill state at ${path}: ${reason}`);
@@ -91,10 +92,19 @@ function loadCharacterState(character, options = {}) {
 	const skills = JSON.parse(JSON.stringify(character.info.skills));
 	const actualIds = skills && typeof skills === "object" && !Array.isArray(skills) ? Object.keys(skills) : [];
 	const miningMigration =
-		SKILL_IDS.at(-1) === "mining" &&
+		SKILL_IDS.includes("mining") &&
 		actualIds.length === PRE_MINING_SKILL_IDS.length &&
 		actualIds.every((id, index) => id === PRE_MINING_SKILL_IDS[index]);
-	if (miningMigration) skills.mining = { level: 1, xp: 0 };
+	const smeltingMigration =
+		SKILL_IDS.at(-1) === "smelting" &&
+		actualIds.length === PRE_SMELTING_SKILL_IDS.length &&
+		actualIds.every((id, index) => id === PRE_SMELTING_SKILL_IDS[index]);
+	if (miningMigration) {
+		skills.mining = { level: 1, xp: 0 };
+		skills.smelting = { level: 1, xp: 0 };
+	} else if (smeltingMigration) {
+		skills.smelting = { level: 1, xp: 0 };
+	}
 	const legacyCurve = character.info.skill_curve_version !== progression.COMBAT_XP_CURVE_VERSION;
 	if (legacyCurve) {
 		for (const id of ids) {
@@ -109,7 +119,7 @@ function loadCharacterState(character, options = {}) {
 	}
 	validateSkillState(skills, { registry, xpTable: options.xpTable });
 	const total_level = computeTotalLevel(skills, registry);
-	if (!miningMigration && !legacyCurve && character.total_level !== undefined && character.total_level !== total_level) {
+	if (!miningMigration && !smeltingMigration && !legacyCurve && character.total_level !== undefined && character.total_level !== total_level) {
 		throw stateError("total_level", "does not equal the sum of registered skill levels", {
 			actual: character.total_level,
 			expected: total_level,
@@ -137,4 +147,5 @@ module.exports = {
 	withSkillState,
 	stateError,
 	PRE_MINING_SKILL_IDS,
+	PRE_SMELTING_SKILL_IDS,
 };

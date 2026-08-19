@@ -16,6 +16,8 @@ function assertProtocol4Publication(publication) {
 	}
 	if (!publication.mining || publication.mining.version !== 1)
 		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing Mining data");
+	if (!publication.smelting || publication.smelting.version !== 1)
+		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing Smelting data");
 	if (!publication.abilities || typeof publication.abilities !== "object") {
 		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing abilities");
 	}

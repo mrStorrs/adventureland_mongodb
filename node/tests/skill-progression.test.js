@@ -13,7 +13,7 @@ test("skill XP awards cross multiple thresholds once and recompute total level",
 	assert.equal(result.delta.to_level, 20);
 	assert.equal(result.delta.levels_gained, 19);
 	assert.equal(result.state.skills.warrior.xp, cumulativeXp(20, "warrior") + 1);
-	assert.equal(result.state.total_level, 27);
+	assert.equal(result.state.total_level, 28);
 });
 
 test("skill XP validates requests, deduplicates sources, and discards at level 99", () => {

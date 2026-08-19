@@ -135,8 +135,8 @@ test("retired acquisition entries disappear without changing surviving box route
 		assert.equal(data.craft[retiredId], undefined, retiredId);
 		assert.equal(JSON.stringify(data.drops).includes(`"${retiredId}"`), false, retiredId);
 	}
-	assert.equal(Object.keys(data.craft).length, 81);
-	assert.equal(hash(data.craft), "245f5ef2d5cef626c6e894ee4fa9f79c8ae577fe7733e4b658345586ce98559e");
+	assert.equal(Object.keys(data.craft).length, 87);
+	assert.equal(hash(data.craft), "ce0538220a7e2740edd478333e86a845cc166ae75fc4a444d0bd657b0355e145");
 });
 
 test("all server data-processing callers bind and publish dynamic cumulative thresholds", () => {
