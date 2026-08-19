@@ -1,6 +1,7 @@
 var crypto = require("crypto");
 var protobuf = require("protobufjs");
 var ByteBuffer = require("bytebuffer"); // Steam decryption
+var publish_cumulative_set_thresholds = require("./game/equipment_schema").publishCumulativeSetThresholds;
 var false_socket = {
 	emit: function (a, b) {
 		if (Dev && !server.shutdown) {
@@ -242,19 +243,7 @@ function sprocess_game_data() {
 			);
 		});
 	}
-	for (var sname in G.sets) {
-		var set = G.sets[sname];
-		for (var i = 2; i <= 5; i++) {
-			set[i] = set[i] || {};
-			for (var prop in set[i - 1]) {
-				if (set[i][prop]) {
-					set[i][prop] += set[i - 1][prop];
-				} else {
-					set[i][prop] = set[i - 1][prop];
-				}
-			}
-		}
-	}
+	G.sets = publish_cumulative_set_thresholds(G.sets);
 	if (is_pvp) {
 		D.drops.maps.global_static.push([1.0 / ((gameplay == "hardcore" && 1000) || 100000), "pvptoken"]);
 	}

@@ -4,6 +4,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
+const { RETIRED_ARMOR_ITEM_IDS } = require("../game/equipment_schema");
 const { expectedEnhancedCopies, loadSourceData } = require("./acquisition-ranking");
 const { buildMonsterCombatTiers } = require("./monster-combat-tiers");
 const { serializeFixture } = require("./fixture-serialization");
@@ -121,7 +122,24 @@ function loadProtectedBaseline(filename = PROTECTED_BASELINE_PATH) {
 
 function validateProtectedBaseline(data = loadSourceData(), baseline = loadProtectedBaseline()) {
 	const payload = protectedPayload(data);
-	if (JSON.stringify(payload) !== JSON.stringify(baseline.protected_payload) || hash(payload) !== baseline.protected_payload_sha256)
+	const retired = new Set(RETIRED_ARMOR_ITEM_IDS);
+	const removed = Symbol("removed-retired-loot");
+	const stripRetiredLoot = (value) => {
+		if (Array.isArray(value)) {
+			if (value.length > 1 && typeof value[1] === "string" && retired.has(value[1])) return { value: removed, removals: 1 };
+			const entries = value.map(stripRetiredLoot);
+			return { value: entries.filter((entry) => entry.value !== removed).map((entry) => entry.value), removals: entries.reduce((total, entry) => total + entry.removals, 0) };
+		}
+		if (value && typeof value === "object") {
+			const entries = Object.entries(value).map(([key, entry]) => [key, stripRetiredLoot(entry)]);
+			return { value: Object.fromEntries(entries.map(([key, entry]) => [key, entry.value])), removals: entries.reduce((total, [, entry]) => total + entry.removals, 0) };
+		}
+		return { value, removals: 0 };
+	};
+	if (hash(baseline.protected_payload) !== baseline.protected_payload_sha256) throw new Error("Protected loot baseline hash is invalid");
+	if (stripRetiredLoot(data.drops).removals) throw new Error("Retired armor loot remains in the current drop tables");
+	const expected = stripRetiredLoot(baseline.protected_payload).value;
+	if (JSON.stringify(payload) !== JSON.stringify(expected) || hash(payload) !== hash(expected))
 		throw new Error("Protected loot baseline drifted");
 	return true;
 }

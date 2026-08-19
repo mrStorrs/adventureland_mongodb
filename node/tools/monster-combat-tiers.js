@@ -6,12 +6,14 @@ const path = require("node:path");
 const { progression } = require("../../design/progression");
 const { WEAPON_PROFILES } = require("../game/active_skill");
 const { isCompatibleOffhand } = require("../game/equipment");
+const { publishCumulativeSetThresholds } = require("../game/equipment_schema");
 const { calculateStats } = require("../game/stats");
 const { buildProductionAcquisitionResolver, loadSourceData } = require("./acquisition-ranking");
 const { serializeFixture } = require("./fixture-serialization");
 
 const COMBAT_SKILLS = Object.freeze(["warrior", "paladin", "mage", "priest", "ranger", "rogue"]);
 const ARMOR_TYPES = Object.freeze(["helmet", "chest", "pants", "gloves", "shoes"]);
+const ARMOR_SET_BY_WEAPON_RANK = Object.freeze({ 1: "basic", 2: "wanderers", 3: "rugged", 4: "wt3", 5: "wt4" });
 const OFFHAND_TYPES = new Set(["shield", "source", "quiver", "misc_offhand"]);
 const EXCLUDED_SET_IDS = new Set(["bunny", "fury", "holidays", "legends", "mpx", "tiger", "vampires"]);
 const FIXTURE_PATH = path.resolve(__dirname, "../tests/fixtures/monster-combat-tiers.json");
@@ -211,7 +213,13 @@ function compactLoadoutRoute(route) {
 
 function selectCanonicalLoadoutFromRoutes(data, routes, { skill, weapon_id, rank, level }) {
 	const slots = { mainhand: { name: weapon_id, level: progression.MONSTER_COMBAT_POLICY.unlock_enhancement } };
+	const armorSet = data.sets[ARMOR_SET_BY_WEAPON_RANK[Math.min(rank, 5)]];
 	for (const type of ARMOR_TYPES) {
+		const progressionItemId = armorSet?.bonus_items?.[type]?.[0];
+		if (progressionItemId && routes.has(progressionItemId) && requirementPasses(data.itemRequirements[progressionItemId], skill, level)) {
+			slots[type] = { name: progressionItemId, level: 0 };
+			continue;
+		}
 		const candidate = Object.entries(data.items)
 			.filter(([id, item]) => item.type === type && isOrdinaryLoadoutItem(item, routes.get(id)) && Number(item.hp || 0) + Number(item.mp || 0) + Number(item.armor || 0) + Number(item.resistance || 0) > 0 && requirementPasses(data.itemRequirements[id], skill, level))
 			.sort(([leftId], [rightId]) => {
@@ -325,6 +333,7 @@ function simulateFight({ monster, stats }) {
 function buildLoadouts(data) {
 	const { loadPropertyCalculators } = require("./direct-equipment-authority");
 	const calculators = loadPropertyCalculators(data);
+	const publishedSets = publishCumulativeSetThresholds(data.sets);
 	const rows = [];
 	for (let tier = 1; tier <= 6; tier += 1) {
 		const weapon_rank = tier === 1 ? 1 : tier - 1;
@@ -334,7 +343,7 @@ function buildLoadouts(data) {
 			const weapon_id = progression.WEAPON_PROGRESSION_ANCHORS[weapon_rank][skill];
 			const slots = selectCanonicalLoadoutFromRoutes(data, routes, { skill, weapon_id, rank: weapon_rank, level: progression.WEAPON_RANK_REQUIREMENTS[weapon_rank - 1] });
 			slots.mainhand.level = enhancement;
-			const stats = calculateStats({ slots, items: data.items, sets: data.sets, getItemProperties: calculators.current.calculate_item_properties });
+			const stats = calculateStats({ slots, items: data.items, sets: publishedSets, getItemProperties: calculators.current.calculate_item_properties });
 			const acquisition_routes = Object.fromEntries(Object.entries(slots).filter(([slot]) => slot !== "mainhand").map(([slot, item]) => [slot, compactLoadoutRoute(routes.get(item.name))]));
 			rows.push({ tier, weapon_rank, skill, weapon_id, enhancement, slots, acquisition_routes, stats });
 		}
@@ -394,7 +403,7 @@ function buildMonsterCombatTiers(data = loadSourceData()) {
 	const analysis = analyze(data);
 	return {
 		schema_version: 1,
-		policy: { ...progression.MONSTER_COMBAT_POLICY, rank_requirements: progression.WEAPON_RANK_REQUIREMENTS, progression_anchors: progression.WEAPON_PROGRESSION_ANCHORS, supported_mechanics: ["physical", "magical", "pure", "armor", "resistance", "piercing", "avoidance", "evasion", "dreturn"] },
+		policy: { ...progression.MONSTER_COMBAT_POLICY, set_threshold_publication: "production_cumulative", rank_requirements: progression.WEAPON_RANK_REQUIREMENTS, progression_anchors: progression.WEAPON_PROGRESSION_ANCHORS, supported_mechanics: ["physical", "magical", "pure", "armor", "resistance", "piercing", "avoidance", "evasion", "dreturn"] },
 		counts: { attackable_monsters: analysis.monsters.length, progression_eligible: analysis.monsters.filter((monster) => monster.progression_eligible).length },
 		universal_candidates: analysis.universal_candidates,
 		monsters: analysis.monsters,
@@ -402,10 +411,11 @@ function buildMonsterCombatTiers(data = loadSourceData()) {
 	};
 }
 
-function buildEquipmentCombatMatrix(data = loadSourceData(), { weapon_states = [] } = {}) {
+function buildEquipmentCombatMatrix(data = loadSourceData()) {
 	const analysis = analyze(data);
 	const { loadPropertyCalculators } = require("./direct-equipment-authority");
 	const calculators = loadPropertyCalculators(data);
+	const publishedSets = publishCumulativeSetThresholds(data.sets);
 	const sidegrade_unlocks = [];
 	for (const [weapon_id, weapon] of Object.entries(data.items).filter(([, item]) => item.type === "weapon" && item.progression && WEAPON_PROFILES[item.wtype] && item.progression.shared_rank < 6).sort(([left], [right]) => left.localeCompare(right))) {
 		const skill = WEAPON_PROFILES[weapon.wtype].skill;
@@ -418,7 +428,7 @@ function buildEquipmentCombatMatrix(data = loadSourceData(), { weapon_states = [
 		}
 		const slots = selectCanonicalLoadout(data, { skill, weapon_id, rank: weapon.progression.shared_rank, level: weapon.progression.requirement });
 		slots.mainhand.level = progression.MONSTER_COMBAT_POLICY.unlock_enhancement;
-		const stats = calculateStats({ slots, items: data.items, sets: data.sets, getItemProperties: calculators.current.calculate_item_properties });
+		const stats = calculateStats({ slots, items: data.items, sets: publishedSets, getItemProperties: calculators.current.calculate_item_properties });
 		const candidate_ids = analysis.universal_candidates[target_tier] || [];
 		const results = candidate_ids.map((monster_id) => ({ monster_id, ...simulateFight({ monster: data.monsters[monster_id], stats }) }));
 		sidegrade_unlocks.push({ weapon_id, skill, shared_rank: weapon.progression.shared_rank, role: weapon.progression.role, target_tier, safe_candidate_ids: results.filter((result) => result.passed).map((result) => result.monster_id), results });
@@ -428,9 +438,8 @@ function buildEquipmentCombatMatrix(data = loadSourceData(), { weapon_states = [
 		if (!unlock.declared_ineligible && !unlock.safe_candidate_ids.length) violations.push({ weapon_id: unlock.weapon_id, target_tier: unlock.target_tier, reason: "no_safe_next_tier_hunter_candidate" });
 	return {
 		schema_version: 4,
-		policy: { direct_combat: "canonical-loadout-safety", failure_policy: "fail-closed", ...progression.MONSTER_COMBAT_POLICY },
+		policy: { direct_combat: "canonical-loadout-safety", failure_policy: "fail-closed", set_threshold_publication: "production_cumulative", ...progression.MONSTER_COMBAT_POLICY },
 		canonical_loadouts: analysis.loadouts,
-		weapon_states,
 		monster_rows: analysis.matrix_rows,
 		universal_candidates: analysis.universal_candidates,
 		sidegrade_unlocks,
@@ -466,7 +475,9 @@ function main(argv = process.argv.slice(2)) {
 		return;
 	}
 	if (argv.includes("--write-combat")) {
-		fs.writeFileSync(COMBAT_FIXTURE_PATH, serializeFixture(buildEquipmentCombatMatrix()));
+		const fixture = buildEquipmentCombatMatrix();
+		if (fixture.violations.length) throw new Error(`Equipment combat matrix is infeasible: ${serializeFixture(fixture.violations).trim()}`);
+		fs.writeFileSync(COMBAT_FIXTURE_PATH, serializeFixture(fixture));
 		return;
 	}
 	if (argv.includes("--verify")) return verifyFixture();

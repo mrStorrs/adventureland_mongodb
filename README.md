@@ -140,14 +140,19 @@ reset or manual respec.
 ## Acquisition-ranked equipment
 
 Base combat equipment now follows the reviewed acquisition frontier instead of
-legacy item tiers. Nineteen named armor themes are complete five-slot sets
-(helmet, chest, pants, gloves, and shoes) with Heavy, Medium, or Light weight
-identity. Weights are universally wearable and provide different stat
-tradeoffs; each theme has cumulative armor-only bonuses at two, three, four,
-and five equipped pieces. Weapons, offhands, capes, accessories, and orbs may
-keep a theme for presentation but do not increment an armor-set bonus. The
-Monster Hunter Paladin theme is included, and 25 newly filled armor slots are
-marked as placeholder artwork until dedicated art is available.
+legacy item tiers. Twenty named armor themes are published with Heavy, Medium,
+or Light weight identity. Thirteen sets carry six-tier armor progression
+metadata: Basic (tier 1), Wanderer's (tier 2), Rugged (tier 3), Heavy (tier 4),
+Darkforge and seven Monster Hunter sidegrades (tier 5), and Vampires (tier 6).
+This metadata is for balance and Guide presentation only; it does not add equip
+gates. Tiered themes and Holiday Spirit retain five-slot cumulative armor
+bonuses. The six reduced themes preserve their existing completion payload at
+their genuine size: Tiger and MP X use one slot, Fury and Swift use two, and
+Legends and Bunny use three. Weapons, offhands, capes, accessories, and orbs
+may keep a theme for presentation but do not increment an armor-set bonus. The
+Monster Hunter Paladin theme is included. The 18 non-tier placeholder armor
+definitions retired by this pass are not replaced; seven retained Vampire and
+Monster Hunter Paladin armor slots remain marked as placeholder artwork.
 
 Standalone armor, capes, and combat offhands (shields, quivers, sources, and
 miscellaneous hand items) are independent sidegrades. Every equippable
@@ -164,6 +169,9 @@ unchanged.
 Existing stored items need no migration or respec. Weapon requirements are
 enforced on a future equip or re-equip, while nonweapon equipment remains
 available at every character level.
+
+The Guide shows `Armor Tier N/6` on tiered armor item and set views and renders
+only populated bonus slots and defined milestone rows, including reduced sets.
 
 ## Weapon progression
 
@@ -246,9 +254,21 @@ human-reviewable scale summary:
 |---|---:|
 | Weapon acquisition and enhancement | 90 weapons; 42 class/rank rows; 1,170 enhancement states |
 | Vanilla equipment baseline | 420 role/level rows; 129 monsters; 1,573 Warrior enhancement states |
-| Armor and sets | 138 nonweapon items; 19 sets |
+| Armor and sets | 20 sets; 13 tiered sets across six tiers; 7 non-tiered themes |
 | Weapon and offhand loadouts | 7 ranks; 1,170 weapon states; 811 legal layouts |
 | Combat matrix | 36 canonical loadouts × 119 attackable monsters = 4,284 rows |
+
+Armor balance evidence is generated from the same cumulative set-threshold
+publication helper used by the server. From the `node/` directory, verify the
+checked-in evidence with:
+
+```sh
+node tools/direct-equipment-authority.js --fixture=armor-set-balance.json --verify
+node tools/equipment-balance.js --verify
+```
+
+The authority enumerates legal complete-set variants at `+0` through `+12`
+and fails closed on tier-ordering, reduced-set, or retirement-contract drift.
 
 ### Monster Hunter progression
 

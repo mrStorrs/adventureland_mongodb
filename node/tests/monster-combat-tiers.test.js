@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const { loadSourceData } = require("../tools/acquisition-ranking");
+const { hash } = require("../tools/direct-equipment-authority");
 const { analyze, buildMonsterCombatTiers, canonicalLoadoutRoutes, simulateFight, validateMonsterCombatTiers } = require("../tools/monster-combat-tiers");
 
 const EXPECTED_ORDINARY_ROSTER = Object.freeze({
@@ -29,7 +30,7 @@ test("damage return applies only to short-range physical attackers", () => {
 	assert.ok(Object.values(tierThree).every((row) => Array.isArray(row.failure_reasons)));
 });
 
-test("canonical loadouts use source-backed permanent gear and expose its acquisition route", () => {
+test("canonical loadouts use the source-backed armor anchor available at each weapon rank", () => {
 	const data = loadSourceData();
 	for (const rank of [1, 2, 3, 4, 5]) {
 		for (const [itemId, route] of canonicalLoadoutRoutes(data, rank)) {
@@ -43,11 +44,15 @@ test("canonical loadouts use source-backed permanent gear and expose its acquisi
 		}
 	}
 	const analysis = analyze(data);
+	const expectedArmorSetByRank = { 1: "basic", 2: "wanderers", 3: "rugged", 4: "wt3", 5: "wt4" };
+	for (const loadout of analysis.loadouts) {
+		for (const slot of ["helmet", "chest", "pants", "gloves", "shoes"])
+			assert.equal(data.items[loadout.slots[slot].name].set, expectedArmorSetByRank[loadout.weapon_rank], `${loadout.tier}:${loadout.skill}:${slot}`);
+	}
 	const tierThreeMage = analysis.loadouts.find((row) => row.tier === 3 && row.skill === "mage");
 	assert.deepEqual(tierThreeMage.acquisition_routes.chest, {
-		route_id: "shop:basics", kind: "shop", effort: 50,
+		route_id: "map:winterland:monster:arcticbee", kind: "monster_drop", effort: 1726.9067323, monster_id: "arcticbee", map_id: "winterland",
 	});
-	assert.ok(Object.values(tierThreeMage.acquisition_routes).every((route) => ["shop", "starter"].includes(route.kind)));
 	const keyedSource = analysis.monsters.find((row) => row.monster_id === "spiderbl");
 	assert.equal(keyedSource.progression_eligible, false);
 	assert.equal(keyedSource.hunter_eligible, false);
@@ -82,6 +87,12 @@ test("infeasible tiers retain stable candidate, class, and failed-metric evidenc
 test("monster combat tiers cover every attackable monster and fail closed for unsupported content", () => {
 	const fixture = buildMonsterCombatTiers();
 	assert.doesNotThrow(() => validateMonsterCombatTiers(fixture));
+	assert.equal(fixture.policy.set_threshold_publication, "production_cumulative");
+	assert.equal(fixture.counts.progression_eligible, 20);
+	assert.equal(
+		hash(fixture.monsters.map(({ monster_id, progression_eligible, hunter_eligible, reason }) => ({ monster_id, progression_eligible, hunter_eligible, reason }))),
+		"8acdf00ba6ec8c1d5691b7fc1783e192144f2407e508dee67975a7cca34d6596",
+	);
 	assert.deepEqual(fixture.universal_candidates, Object.fromEntries([2, 3, 4, 5, 6].map((tier) => [tier, fixture.universal_candidates[tier]])));
 	for (const [tier, required] of Object.entries(fixture.policy.minimum_solo_candidates)) assert.ok(fixture.universal_candidates[tier].length >= required, `tier ${tier}`);
 	for (const row of fixture.monsters) {

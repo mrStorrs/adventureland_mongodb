@@ -8,6 +8,7 @@ const vm = require("node:vm");
 
 const { DIRECT_EFFECT_KEY_SET } = require("../game/direct_effects");
 const { activeSkillFromItem } = require("../game/active_skill");
+const { ARMOR_PROGRESSION_SET_TIERS } = require("../game/equipment_schema");
 const { loadSourceData } = require("../tools/acquisition-ranking");
 
 const root = path.resolve(__dirname, "../..");
@@ -94,6 +95,19 @@ test("only weapons retain level-gated equipment requirements", () => {
 	for (const [itemId, item] of Object.entries(data.items)) {
 		if (item.type !== "weapon") continue;
 		assert.ok(data.itemRequirements[itemId].length > 0, `${itemId} remains weapon-gated`);
+	}
+});
+
+test("armor tiers stay set-level Guide metadata without item progression or equip gates", () => {
+	const data = loadSourceData();
+	for (const [setId, expected] of Object.entries(ARMOR_PROGRESSION_SET_TIERS)) {
+		const set = data.sets[setId];
+		assert.deepEqual(JSON.parse(JSON.stringify(set.armor_progression)), expected, setId);
+		for (const itemId of Object.values(set.bonus_items).flat()) {
+			assert.equal(data.items[itemId].progression, undefined, itemId);
+			assert.deepEqual(data.items[itemId].requirements, [], itemId);
+			assert.deepEqual(data.itemRequirements[itemId], [], itemId);
+		}
 	}
 });
 

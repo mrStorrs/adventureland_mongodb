@@ -142,27 +142,6 @@ var craft={
 		],
 		"cost":156000000,
 	},
-	"swifthelmet":{
-		"items":[
-			[1,"shoes"],
-			[20,"feather0"],
-		],
-		"cost":120000,
-	},
-	"swiftarmor":{
-		"items":[
-			[1,"shoes"],
-			[20,"feather0"],
-		],
-		"cost":120000,
-	},
-	"swiftpants":{
-		"items":[
-			[1,"shoes"],
-			[20,"feather0"],
-		],
-		"cost":120000,
-	},
 	"fierygloves":{
 		"items":[
 			[1,"gloves"],

@@ -10,7 +10,7 @@ test("direct conversion preserves published item identities, requirements, and a
 	const data = loadSourceData();
 	const armor = buildArmorSetBalanceFixture(data);
 	const ranking = buildAcquisitionRanking(data);
-	assert.equal(armor.set_count, 19);
+	assert.deepEqual(armor.counts, { sets: 20, tiered_sets: 13, non_tiered_sets: 7, tiers: 6 });
 	assert.equal(ranking.counts.weapons, 90);
 	for (const [id, item] of Object.entries(data.items)) {
 		assert.ok(typeof item.name === "string" && item.name.length, `stable item ${id}`);
@@ -18,7 +18,7 @@ test("direct conversion preserves published item identities, requirements, and a
 	}
 	for (const set of Object.values(armor.sets)) {
 		assert.ok(set.weight);
-		for (const threshold of Object.values(set.thresholds)) assert.equal(Object.hasOwn(threshold, "stat_type"), false);
+		for (const threshold of [...Object.values(set.raw_thresholds), ...Object.values(set.published_thresholds)]) assert.equal(Object.hasOwn(threshold, "stat_type"), false);
 	}
 });
 

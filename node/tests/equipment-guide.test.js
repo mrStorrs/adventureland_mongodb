@@ -13,7 +13,7 @@ function loadHelpers() {
 	assert.ok(start >= 0 && end > start, "equipment Guide helpers are present");
 	const context = { G: { skills: { warrior: { name: "Warrior" }, paladin: { name: "Paladin" }, ranger: { name: "Ranger" }, rogue: { name: "Rogue" } } } };
 	vm.createContext(context);
-	vm.runInContext("String.prototype.toTitleCase = function () { return this.charAt(0).toUpperCase() + this.slice(1); };\n" + source.slice(start, end) + "\nglobalThis.helpers={equipment_requirement_state,equipment_requirement_label,equipment_requirements_pass,equipment_set_bonus_groups};", context, { filename: "html.js" });
+	vm.runInContext("String.prototype.toTitleCase = function () { return this.charAt(0).toUpperCase() + this.slice(1); };\n" + source.slice(start, end) + "\nglobalThis.helpers={equipment_requirement_state,equipment_requirement_label,equipment_requirements_pass,equipment_set_bonus_groups,equipment_armor_tier_label};", context, { filename: "html.js" });
 	return { source, helpers: context.helpers };
 }
 
@@ -32,10 +32,16 @@ function loadRenderers() {
 	const items = {
 		placeholder: { type: "chest", skin: "placeholder", armor_weight: "heavy", placeholder_art: true, requirements: [{ any_skill: ["warrior", "paladin"], level: 42 }] },
 		groupedweapon: { type: "weapon", name: "Grouped Weapon", skin: "groupedweapon", tier: 1, wtype: "short_sword", requirements: [{ any_skill: ["warrior", "paladin"], level: 42 }] },
-		helm: { name: "Helm", skin: "helm" }, chestA: { name: "Chest A", skin: "chestA" }, chestB: { name: "Chest B", skin: "chestB" }, pants: { name: "Pants", skin: "pants" }, gloves: { name: "Gloves", skin: "gloves" }, shoes: { name: "Shoes", skin: "shoes" }, cape: { name: "Cape", skin: "cape" },
+		helm: { name: "Helm", skin: "helm", set: "example", type: "helmet" }, chestA: { name: "Chest A", skin: "chestA", set: "example", type: "chest" }, chestB: { name: "Chest B", skin: "chestB", set: "example", type: "chest" }, pants: { name: "Pants", skin: "pants", set: "example", type: "pants" }, gloves: { name: "Gloves", skin: "gloves", set: "example", type: "gloves" }, shoes: { name: "Shoes", skin: "shoes", set: "example", type: "shoes" }, cape: { name: "Cape", skin: "cape" },
+		solo: { name: "Solo", skin: "solo", set: "solo", type: "helmet" }, dualHelm: { name: "Dual Helm", skin: "dualHelm", set: "dual", type: "helmet" }, dualPants: { name: "Dual Pants", skin: "dualPants", set: "dual", type: "pants" }, tripleChest: { name: "Triple Chest", skin: "tripleChest", set: "triple", type: "chest" }, triplePants: { name: "Triple Pants", skin: "triplePants", set: "triple", type: "pants" }, tripleGloves: { name: "Triple Gloves", skin: "tripleGloves", set: "triple", type: "gloves" },
 	};
 	const context = {
-		G: { skills: { warrior: { name: "Warrior" }, paladin: { name: "Paladin" } }, items, maps: {}, craft: {}, sets: { example: { name: "Example", items: ["helm", "chestA", "chestB", "pants", "gloves", "shoes", "cape"], bonus_items: { helmet: ["helm"], chest: ["chestA", "chestB"], pants: ["pants"], gloves: ["gloves"], shoes: ["shoes"] }, 2: { armor: 2 }, 3: { armor: 3 }, 4: { armor: 4 }, 5: { armor: 5 } } } },
+		G: { skills: { warrior: { name: "Warrior" }, paladin: { name: "Paladin" } }, items, maps: {}, craft: {}, sets: {
+			example: { name: "Example", items: ["helm", "chestA", "chestB", "pants", "gloves", "shoes", "cape"], armor_progression: { shared_tier: 5, role: "progression", anchor: true }, bonus_items: { helmet: ["helm"], chest: ["chestA", "chestB"], pants: ["pants"], gloves: ["gloves"], shoes: ["shoes"] }, 2: { armor: 2 }, 3: { armor: 3 }, 4: { armor: 4 }, 5: { armor: 5 } },
+			solo: { name: "Solo Set", items: ["solo"], bonus_items: { helmet: ["solo"] }, 1: { armor: 1 } },
+			dual: { name: "Dual Set", items: ["dualHelm", "dualPants"], bonus_items: { helmet: ["dualHelm"], pants: ["dualPants"] }, 2: { armor: 2 } },
+			triple: { name: "Triple Set", items: ["tripleChest", "triplePants", "tripleGloves"], bonus_items: { chest: ["tripleChest"], pants: ["triplePants"], gloves: ["tripleGloves"] }, 3: { armor: 3 } },
+		} },
 		window: { character: { skills } }, character: { skills }, weapon_types: { short_sword: "Short Sword" }, offhand_types: {}, modal_count: 0, last_selector: "#set",
 		bold_prop_line: (name, value, color) => `${color || ""}|${name}|${value}`, calculate_item_grade: () => 0, calculate_item_properties: () => ({}), to_pretty_float: (value) => String(value), colors: {}, in_arr: (value, values) => Array.isArray(values) && values.includes(value), trade_slots: [], booster_items: [],
 		item_container: ({ skin }) => `[${skin}]`, render_item: () => "<properties>", show_modal: (html) => { context.modalHtml = html; }, $: () => ({ html: (html) => { context.setHtml = html; } }),
@@ -47,6 +53,10 @@ function loadRenderers() {
 
 function plain(value) {
 	return JSON.parse(JSON.stringify(value));
+}
+
+function occurrences(value, pattern) {
+	return (value.match(pattern) || []).length;
 }
 
 test("Guide helpers express grouped highest-skill requirements without treating them as AND", () => {
@@ -63,16 +73,19 @@ test("Guide helpers express grouped highest-skill requirements without treating 
 	assert.equal(helpers.equipment_requirements_pass([clause], { warrior: { level: 41 }, paladin: { level: 41 } }), false);
 });
 
-test("Guide helpers group bonus slots and source renders weights, alternatives, inert theme members, and placeholders", () => {
+test("Guide helpers render only populated bonus slots and dynamic thresholds", () => {
 	const { source, helpers } = loadHelpers();
-	assert.deepEqual(plain(helpers.equipment_set_bonus_groups({ bonus_items: { helmet: ["helm"], chest: ["chestA", "chestB"], pants: ["pants"], gloves: ["gloves"], shoes: ["shoes"] } })), [
-		{ slot: "helmet", items: ["helm"] }, { slot: "chest", items: ["chestA", "chestB"] }, { slot: "pants", items: ["pants"] }, { slot: "gloves", items: ["gloves"] }, { slot: "shoes", items: ["shoes"] },
+	assert.deepEqual(plain(helpers.equipment_set_bonus_groups({ bonus_items: { helmet: ["helm"], chest: [], pants: ["pants"], shoes: ["shoes"] } })), [
+		{ slot: "helmet", items: ["helm"] }, { slot: "pants", items: ["pants"] }, { slot: "shoes", items: ["shoes"] },
 	]);
+	assert.equal(helpers.equipment_armor_tier_label({ armor_progression: { shared_tier: 5 } }), "5/6");
+	assert.equal(helpers.equipment_armor_tier_label({}), "");
 	assert.match(source, /Weight: /);
 	assert.match(source, /Placeholder artwork/);
 	assert.match(source, /Themed items \(do not count toward armor bonus\)/);
-	assert.match(source, /\[2, 3, 4, 5\]\.forEach/);
-	assert.doesNotMatch(source.slice(source.indexOf("function render_set"), source.indexOf("function render_condition")), /\[1, 2, 3, 4, 5, 6, 7, 8\]/);
+	assert.doesNotMatch(source, /\[2, 3, 4, 5\]\.forEach/);
+	const renderSetStart = source.indexOf("function render_set");
+	assert.match(source.slice(renderSetStart, source.indexOf("function render_condition", renderSetStart)), /\^\\d\+\$/);
 });
 
 test("Guide renderers display the approved grouped gates and armor-only set details", () => {
@@ -90,12 +103,33 @@ test("Guide renderers display the approved grouped gates and armor-only set deta
 	context.character.skills.warrior.level = 41;
 	const ineligibleWeapon = context.renderers.render_item("html", { item: context.G.items.groupedweapon, name: "groupedweapon", pure: true });
 	assert.match(ineligibleWeapon, /#CC3837/);
+	const tieredArmor = context.renderers.render_item("html", { item: context.G.items.helm, name: "helm", pure: true, prop: { set: "example" } });
+	assert.match(tieredArmor, /Armor Tier/);
+	assert.match(tieredArmor, /5\/6/);
 	context.renderers.render_set("example");
+	assert.match(context.setHtml, /Armor Tier 5\/6/);
 	assert.match(context.setHtml, /Bonus Chest: Chest A or Chest B/);
 	assert.match(context.setHtml, /Themed items \(do not count toward armor bonus\)/);
 	assert.match(context.setHtml, /\[2\+ Equipped\]/);
 	assert.match(context.setHtml, /\[5\+ Equipped\]/);
 	assert.doesNotMatch(context.setHtml, /\[1\+ Equipped\]|\[6\+ Equipped\]/);
+	const milestoneIndices = [2, 3, 4, 5].map((count) => context.setHtml.indexOf(`[${count}+ Equipped]`));
+	assert.ok(milestoneIndices.every((index) => index >= 0));
+	assert.deepEqual([...milestoneIndices].sort((left, right) => left - right), milestoneIndices);
+	for (const count of [2, 3, 4, 5]) assert.equal(occurrences(context.setHtml, new RegExp(`\\[${count}\\+ Equipped\\]`, "g")), 1);
+	for (const skin of ["helm", "chestA", "chestB", "pants", "gloves", "shoes", "cape"]) {
+		assert.equal(occurrences(context.setHtml, new RegExp(`\\[${skin}\\]`, "g")), 1, skin);
+	}
+	for (const [setId, expected, absent] of [
+		["solo", /\[1\+ Equipped\]/, /Bonus Chest|Bonus Pants|Bonus Gloves|Bonus Shoes|\[2\+ Equipped\]/],
+		["dual", /\[2\+ Equipped\]/, /Bonus Chest|Bonus Gloves|Bonus Shoes|\[1\+ Equipped\]|\[3\+ Equipped\]/],
+		["triple", /\[3\+ Equipped\]/, /Bonus Helmet|Bonus Shoes|\[1\+ Equipped\]|\[2\+ Equipped\]|\[4\+ Equipped\]/],
+	]) {
+		context.renderers.render_set(setId);
+		assert.match(context.setHtml, expected, setId);
+		assert.doesNotMatch(context.setHtml, absent, setId);
+		assert.doesNotMatch(context.setHtml, /Armor Tier/, setId);
+	}
 });
 
 test("item tooltips render readable direct values, negative effects, and the applied-scroll distinction", () => {
