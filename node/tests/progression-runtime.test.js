@@ -83,6 +83,18 @@ test("runtime rejects mismatched combat levels once the current curve marker is 
 	);
 });
 
+test("runtime creates the client snapshot only after canonical skill loading succeeds", () => {
+	const character = player();
+	character.info.skill_curve_version = progression.COMBAT_XP_CURVE_VERSION;
+	character.info.skills.warrior = { level: 2, xp: 0 };
+
+	assert.throws(
+		() => initializePlayerProgression(character, 0),
+		(error) => error.code === "invalid_character_skill_state" && error.path === "skills.warrior.xp",
+	);
+	assert.equal(Object.hasOwn(character, "progression_client_skills"), false);
+});
+
 test("runtime awards persist complete skill deltas and reject replay", () => {
 	const character = player();
 	initializePlayerProgression(character, 0);
@@ -193,6 +205,45 @@ test("runtime keeps full player snapshots at the last emitted progression state"
 
 	flushPlayerProgressionEvents(character);
 	assert.equal(clientSkillState(character).warrior.xp, 100);
+});
+
+test("runtime refreshes the client snapshot when legacy skills gain Mining before queued XP", () => {
+	const character = player();
+	delete character.info.skills.mining;
+	character.total_level -= 1;
+
+	initializePlayerProgression(character, 0);
+	assert.deepEqual(character.info.skills.mining, { level: 1, xp: 0 });
+
+	awardPlayerSkillXp(character, "warrior", 1, {
+		source: "pve_damage",
+		sourceId: "migration:queued-xp",
+	});
+	const pending = clientSkillState(character);
+	assert.deepEqual(pending.mining, { level: 1, xp: 0 });
+	assert.equal(pending.warrior.xp, 0);
+
+	assert.equal(flushPlayerProgressionEvents(character), 1);
+	assert.deepEqual(clientSkillState(character).mining, { level: 1, xp: 0 });
+	assert.equal(clientSkillState(character).warrior.xp, 1);
+});
+
+test("runtime reinitialization preserves the withheld snapshot while XP is queued", () => {
+	const character = player();
+	initializePlayerProgression(character, 0);
+
+	awardPlayerSkillXp(character, "warrior", 1, {
+		source: "pve_damage",
+		sourceId: "reinitialize:queued-xp",
+	});
+	assert.equal(clientSkillState(character).warrior.xp, 0);
+
+	initializePlayerProgression(character, 1);
+	assert.equal(character.progression_events.length, 1);
+	assert.equal(clientSkillState(character).warrior.xp, 0);
+
+	assert.equal(flushPlayerProgressionEvents(character), 1);
+	assert.equal(clientSkillState(character).warrior.xp, 1);
 });
 
 test("queued multi-style progression preserves protocol snapshots and excludes runtime state", () => {
