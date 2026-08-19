@@ -12,8 +12,10 @@ function assertProtocol4Publication(publication) {
 		!publication.skills ||
 		JSON.stringify(Object.keys(publication.skills).sort()) !== JSON.stringify([...SKILL_IDS].sort())
 	) {
-		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication must expose exactly the seven registered skills");
+		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication must expose exactly the registered skills");
 	}
+	if (!publication.mining || publication.mining.version !== 1)
+		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing Mining data");
 	if (!publication.abilities || typeof publication.abilities !== "object") {
 		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing abilities");
 	}

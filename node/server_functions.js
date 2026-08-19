@@ -400,6 +400,14 @@ function is_player_allowed(player) {
 }
 
 function rip(player) {
+	if (player && ((player.c && player.c.mining) || player.mining_attempt)) {
+		if (typeof clear_mining_attempt == "function") clear_mining_attempt(player, "dead");
+		else {
+			if (player.c && player.c.mining && typeof mining_terminal_cancel == "function") mining_terminal_cancel(player, player.c.mining, "dead");
+			if (player.c) delete player.c.mining;
+			delete player.mining_attempt;
+		}
+	}
 	if (player && player.is_player) {
 		progression_ledger.removeCharacter(player.id || player.name);
 	}

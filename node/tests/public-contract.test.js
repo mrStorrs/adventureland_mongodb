@@ -24,6 +24,7 @@ function loadRawProgression() {
 		"skill_xp.js",
 		"abilities.js",
 		"character.js",
+		"mining.js",
 	])
 		vm.runInContext(read(`design/${file}`), context, { filename: file });
 	return context;
@@ -45,11 +46,12 @@ test("public progression publication is protocol 4 and contains no class or leve
 		"ranger",
 		"rogue",
 		"merchant",
+		"mining",
 	]);
 	assert.equal(publication.character.appearances.length, 28);
 	assert.deepEqual(
 		Object.values(publication.character.skills).map(({ level, xp }) => [level, xp]),
-		Array(7).fill([1, 0]),
+		Array(8).fill([1, 0]),
 	);
 });
 

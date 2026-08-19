@@ -919,10 +919,16 @@ var item_requirements = {
 	],
 	pickaxe: [
 		{
-			skill: "merchant",
-			level: 16,
+			skill: "mining",
+			level: 1,
 		},
 	],
+	ironpickaxe: [{ skill: "mining", level: 15 }],
+	goldpickaxe: [{ skill: "mining", level: 30 }],
+	mithrilpickaxe: [{ skill: "mining", level: 55 }],
+	adamantitepickaxe: [{ skill: "mining", level: 70 }],
+	runitepickaxe: [{ skill: "mining", level: 85 }],
+	miningcape: [{ skill: "mining", level: 99 }],
 	bow: [
 		{
 			skill: "ranger",
@@ -1983,9 +1989,10 @@ for(var acquisition_weapon_id in acquisition_ranked_weapon_requirements){
 
 function finalize_equipment_requirements(items,item_requirements){
 	var ungated_equipment_types={helmet:true,pants:true,chest:true,amulet:true,earring:true,shoes:true,gloves:true,ring:true,shield:true,belt:true,source:true,orb:true,quiver:true,cape:true,misc_offhand:true,tool:true};
+	var mining_gated_items={pickaxe:true,ironpickaxe:true,goldpickaxe:true,mithrilpickaxe:true,adamantitepickaxe:true,runitepickaxe:true,miningcape:true};
 	for(var equipment_requirement_item_id in items){
 		var equipment_requirement_item=items[equipment_requirement_item_id];
-		if(ungated_equipment_types[equipment_requirement_item.type] && equipment_requirement_item_id.indexOf("wbook")!==0) item_requirements[equipment_requirement_item_id]=[];
+		if(ungated_equipment_types[equipment_requirement_item.type] && equipment_requirement_item_id.indexOf("wbook")!==0 && !mining_gated_items[equipment_requirement_item_id]) item_requirements[equipment_requirement_item_id]=[];
 	}
 }
 

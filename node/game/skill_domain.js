@@ -5,6 +5,8 @@ const { skills: DESIGN_SKILLS } = require("../../design/skills");
 const { character: CHARACTER_DEFINITION } = require("../../design/character");
 const { progression } = require("../../design/progression");
 const { skill_xp: DESIGN_SKILL_XP } = require("../../design/skill_xp");
+const { mining: DESIGN_MINING } = require("../../design/mining");
+const { validateMiningData } = require("./mining");
 
 const SKILL_IDS = Object.freeze(Object.keys(DESIGN_SKILLS));
 const SKILL_DEFINITIONS = DESIGN_SKILLS;
@@ -36,6 +38,10 @@ const EQUIPPABLE_TYPES = new Set([
 	"tool",
 ]);
 const NONCOMBAT_TOOL_TYPES = new Set(["rod", "pickaxe"]);
+const MINING_REQUIREMENTS = new Map([
+	...DESIGN_MINING.tiers.map((tier) => [tier.pickaxe, [{ skill: "mining", level: tier.level }]]),
+	[DESIGN_MINING.cape.item, [{ skill: "mining", level: DESIGN_MINING.cape.level }]],
+]);
 const VALIDATED_PUBLICATION = Symbol("validated progression publication");
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
@@ -386,7 +392,15 @@ function validateItemRequirements(items, itemRequirements, registry, weaponOwner
 			throw fail("invalid_game_data", `Equippable item ${itemId} is missing an explicit requirement`, { item: itemId });
 		}
 		if (item.type !== "weapon") {
-			if (EQUIPPABLE_TYPES.has(item.type) && itemRequirements[itemId].length) {
+			const miningRequirements = MINING_REQUIREMENTS.get(itemId);
+			if (miningRequirements) {
+				if (
+					JSON.stringify(itemRequirements[itemId]) !== JSON.stringify(miningRequirements) ||
+					JSON.stringify(item.purchase_requirement) !== JSON.stringify(miningRequirements[0])
+				) {
+					throw fail("invalid_game_data", `Mining equipment ${itemId} has an invalid gate`, { item: itemId });
+				}
+			} else if (EQUIPPABLE_TYPES.has(item.type) && itemRequirements[itemId].length) {
 				throw fail("invalid_game_data", `Nonweapon equipment ${itemId} must be ungated`, { item: itemId });
 			}
 			continue;
@@ -503,6 +517,7 @@ function validateProgressionData(data) {
 	validateAbilityCatalog(data.abilities, data.skills);
 	validateItemRequirements(data.items, data.item_requirements, data.skills, weaponOwners);
 	validateCharacterDefinition(data.character, data.items);
+	validateMiningData(data.mining, { items: data.items });
 	return data;
 }
 
@@ -522,6 +537,7 @@ function buildProgressionData(data) {
 		abilities: JSON.parse(JSON.stringify(data.abilities)),
 		character: JSON.parse(JSON.stringify(data.character)),
 		item_requirements: JSON.parse(JSON.stringify(data.item_requirements)),
+		mining: JSON.parse(JSON.stringify(data.mining)),
 	};
 	validateProgressionData(normalized);
 	Object.defineProperty(normalized, VALIDATED_PUBLICATION, { value: true });
@@ -547,6 +563,7 @@ function loadProgressionPublication(target, progressionData) {
 			// Keep that cache outside the frozen progression source while preserving the
 			// canonical character definition underneath it.
 			character: { ...next.character, xcx: [] },
+			mining: next.mining,
 		},
 	);
 }

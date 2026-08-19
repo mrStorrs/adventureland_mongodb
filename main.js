@@ -1,6 +1,7 @@
 var fs = require("fs"),
 	path = require("path");
 var { buildProgressionData, loadProgressionPublication } = require("./node/game/skill_domain");
+var { validateMiningData } = require("./node/game/mining");
 var { ensureWorldIndexes, verifyWorldState } = require("./node/game/world_schema");
 var { rankingSort } = require("./node/game/rankings");
 var { assertProtocol4Publication } = require("./node/game/release_readiness");
@@ -75,6 +76,7 @@ eval("" + fs.readFileSync(path.resolve(__dirname, "design/skills.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/skill_xp.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/abilities.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/character.js")));
+eval("" + fs.readFileSync(path.resolve(__dirname, "design/mining.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/progression.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/events.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/recipes.js")));
@@ -84,6 +86,8 @@ eval("" + fs.readFileSync(path.resolve(__dirname, "design/cosmetics.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/emotions.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/precomputed_images.js")));
 
+validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
+
 var progression_data = buildProgressionData({
 	items: items,
 	item_requirements: item_requirements,
@@ -91,6 +95,7 @@ var progression_data = buildProgressionData({
 	skill_xp: skill_xp,
 	abilities: abilities,
 	character: character,
+	mining: mining,
 });
 
 // docs
@@ -342,6 +347,7 @@ app.all("/data.js", async (req, res, next) => {
 		var map = await rpc[id];
 		if (map) geometry[id] = map.info.data;
 	}
+	validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites, geometry: geometry });
 	var G = loadProgressionPublication(
 		{
 			version: Version,

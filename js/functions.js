@@ -980,6 +980,8 @@ function use_ability(name, target, arg) {
 		socket.emit("ability", { name: "dash", x: get_x(character) + [0, -40, 40, 0][d], y: get_y(character) + [40, 0, 0, -40][d] });
 	} else if (name == "energize") {
 		socket.emit("ability", { name: "energize", id: target, mp: arg });
+	} else if (name == "mining") {
+		socket.emit("ability", { name: "mining", id: target });
 	} else if (name == "stack") on_ability("attack");
 	else if (name == "warp") {
 		if (target && is_string(target) && !target[2]) target[2] = character.map;

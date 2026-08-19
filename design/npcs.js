@@ -311,8 +311,9 @@ var npcs={
 		"name":"Landon",
 	},
 	"gemmerchant":{
-		"role":"quest",
+		"role":"merchant",
 		"quest":"gemfragment",
+		"items":["pickaxe","ironpickaxe","goldpickaxe","mithrilpickaxe","adamantitepickaxe","runitepickaxe","miningcape"],
 		"skin":"gemmerchant",
 		"type":"fullstatic",
 		"says":"Bling",

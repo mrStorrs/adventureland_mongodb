@@ -1173,19 +1173,6 @@ var drops = {
 		[14, "shoes1"],
 		[0.5, "open", "lglitch"],
 	],
-	m1: [
-		[200, "gemfragment"],
-		[1, "bronzenugget"],
-		[0.5, "goldnugget"],
-		[0.1, "platinumnugget"],
-		//[0.5,"open","glitch"],
-		[0.1, "emotionjar", 1, "hearts_single"],
-	],
-	m2: [
-		[100, "empty"],
-		[10, "wbook0"],
-		[0.1, "wbook1"],
-	],
 	armorbox: [
 		[14, "coat1"],
 		[22, "helmet1"],

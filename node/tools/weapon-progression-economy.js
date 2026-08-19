@@ -21,6 +21,7 @@ const REFERENCE_WEAPON_IDS = new Set(["fsword", "swifty", "sword", "bataxe", "sc
 const MUTABLE_ORDINARY_MONSTER_IDS = Object.freeze(["arcticbee", "armadillo", "bat", "bbpompom", "cgoo", "croc", "crabx", "ghost", "gscorpion", "osnake", "poisio", "rat", "scorpion", "snake", "spider", "squigtoad", "stoneworm", "tortoise"]);
 const TARGET_TIERS = Object.freeze([2, 3, 4, 5, 6]);
 const TARGET_ANCHOR_WEAPON_IDS = new Set(TARGET_TIERS.flatMap((tier) => Object.values(progression.WEAPON_PROGRESSION_ANCHORS[tier])));
+const RETIRED_MINING_DROP_TABLE_IDS = Object.freeze(["m1", "m2"]);
 
 function canonical(value) {
 	if (Array.isArray(value)) return value.map(canonical);
@@ -138,7 +139,11 @@ function validateProtectedBaseline(data = loadSourceData(), baseline = loadProte
 	};
 	if (hash(baseline.protected_payload) !== baseline.protected_payload_sha256) throw new Error("Protected loot baseline hash is invalid");
 	if (stripRetiredLoot(data.drops).removals) throw new Error("Retired armor loot remains in the current drop tables");
+	for (const tableId of RETIRED_MINING_DROP_TABLE_IDS) {
+		if (Object.prototype.hasOwnProperty.call(data.drops, tableId)) throw new Error(`Retired Mining drop table ${tableId} remains`);
+	}
 	const expected = stripRetiredLoot(baseline.protected_payload).value;
+	for (const tableId of RETIRED_MINING_DROP_TABLE_IDS) delete expected.non_monster_tables[tableId];
 	if (JSON.stringify(payload) !== JSON.stringify(expected) || hash(payload) !== hash(expected))
 		throw new Error("Protected loot baseline drifted");
 	return true;

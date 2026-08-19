@@ -212,8 +212,9 @@ var character = {
 		ranger: { level: 1, xp: 0 },
 		rogue: { level: 1, xp: 0 },
 		merchant: { level: 1, xp: 0 },
+		mining: { level: 1, xp: 0 },
 	},
-	total_level: 7,
+	total_level: 8,
 	starter: {
 		weapons: ["blade", "mace", "staff", "wbook0", "bow", "claw"],
 		consumables: [

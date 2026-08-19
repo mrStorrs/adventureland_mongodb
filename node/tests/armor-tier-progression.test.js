@@ -502,7 +502,8 @@ test("only the approved placeholders and their direct acquisition references are
 	assert.deepEqual(data.drops.basketofeggs.filter((entry) => ["eears", "epyjamas", "eslippers"].includes(entry[1])), [[1, "eears"], [1 / 3, "epyjamas"], [1, "eslippers"]]);
 	assert.deepEqual(data.drops.mysterybox.filter((entry) => ["warpvest", "starkillers"].includes(entry[1])), [[1 / 3, "warpvest"]]);
 	assert.equal(hash(data.tokens), "c65e7672d59d331e298a023b41713551dd72cda93940ce1bb839abe86a37be00");
-	assert.equal(hash(data.npcs), "7ced56518bf86c8a44ea95a456f0e110d2d5926fa8dc927a0f8fc7e1e43a3419");
+	const unrelatedNpcs = Object.fromEntries(Object.entries(data.npcs).filter(([npcId]) => npcId !== "gemmerchant"));
+	assert.equal(hash(unrelatedNpcs), "af3b22ea692dda09b5ca9f51eeeecce671750374994b1b12321827013b0f41ac");
 });
 
 test("frozen conversion, source, loot, weapon-economy, and XP authorities stay byte-identical", () => {

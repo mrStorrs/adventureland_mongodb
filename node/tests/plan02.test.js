@@ -35,7 +35,7 @@ const items = {
 const requirements = Object.fromEntries(
 	Object.keys(items).map((id) => [
 		id,
-		[{ skill: id === "rod" || id === "pickaxe" ? "merchant" : "warrior", level: 1 }],
+		[{ skill: id === "rod" ? "merchant" : id === "pickaxe" ? "mining" : "warrior", level: 1 }],
 	]),
 );
 requirements.mace = [
@@ -45,11 +45,11 @@ requirements.mace = [
 requirements.greatsword = [{ skill: "warrior", level: 1 }];
 requirements.shield = [{ skill: "paladin", level: 1 }];
 
-test("character state is complete, ordered, derived, and rejects legacy shape", () => {
+test("character state is complete, ordered, derived, and rejects malformed shape", () => {
 	const fresh = createCharacterState();
-	assert.deepEqual(Object.keys(fresh.skills), ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant"]);
-	assert.equal(fresh.total_level, 7);
-	assert.deepEqual(projectPersistenceState(fresh), { info: { skills: fresh.skills }, total_level: 7 });
+	assert.deepEqual(Object.keys(fresh.skills), ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining"]);
+	assert.equal(fresh.total_level, 8);
+	assert.deepEqual(projectPersistenceState(fresh), { info: { skills: fresh.skills }, total_level: 8 });
 	assert.throws(
 		() => validateSkillState({ warrior: { level: 1, xp: 0 } }),
 		(error) => error.code === "invalid_character_skill_state",
@@ -65,7 +65,7 @@ test("character state is complete, ordered, derived, and rejects legacy shape", 
 	const all99 = Object.fromEntries(Object.keys(fresh.skills).map((skill) => [skill, { level: 99, xp: maxXpForSkill(skill) }]));
 	assert.equal(
 		Object.values(all99).reduce((sum, progress) => sum + progress.level, 0),
-		693,
+		792,
 	);
 	assert.doesNotThrow(() => validateSkillState(all99));
 	const future = createCharacterState([...Object.keys(fresh.skills), "artisan"]);
