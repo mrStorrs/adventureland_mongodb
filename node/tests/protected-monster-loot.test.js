@@ -7,7 +7,7 @@ const { RETIRED_ARMOR_ITEM_IDS } = require("../game/equipment_schema");
 const { loadSourceData } = require("../tools/acquisition-ranking");
 const { loadProtectedBaseline, main, validateProtectedBaseline } = require("../tools/weapon-progression-economy");
 
-test("protected loot permits only the exact armor retirements from its immutable baseline", () => {
+test("protected loot permits only the exact armor and retired Mining-table changes from its immutable baseline", () => {
 	const data = loadSourceData();
 	const baseline = loadProtectedBaseline();
 	assert.doesNotThrow(() => validateProtectedBaseline(data, baseline));
@@ -29,6 +29,13 @@ test("protected loot permits only the exact armor retirements from its immutable
 	const outerRoute = { ...data, drops: JSON.parse(JSON.stringify(data.drops)) };
 	outerRoute.drops.monsters.tiger.find((entry) => entry[1] === "open" && entry[2] === "tigerarmorbox")[0] = 0.2;
 	assert.throws(() => validateProtectedBaseline(outerRoute, loadProtectedBaseline()), /Protected loot baseline drifted/);
+	const miningItems = ["ironpickaxe", "goldpickaxe", "mithrilpickaxe", "adamantitepickaxe", "runitepickaxe", "miningcape", "copperore", "ironore", "goldore", "mithrilore", "adamantiteore", "runiteore"];
+	for (const table of ["glitch", "lglitch"]) {
+		for (const itemId of miningItems) assert.equal(data.drops[table].some((entry) => entry[1] === itemId), false, `${table}:${itemId}`);
+	}
+	const extraMiningGlitchRoute = { ...data, drops: JSON.parse(JSON.stringify(data.drops)) };
+	extraMiningGlitchRoute.drops.glitch.push([2, "runiteore"]);
+	assert.throws(() => validateProtectedBaseline(extraMiningGlitchRoute, loadProtectedBaseline()), /Protected loot baseline drifted/);
 	assert.doesNotThrow(() => main(["--verify"]));
 	assert.throws(() => main(["--write-protected-baseline"]), /immutable/);
 });

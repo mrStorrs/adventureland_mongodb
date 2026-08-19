@@ -47,6 +47,12 @@ var skills = {
 		kind: "noncombat",
 		max_level: 99,
 	},
+	mining: {
+		id: "mining",
+		name: "Mining",
+		kind: "noncombat",
+		max_level: 99,
+	},
 };
 
 if (typeof module !== "undefined") module.exports = { skills: skills };

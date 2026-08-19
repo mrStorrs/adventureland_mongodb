@@ -357,7 +357,7 @@ test("browser evidence executes and validator rejects malformed evidence", async
 	const logPath = path.join(temporaryDirectory, "browser.log");
 	const resultPath = path.join(temporaryDirectory, "browser-result.json");
 	const skills = Object.fromEntries(
-		["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant"].map((name) => [name, { level: 1, xp: 0 }]),
+		["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining"].map((name) => [name, { level: 1, xp: 0 }]),
 	);
 	const browserMaxXp = Math.round(900_000_000 * ((1 / (99 - 1)) ** 2));
 	const skillXpEvent = (skill, xp, priorXp = {}) => {
@@ -373,7 +373,7 @@ test("browser evidence executes and validator rejects malformed evidence", async
 			to_level: 1,
 			xp,
 			max_xp: browserMaxXp,
-			total_level: 7,
+			total_level: 8,
 			skills: Object.fromEntries(
 				Object.keys(skills).map((name) => [
 					name,
@@ -531,7 +531,7 @@ test("browser evidence executes and validator rejects malformed evidence", async
 			to_level: 99,
 			xp: cappedXp,
 			max_xp: null,
-			total_level: 105,
+			total_level: 106,
 			skills: structuredClone(cappedEvents.at(-1).skills),
 		};
 		discardedEventResult.browser.ui.combat.skillXpEvents = [...cappedEvents, discardedEvent];

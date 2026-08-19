@@ -91,6 +91,7 @@ var progression = {
 		"merchant_dice",
 		"merchant_upgrade",
 		"merchant_compound",
+		"mining",
 	],
 	WEAPON_RANK_REQUIREMENTS: Object.freeze([1, 20, 40, 60, 80, 90, 99]),
 	WEAPON_PROGRESSION_ANCHORS: Object.freeze({

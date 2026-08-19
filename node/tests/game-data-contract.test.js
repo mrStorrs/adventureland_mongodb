@@ -67,8 +67,12 @@ test("Priest starters are replaceable without adding an ordinary starter loot ro
 	assert.equal((data.drops.monsters.bat || []).some((entry) => entry[1] === "wbook0"), false);
 });
 
-test("only weapons retain level-gated equipment requirements", () => {
+test("only weapons and approved Mining mastery equipment retain level gates", () => {
 	const data = loadSourceData();
+	const miningRequirements = new Map([
+		...data.mining.tiers.map((tier) => [tier.pickaxe, [{ skill: "mining", level: tier.level }]]),
+		[data.mining.cape.item, [{ skill: "mining", level: data.mining.cape.level }]],
+	]);
 	const equipmentTypes = new Set([
 		"helmet",
 		"pants",
@@ -90,7 +94,7 @@ test("only weapons retain level-gated equipment requirements", () => {
 	]);
 	for (const [itemId, item] of Object.entries(data.items)) {
 		if (!equipmentTypes.has(item.type) || item.type === "weapon") continue;
-		assert.deepEqual(data.itemRequirements[itemId], [], `${itemId} is not level-gated`);
+		assert.deepEqual(data.itemRequirements[itemId], miningRequirements.get(itemId) || [], `${itemId} has its approved gate`);
 	}
 	for (const [itemId, item] of Object.entries(data.items)) {
 		if (item.type !== "weapon") continue;

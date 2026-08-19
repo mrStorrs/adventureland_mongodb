@@ -3744,18 +3744,57 @@ var items={
 		"wtype": "pickaxe",
 		"tier": 1,
 		"skin": "pickaxe",
-		"name": "Pickaxe",
-		"breaks": 1,
+		"name": "Copper Pickaxe",
 		"g": 2000,
-		"upgrade": {
-			"breaks": -0.064
-		},
-		"grades": [
-			7,
-			9,
-			10,
-			12
-		]
+		"purchase_requirement": { "skill": "mining", "level": 1 }
+	},
+	"ironpickaxe": {
+		"type": "tool", "wtype": "pickaxe", "tier": 2, "skin": "pickaxe", "name": "Iron Pickaxe", "g": 100000,
+		"exclusive": true,
+		"purchase_requirement": { "skill": "mining", "level": 15 }
+	},
+	"goldpickaxe": {
+		"type": "tool", "wtype": "pickaxe", "tier": 3, "skin": "pickaxe", "name": "Gold Pickaxe", "g": 1000000,
+		"exclusive": true,
+		"purchase_requirement": { "skill": "mining", "level": 30 }
+	},
+	"mithrilpickaxe": {
+		"type": "tool", "wtype": "pickaxe", "tier": 4, "skin": "pickaxe", "name": "Mithril Pickaxe", "g": 8000000,
+		"exclusive": true,
+		"purchase_requirement": { "skill": "mining", "level": 55 }
+	},
+	"adamantitepickaxe": {
+		"type": "tool", "wtype": "pickaxe", "tier": 5, "skin": "pickaxe", "name": "Adamantite Pickaxe", "g": 35000000,
+		"exclusive": true,
+		"purchase_requirement": { "skill": "mining", "level": 70 }
+	},
+	"runitepickaxe": {
+		"type": "tool", "wtype": "pickaxe", "tier": 6, "skin": "pickaxe", "name": "Runite Pickaxe", "g": 150000000,
+		"exclusive": true,
+		"purchase_requirement": { "skill": "mining", "level": 85 }
+	},
+	"miningcape": {
+		"type": "cape", "skin": "cape0", "name": "Mining Cape", "g": 99000000, "armor_weight": "medium", "mining_bonus": 0.05,
+		"exclusive": true,
+		"purchase_requirement": { "skill": "mining", "level": 99 }
+	},
+	"copperore": {
+		"type": "material", "skin": "gemfragment", "name": "Copper Ore", "s": 9999, "g": 20, "exclusive": true
+	},
+	"ironore": {
+		"type": "material", "skin": "gemfragment", "name": "Iron Ore", "s": 9999, "g": 100, "exclusive": true
+	},
+	"goldore": {
+		"type": "material", "skin": "goldnugget", "name": "Gold Ore", "s": 9999, "g": 500, "exclusive": true
+	},
+	"mithrilore": {
+		"type": "material", "skin": "gemfragment", "name": "Mithril Ore", "s": 9999, "g": 2000, "exclusive": true
+	},
+	"adamantiteore": {
+		"type": "material", "skin": "gemfragment", "name": "Adamantite Ore", "s": 9999, "g": 8000, "exclusive": true
+	},
+	"runiteore": {
+		"type": "material", "skin": "platinumnugget", "name": "Runite Ore", "s": 9999, "g": 32000, "exclusive": true
 	},
 	"bow": {
 		"type": "weapon",

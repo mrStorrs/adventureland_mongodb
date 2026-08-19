@@ -123,6 +123,7 @@ function loadBenchmarkData() {
 			"skill_xp.js",
 			"abilities.js",
 			"character.js",
+			"mining.js",
 			"monsters.js",
 		],
 		path.resolve(__dirname, "../../design"),
@@ -136,6 +137,7 @@ function loadBenchmarkData() {
 		abilities: design.abilities,
 		character: design.character,
 		item_requirements: design.item_requirements,
+		mining: design.mining,
 	});
 	return {
 		combatSkills: COMBAT_SKILLS,
@@ -146,6 +148,7 @@ function loadBenchmarkData() {
 		skillXp: publication.skill_xp,
 		abilities: publication.abilities,
 		character: publication.character,
+		mining: publication.mining,
 		conditions: design.conditions,
 		monsters: design.monsters,
 		sets: design.sets,

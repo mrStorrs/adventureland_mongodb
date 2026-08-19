@@ -173,6 +173,151 @@ var events = {
 };
 var progression_protocol_diagnostics = {};
 var progression_pending_level_up = null;
+var mining_state = { rocks: {} };
+var mining_state_ready = false;
+var mining_rock_sprites = {};
+
+function reset_mining_state(now) {
+	mining_state = { rocks: {} };
+	mining_state_ready = false;
+	update_mining_rocks(now);
+}
+
+function is_fresh_progression_character(entity) {
+	var skill_ids = Object.keys(G.skills || {});
+	if (!entity || !entity.skills || !skill_ids.length || entity.total_level != skill_ids.length) return false;
+	return skill_ids.every(function (id) {
+		var progress = entity.skills[id];
+		return progress && progress.level == 1 && progress.xp == 0;
+	});
+}
+
+function set_mining_state(data, now) {
+	var next = { rocks: {} },
+		known = {};
+	(G.mining && G.mining.rocks || []).forEach(function (rock) { known[rock.id] = true; });
+	if (!data || !data.rocks || typeof data.rocks != "object") {
+		reset_mining_state(now);
+		return false;
+	}
+	for (var id in data.rocks) {
+		if (!known[id] || !Number.isSafeInteger(data.rocks[id]) || data.rocks[id] < 0) {
+			reset_mining_state(now);
+			return false;
+		}
+		if (data.rocks[id] > (now === undefined ? Date.now() : now)) next.rocks[id] = data.rocks[id];
+	}
+	mining_state = next;
+	mining_state_ready = true;
+	update_mining_rocks(now);
+	return true;
+}
+
+function mining_rock_available(id, now) {
+	if (!mining_state_ready) return false;
+	var available_at = mining_state.rocks[id];
+	var current = now === undefined ? (typeof now_date != "undefined" && now_date && now_date.getTime ? now_date.getTime() : Date.now()) : now;
+	return !available_at || available_at <= current;
+}
+
+function show_mining_rock_label(sprite) {
+	if (!sprite || typeof PIXI == "undefined" || !PIXI.Text || !sprite.addChild) return;
+	if (!sprite.mining_hover_label) {
+		var label = new PIXI.Text(sprite.mining_label || sprite.rock_id, {
+			fontFamily: (typeof SZ != "undefined" && SZ.font) || "Pixel",
+			fontSize: 32,
+			fontWeight: "bold",
+			fill: "white",
+			stroke: "black",
+			strokeThickness: 4,
+			align: "center",
+		});
+		if (label.anchor && label.anchor.set) label.anchor.set(0.5, 1);
+		if (label.scale && label.scale.set) label.scale.set(0.5, 0.5);
+		label.y = -Math.max(16, sprite.height / 2);
+		sprite.mining_hover_label = label;
+		sprite.addChild(label);
+	}
+	sprite.mining_hover_label.text = sprite.mining_label;
+	sprite.mining_hover_label.visible = true;
+}
+
+function hide_mining_rock_label(sprite) {
+	if (sprite && sprite.mining_hover_label) sprite.mining_hover_label.visible = false;
+}
+
+function update_mining_rock(sprite, now) {
+	if (!sprite || !G.mining) return;
+	var rock = G.mining.rocks.find(function (entry) { return entry.id == sprite.rock_id; });
+	if (!rock) return;
+	var current = now === undefined ? Date.now() : now,
+		loading = !mining_state_ready,
+		available = !loading && mining_rock_available(rock.id, current),
+		art = available ? rock.available_art : rock.depleted_art;
+	if (sprite.skin != art && typeof textures != "undefined") {
+		var replacement = new_sprite(art, "static");
+		sprite.texture = replacement.texture;
+		sprite.skin = art;
+	}
+	sprite.art = art;
+	sprite.interactive = true;
+	sprite.buttonMode = available;
+	var remaining = Math.max(0, Math.ceil(((mining_state.rocks[rock.id] || current) - current) / 1000));
+	sprite.mining_label = loading ? rock.id + " — loading account state" : available ? rock.id + " — available" : rock.id + " — available in " + remaining + "s";
+	sprite.name = sprite.mining_label;
+	sprite.accessibleTitle = sprite.mining_label;
+	sprite.accessibleHint = loading ? "Mining unavailable while account state loads" : available ? "Activate to mine this account-private rock" : "Mining unavailable until this account-private rock respawns";
+	if (sprite.mining_hover_label) sprite.mining_hover_label.text = sprite.mining_label;
+}
+
+function mining_rock_click(id) {
+	if (!mining_rock_available(id)) return false;
+	use_ability("mining", id);
+	return true;
+}
+
+function update_mining_rocks(now) {
+	for (var id in mining_rock_sprites) update_mining_rock(mining_rock_sprites[id], now);
+}
+
+function destroy_mining_rocks() {
+	for (var id in mining_rock_sprites) {
+		var sprite = mining_rock_sprites[id];
+		if (sprite && sprite.destroy) sprite.destroy({ children: true });
+	}
+	mining_rock_sprites = {};
+	map_entities = (map_entities || []).filter(function (entity) { return !entity.mining_rock; });
+}
+
+function create_mining_rocks() {
+	if (!G.mining || current_map != G.mining.map) return;
+	if (Object.keys(mining_rock_sprites).length) destroy_mining_rocks();
+	G.mining.rocks.forEach(function (rock) {
+		var sprite = new_sprite(rock.available_art, "static");
+		sprite.rock_id = rock.id;
+		sprite.mining_rock = true;
+		sprite.x = sprite.real_x = rock.x;
+		sprite.y = sprite.real_y = rock.y;
+		if (sprite.anchor && sprite.anchor.set) sprite.anchor.set(0.5, 0.5);
+		sprite.accessible = true;
+		sprite.tabIndex = 0;
+		if (sprite.on) {
+			sprite.on("pointertap", function () { mining_rock_click(rock.id); });
+			sprite.on("mouseover", function (event) {
+				mouseover.call(sprite, event);
+				show_mining_rock_label(sprite);
+			});
+			sprite.on("mouseout", function (event) {
+				mouseout.call(sprite, event);
+				hide_mining_rock_label(sprite);
+			});
+		}
+		update_mining_rock(sprite);
+		mining_rock_sprites[rock.id] = sprite;
+		map.addChild(sprite);
+		map_entities.push(sprite);
+	});
+}
 
 function report_progression_protocol_issue(code, message) {
 	if (progression_protocol_diagnostics[code]) return;
@@ -227,7 +372,7 @@ function valid_skill_xp_payload(data) {
 }
 
 function skill_xp_table(skill) {
-	return G.skill_xp && G.skill_xp[skill == "merchant" ? "merchant" : "combat"];
+	return G.skill_xp && G.skill_xp[G.skills && G.skills[skill] && G.skills[skill].kind == "noncombat" ? "merchant" : "combat"];
 }
 
 function valid_skill_xp_tables() {
@@ -1428,6 +1573,7 @@ function init_socket(args) {
 	socket.on("new_map", function (data) {
 		var create = false;
 		transporting = false;
+		reset_mining_state();
 		if (current_map != data.name) {
 			create = true;
 			topleft_npc = false;
@@ -1522,6 +1668,10 @@ function init_socket(args) {
 		delete data.s_info;
 		var d_entities = data.entities;
 		delete data.entities;
+		var initial_mining_state = data.mining_state;
+		delete data.mining_state;
+		reset_mining_state();
+		if (initial_mining_state) set_mining_state(initial_mining_state);
 		G.base_gold = data.base_gold;
 		delete data.base_gold;
 		character = add_character(data, 1);
@@ -1537,7 +1687,7 @@ function init_socket(args) {
 		(G.character.xcx || []).forEach(function (c) {
 			if (!character.xcx.includes(c)) character.xcx.push(c);
 		});
-		if (character.total_level == 7) {
+		if (is_fresh_progression_character(character)) {
 			if (X && X.tutorial && !X.tutorial.finished && tutorial_ui) open_tutorial();
 			else show_game_guide();
 		}
@@ -1782,6 +1932,13 @@ function init_socket(args) {
 		add_log((data.skill || "Skill").toTitleCase() + " reached level " + data.to_level + "!", "#724A8F");
 		call_code_function("trigger_character_event", "skill_level_up", data);
 		sfx("level_up");
+	});
+	socket.on("mining_state", function (data) {
+		if (!G.mining || current_map != G.mining.map) {
+			reset_mining_state();
+			return;
+		}
+		if (!set_mining_state(data)) report_progression_protocol_issue("invalid_mining_state", "malformed private Mining state");
 	});
 	socket.on("game_response", function (data) {
 		if (Dev) console.log(["game_response", data]);
@@ -2563,18 +2720,9 @@ function init_socket(args) {
 					v_shake_minor(sender);
 					sender.a_direction = sender.direction = data.direction;
 				}
-			} else if (data.type == "mining_fail") {
-				var sender = get_player(data.name);
-				if (sender) v_shake_i2(sender);
-				if (sender.me) add_log("Failed to mine", "gray");
-			} else if (data.type == "mining_none") {
-				add_log("Didn't mine anything", "gray");
 			} else if (data.type == "mining_start") {
 				var sender = get_player(data.name);
-				if (sender) {
-					v_shake_minor(sender);
-					sender.a_direction = sender.direction = data.direction;
-				}
+				if (sender) v_shake_minor(sender);
 			} else if (data.type == "poisoned_resist") {
 				var target = get_entity(data.id);
 				if (target) d_text("RESIST!", target, { color: "#68B84B" });
@@ -5198,6 +5346,7 @@ function create_map() {
 		map_entities.forEach(function (e) {
 			e.destroy({ children: true });
 		});
+		mining_rock_sprites = {};
 		if (wtile) wtile.destroy(), (wtile = null);
 		if (dtile) dtile.destroy(), (dtile = null);
 		if (tiles) tiles.destroy(), (tiles = null);
@@ -5568,6 +5717,8 @@ function create_map() {
 		var chest = chests[id];
 		if (chest.map == current_map) map.addChild(chest);
 	}
+
+	create_mining_rocks();
 
 	if (border_mode) {
 		G.maps[current_map].spawns.forEach(function (spawn) {
@@ -5969,6 +6120,7 @@ function draw(arg1, manual_draw) {
 	position_map();
 
 	ui_logic();
+	if (Object.keys(mining_rock_sprites).length) update_mining_rocks();
 
 	call_code_function("on_draw"); // before retile_the_map, as retile_the_map updates drawings
 

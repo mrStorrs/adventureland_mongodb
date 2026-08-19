@@ -3649,6 +3649,14 @@ function render_item(selector, args) {
 		if (prop.explosion) html += bold_prop_line("Explosion", prop.explosion + "%", "#782D33");
 		if (prop.blast) html += bold_prop_line("Blast", prop.blast + "%", "#685079");
 		if (prop.breaks && prop.breaks > 0) html += bold_prop_line("Breaks", to_pretty_float(prop.breaks) + "%", "#782D33");
+		if (G.mining) {
+			var mining_tool = G.mining.tiers.find(function (tier) { return tier.pickaxe == args.name; });
+			if (mining_tool) {
+				html += bold_prop_line("Mining Tier", mining_tool.name + " (Lv." + mining_tool.level + ")", "#B8A36A");
+				html += bold_prop_line("Mining Time", to_pretty_float(mining_tool.duration_ms / 1000) + "s", "#B8A36A");
+			}
+			if (item.mining_bonus) html += bold_prop_line("Mining Success", "+" + to_pretty_float(item.mining_bonus * 100) + "%", "#B8A36A");
+		}
 		if (prop.charisma) html += bold_prop_line("Charisma", prop.charisma, "#4DB174");
 		if (prop.awesomeness) html += bold_prop_line("Awesomeness", prop.awesomeness, "#FFDE2F");
 		if (prop.bling) html += bold_prop_line("Bling", prop.bling, "#A4E6FF");
@@ -5386,7 +5394,7 @@ function render_interaction(type, sub_type, args) {
 			"Back in the day we had miners, then came the moles, they work for free yet retrieving the gems is a challenge. Bring me " +
 			G.items.gemfragment.e +
 			" gem fragments and I can give you something exciting in return, no questions asked.";
-		html += "<span style='float: right; margin-top: 5px'><div class='slimbutton' onclick='render_exchange_shrine(\"gemfragment\")'>I GOT " + G.items.gemfragment.e + "!</div></span>";
+		html += "<span style='float: right; margin-top: 5px'><div class='slimbutton' onclick='render_merchant(get_npc(\"gemmerchant\"))'>MINING SHOP</div> <div class='slimbutton' onclick='render_exchange_shrine(\"gemfragment\")'>I GOT " + G.items.gemfragment.e + "!</div></span>";
 	} else if (type == "leathers") {
 		html +=
 			"Hey, hey, hey! What brings you to this cold land? I personally love it here, ideal for my work. If you can bring me " +

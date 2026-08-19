@@ -327,6 +327,49 @@ calibration evidence from the `node/` directory with:
 node tools/combat-xp-pacing.js --verify
 ```
 
+## Mining skill
+
+Mining is a per-character, noncombat skill with levels 1–99 and the same
+900,000,000-XP noncombat curve used by Merchant. The six ore tiers and their
+matching permanent main-hand pickaxes unlock at Mining levels 1, 15, 30, 55,
+70, and 85:
+
+| Ore | Unlock | XP per success | Matching pickaxe time |
+|---|---:|---:|---:|
+| Copper | 1 | 800 | 5.0s |
+| Iron | 15 | 1,200 | 4.4s |
+| Gold | 30 | 1,800 | 3.8s |
+| Mithril | 55 | 2,800 | 3.2s |
+| Adamantite | 70 | 4,000 | 2.6s |
+| Runite | 85 | 6,000 | 2.0s |
+
+The times above use each ore's matching pickaxe. Any equipped Mining pickaxe
+can attempt any ore unlocked by level; its tier affects attempt time and
+success chance but does not add another ore requirement.
+
+The Tunnel publishes three reachable rocks for each tier. Rocks are visible in
+the browser and their depletion is private to an account, shared by its
+characters, and isolated from other accounts. A successful claim makes one
+rock unavailable for 10 seconds; failures do not deplete it. Mining consumes no
+MP and has no ability cooldown. Success awards one ore, Mining XP, and an
+optional Gem Fragment or nugget bonus. Ore stacks to 9,999 and sells through
+the normal merchant path. Mine Heathcliff stocks all pickaxes and a level-99
+Mining Cape for 99,000,000 gold; the cape adds 0.05 to Mining success before
+the server's 0.95 cap.
+
+The browser action is `use_ability("mining", rockId)`. Supplying a stable rock
+ID (for example, `copper-1`) targets that rock; omitting the ID chooses the
+nearest eligible available rock. The server validates map, range, level,
+pickaxe, inventory, and account state at start and completion.
+
+Run the deterministic Mining contract and balance checks from this repository
+with:
+
+```sh
+node --test node/tests/mining-domain.test.js node/tests/mining-runtime.test.js node/tests/mining-balance.test.js node/tests/browser-mining-contract.test.js
+node --test node/tests/*.test.js
+```
+
 ## Default server monster rewards
 
 The game server derives its reward multiplier from

@@ -45,6 +45,14 @@ const { directBonusFor, validateItemBonus } = require("./game/direct_bonus_migra
 const { tagStyleEffect } = require("./game/style_effects");
 const { ContributionLedger } = require("./game/contributions");
 const {
+	claimRock,
+	compensateRockClaim,
+	normalizeRockState,
+	publicRockState,
+	validateMiningData,
+} = require("./game/mining");
+const { createAtomicMiningRewardCommit, createMiningRuntime } = require("./game/mining_runtime");
+const {
 	initializePlayerProgression,
 	awardPlayerSkillXp,
 	awardPlayerSkillXpSplit,
@@ -111,6 +119,291 @@ var server_id = "1";
 var server_auth = require("crypto").randomBytes(32).toString("hex");
 var players = {};
 var dc_players = {};
+var mining_account_refresh = {};
+
+function mining_tool_marker(item) {
+	if (!item) return null;
+	return JSON.stringify({ name: item.name, level: item.level || 0, rid: item.rid || null, data: item.data || null });
+}
+
+function mining_character_view(player) {
+	var mainhand = player.slots && player.slots.mainhand;
+	return {
+		id: player.id,
+		owner: player.owner,
+		connected: Boolean(player.socket && !player.dc && players[player.socket.id] === player),
+		connectionGeneration: player.socket && player.socket.id,
+		map: player.map,
+		x: player.x,
+		y: player.y,
+		moving: player.moving,
+		rip: player.rip,
+		esize: player.esize,
+		items: player.items,
+		skills: player.skills,
+		slots: {
+			mainhand: mainhand && { ...mainhand, marker: mining_tool_marker(mainhand) },
+			cape: player.slots && player.slots.cape,
+		},
+	};
+}
+
+function mining_state_for_database(state) {
+	return Object.fromEntries(
+		Object.entries(state).map(function (entry) {
+			return [entry[0], { available_at: new Date(entry[1].available_at), claim_id: entry[1].claim_id }];
+		}),
+	);
+}
+
+function broadcast_mining_state(owner, state) {
+	var payload = publicRockState(G.mining, state, Date.now());
+	for (var socket_id in players) {
+		var current = players[socket_id];
+		if (current && current.owner == owner && current.map == G.mining.map && current.socket) current.socket.emit("mining_state", payload);
+	}
+}
+
+async function load_mining_account_state(player) {
+	var user = await get(player.owner);
+	if (!user || !user.info) throw new Error("missing Mining account");
+	return { user: user, state: normalizeRockState(G.mining, user.info.mining_rocks, Date.now()) };
+}
+
+async function claim_mining_account_rock(player, request) {
+	var user = await get(player.owner);
+	if (!user) throw new Error("missing Mining account");
+	var result = await tx(
+		async () => {
+			R.user = await tx_get(A.user);
+			if (!R.user || !R.user.info) ex("state_unavailable");
+			var claim = claimRock(G.mining, R.user.info.mining_rocks, {
+				rockId: A.rock_id,
+				now: A.now,
+				claimId: A.claim_id,
+			});
+			R.won = claim.won;
+			R.available_at = claim.availableAt;
+			R.mining_state = claim.state;
+			if (claim.won) {
+				R.user.info.mining_rocks = mining_state_for_database(claim.state);
+				await tx_save(R.user);
+			}
+		},
+		{ user: user, rock_id: request.rockId, now: request.now, claim_id: request.claimId },
+	);
+	if (!result || result.failed) throw new Error((result && result.reason) || "state_unavailable");
+	broadcast_mining_state(player.owner, result.mining_state);
+	return { won: result.won, state: result.mining_state, availableAt: result.available_at };
+}
+
+async function compensate_mining_account_rock(player, request) {
+	var user = await get(player.owner);
+	if (!user) throw Object.assign(new Error("missing Mining account"), { code: "mining_compensation_missing_user" });
+	var result = await tx(
+		async () => {
+			R.user = await tx_get(A.user);
+			if (!R.user || !R.user.info) ex("state_unavailable");
+			R.mining_state = compensateRockClaim(G.mining, R.user.info.mining_rocks, {
+				rockId: A.rock_id,
+				claimId: A.claim_id,
+				now: A.now,
+			});
+			R.user.info.mining_rocks = mining_state_for_database(R.mining_state);
+			await tx_save(R.user);
+		},
+		{ user: user, rock_id: request.rockId, now: request.now, claim_id: request.claimId },
+	);
+	if (!result || result.failed || !result.success) {
+		throw Object.assign(new Error((result && result.reason) || "Mining compensation transaction failed"), {
+			code: "mining_compensation_transaction_failed",
+		});
+	}
+	if (result.mining_state && result.mining_state[request.rockId] && result.mining_state[request.rockId].claim_id === request.claimId) {
+		throw Object.assign(new Error("Mining compensation claim remains active"), { code: "mining_compensation_unverified" });
+	}
+	broadcast_mining_state(player.owner, result.mining_state);
+	return { success: true, state: result.mining_state };
+}
+
+var mining_compensation_retries = {};
+
+function schedule_mining_compensation(player, request) {
+	if (!player || !player.owner || !request || !request.rockId || !request.claimId) return;
+	var key = [player.owner, request.rockId, request.claimId].join(":");
+	if (mining_compensation_retries[key]) return;
+	var retry_player = { owner: player.owner, id: player.id, real_id: player.real_id };
+	var deadline = request.now + G.mining.respawn_ms;
+	mining_compensation_retries[key] = true;
+	function retry() {
+		if (Date.now() >= deadline) {
+			delete mining_compensation_retries[key];
+			log_mining_event(retry_player, {
+				action_id: request.claimId,
+				rock_id: request.rockId,
+				outcome: "compensation_expired",
+			});
+			return;
+		}
+		compensate_mining_account_rock(retry_player, request).then(
+			function () {
+				delete mining_compensation_retries[key];
+			},
+			function () {
+				setTimeout(retry, 250);
+			},
+		);
+	}
+	setTimeout(retry, 250);
+}
+
+function mining_terminal_cancel(player, attempt, reason) {
+	if (!player || !attempt || !player.socket) return;
+	player.socket.emit("game_response", {
+		response: "data",
+		place: "mining",
+		cevent: true,
+		outcome: "cancelled",
+		rock_id: attempt.rockId || attempt.rock_id,
+		reason: reason,
+	});
+}
+
+function mining_attempt_for(player) {
+	return (player && player.mining_attempt) || (player && player.c && player.c.mining) || null;
+}
+
+function clear_mining_attempt(player, reason) {
+	var attempt = mining_attempt_for(player);
+	if (attempt && reason) mining_terminal_cancel(player, attempt, reason);
+	if (player && player.c) delete player.c.mining;
+	if (player) delete player.mining_attempt;
+}
+
+function preserve_mining_channel(player) {
+	var mining_channel = player.c && player.c.mining;
+	player.c = mining_channel ? { mining: mining_channel } : {};
+}
+
+function cancel_mining_if_mainhand_changed(player, previous_marker) {
+	if (previous_marker === mining_tool_marker(player.slots && player.slots.mainhand)) return false;
+	if (!mining_attempt_for(player)) return false;
+	clear_mining_attempt(player, "tool_changed");
+	return true;
+}
+
+function clone_mining_reward_value(value) {
+	return value === undefined ? undefined : structuredClone(value);
+}
+
+function snapshot_mining_rewards(player) {
+	return {
+		items: clone_mining_reward_value(player.items),
+		citems: clone_mining_reward_value(player.citems),
+		esize: player.esize,
+		skills: clone_mining_reward_value(player.info && player.info.skills),
+		total_level: player.total_level,
+		skill_xp_sources: clone_mining_reward_value(player.p && player.p.skill_xp_sources),
+		skill_xp: clone_mining_reward_value(player.t && player.t.skill_xp),
+		total_skill_xp: player.t && player.t.total_skill_xp,
+		progression_events: clone_mining_reward_value(player.progression_events),
+	};
+}
+
+function restore_mining_rewards(player, snapshot) {
+	player.items = snapshot.items;
+	player.citems = snapshot.citems;
+	player.esize = snapshot.esize;
+	player.info.skills = snapshot.skills;
+	player.skills = player.info.skills;
+	player.total_level = snapshot.total_level;
+	player.p.skill_xp_sources = snapshot.skill_xp_sources;
+	player.t.skill_xp = snapshot.skill_xp;
+	player.t.total_skill_xp = snapshot.total_skill_xp;
+	if (snapshot.progression_events === undefined) delete player.progression_events;
+	else player.progression_events = snapshot.progression_events;
+}
+
+var commit_mining_rewards = createAtomicMiningRewardCommit({
+	snapshot: snapshot_mining_rewards,
+	restore: restore_mining_rewards,
+	addItem: function (player, item_name) {
+		add_item(player, create_new_item(item_name), { announce: false });
+	},
+	canAddItem: function (player, item_name) {
+		return can_add_item(player, create_new_item(item_name));
+	},
+	awardXp: function (player, award) {
+		return awardPlayerSkillXp(player, award.skill, award.xp, {
+			source: "mining",
+			sourceId: award.sourceId,
+		});
+	},
+});
+
+function mining_log_value(value, maximum) {
+	if (value === undefined || value === null || value === "") return null;
+	return String(value).replace(/[^A-Za-z0-9_.:-]/g, "_").slice(0, maximum || 128);
+}
+
+function mining_opaque_log_id(kind, value) {
+	var normalized = value === undefined || value === null ? "unknown" : String(value);
+	return require("crypto").createHash("sha256").update(server_auth + "\0" + kind + "\0" + normalized).digest("hex").slice(0, 16);
+}
+
+function log_mining_event(player, fields) {
+	var parts = [
+		"mining",
+		"account_id=" + mining_opaque_log_id("account", player && player.owner),
+		"character_id=" + mining_opaque_log_id("character", player && (player.real_id || player.id || player.name)),
+	];
+	for (var key of ["action_id", "rock_id", "outcome", "reason", "ore", "xp", "bonus", "exception_code", "claim_ms", "completion_ms"]) {
+		var value = mining_log_value(fields && fields[key], key == "xp" || key == "claim_ms" || key == "completion_ms" ? 24 : 128);
+		if (value !== null) parts.push(key + "=" + value);
+	}
+	server_log(parts.join(" "), 1);
+}
+
+function mining_runtime_for(player) {
+	return createMiningRuntime(G.mining, {
+		characterView: mining_character_view,
+		loadAccountState: load_mining_account_state,
+		claim: claim_mining_account_rock,
+		compensate: compensate_mining_account_rock,
+		inventoryCanAccept: function (current, item_name) {
+			return can_add_item(current, create_new_item(item_name));
+		},
+		commitRewards: commit_mining_rewards,
+		beginAttempt: function (current, attempt) {
+			if (!current.socket || players[current.socket.id] !== current || current.rip) {
+				throw Object.assign(new Error("Mining character is unavailable"), { code: "mining_dead" });
+			}
+			current.mining_attempt = attempt;
+			current.c.mining = { ms: attempt.duration, len: attempt.duration, rock_id: attempt.rockId };
+		},
+		emit: function (current, event, payload) {
+			current.socket.emit(event, payload);
+		},
+		emitNearby: function (current, event, payload) {
+			xy_emit(current, event, payload);
+		},
+		log: log_mining_event,
+		reconcileCompensation: schedule_mining_compensation,
+	});
+}
+
+async function emit_mining_state_for_player(player) {
+	if (!player || !player.socket || !G.mining || player.map != G.mining.map) return;
+	var mining_socket = player.socket;
+	try {
+		var account = await load_mining_account_state(player);
+		if (player.socket === mining_socket && players[mining_socket.id] === player && !player.dc && player.map == G.mining.map) {
+			mining_socket.emit("mining_state", publicRockState(G.mining, account.state, Date.now()));
+		}
+	} catch (error) {
+		log_mining_event(player, { outcome: "state_emit_failed", exception_code: error && (error.code || error.name) });
+	}
+}
 var sockets = {};
 var observers = {};
 var total_monsters = 0;
@@ -438,6 +731,7 @@ async function init_game() {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/skill_xp.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/abilities.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/character.js")));
+		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/mining.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/progression.js")));
 		const progression_data = buildProgressionData({
 			items: items,
@@ -446,6 +740,7 @@ async function init_game() {
 			skill_xp: skill_xp,
 			abilities: abilities,
 			character: character,
+			mining: mining,
 		});
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/events.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/recipes.js")));
@@ -454,6 +749,7 @@ async function init_game() {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/cosmetics.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/emotions.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/precomputed_images.js")));
+		validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
 
 		// Load geometry from MongoDB (parallel fetch, following qwazy pattern)
 		var geometry = {};
@@ -468,6 +764,7 @@ async function init_game() {
 			var map = await rpc[id];
 			if (map) geometry[id] = map.info.data;
 		}
+		validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites, geometry: geometry });
 
 		// Build G (game data) from design globals (matches create_server_api output)
 		G = loadProgressionPublication(
@@ -633,6 +930,7 @@ async function reload_server(to_broadcast, change) {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/skill_xp.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/abilities.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/character.js")));
+		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/mining.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/progression.js")));
 		const progression_data = buildProgressionData({
 			items: items,
@@ -641,6 +939,7 @@ async function reload_server(to_broadcast, change) {
 			skill_xp: skill_xp,
 			abilities: abilities,
 			character: character,
+			mining: mining,
 		});
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/events.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/recipes.js")));
@@ -649,6 +948,7 @@ async function reload_server(to_broadcast, change) {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/cosmetics.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/emotions.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/precomputed_images.js")));
+		validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
 
 		// Reload geometry from MongoDB
 		var geometry = {};
@@ -662,6 +962,7 @@ async function reload_server(to_broadcast, change) {
 			var map = await rpc[id];
 			if (map) geometry[id] = map.info.data;
 		}
+		validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites, geometry: geometry });
 
 		G = loadProgressionPublication(
 			{
@@ -884,7 +1185,16 @@ function player_to_client(player, stranger) {
 	].forEach(function (p) {
 		// removed "vx","vy"
 		if (player[p] !== undefined) {
-			if (p !== "s") data[p] = player[p];
+			if (p === "c") {
+				data.c = { ...player.c };
+				if (data.c.mining) {
+					data.c.mining = {
+						ms: Number(data.c.mining.ms) || 0,
+						len: Number(data.c.mining.len) || 0,
+						rock_id: mining_log_value(data.c.mining.rock_id, 64),
+					};
+				}
+			} else if (p !== "s") data[p] = player[p];
 			else {
 				data.s = { ...player.s };
 				for (const [condition, value] of Object.entries(data.s)) {
@@ -1109,6 +1419,7 @@ function clean_slate(player) {
 	player.hp = player.max_hp;
 	player.mp = player.max_mp;
 	player.s = {};
+	clear_mining_attempt(player);
 	player.c = {};
 }
 
@@ -3907,6 +4218,9 @@ function transport_player_to(player, name, point, effect) {
 	if (!instances[name]) {
 		name = "main";
 	}
+	if (player.c && player.c.mining) {
+		clear_mining_attempt(player, "map_changed");
+	}
 	var instance = instances[name];
 	var new_map = G.maps[instance.map];
 	var direction = 0;
@@ -4015,6 +4329,7 @@ function transport_player_to(player, name, point, effect) {
 		entities: send_all_xy(player, { raw: true }),
 		eval: EV,
 	});
+	if (player.map == G.mining.map) void emit_mining_state_for_player(player);
 	player.last.transport = new Date();
 	resend(player, "u+cid");
 }
@@ -6787,7 +7102,8 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			player.c = {};
+			let mining_mainhand_before = mining_tool_marker(player.slots && player.slots.mainhand);
+			preserve_mining_channel(player);
 			if (Array.isArray(data)) {
 				data.length = min(data.length, 15);
 				let resolve = [];
@@ -6839,6 +7155,7 @@ function init_io() {
 				} else {
 					player.s.penalty_cd = { ms: penalty };
 				}
+				cancel_mining_if_mainhand_changed(player, mining_mainhand_before);
 				resend(player, "reopen+u+cid");
 				success_response("data", { slots: resolve });
 			} else {
@@ -6850,7 +7167,8 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			player.c = {};
+			var mining_mainhand_before = mining_tool_marker(player.slots && player.slots.mainhand);
+			preserve_mining_channel(player);
 			data.num = to_number(data.num);
 			if (data.num >= player.items.length) {
 				return fail_response("invalid");
@@ -7066,6 +7384,7 @@ function init_io() {
 				return fail_response("cant_consume");
 			}
 
+			cancel_mining_if_mainhand_changed(player, mining_mainhand_before);
 			if (to_update) {
 				resend(player, to_update);
 			}
@@ -7104,13 +7423,15 @@ function init_io() {
 			if (player.esize <= 0 && !item.b) {
 				return fail_response("no_space");
 			}
-			player.c = {};
+			var mining_mainhand_before = mining_tool_marker(player.slots && player.slots.mainhand);
+			preserve_mining_channel(player);
 			try {
 				commit_unequip_transaction(player, data.slot, data.position);
 			} catch (error) {
 				resend(player, "reopen+u+cid");
 				return fail_response(error.code || "cant_unequip", error);
 			}
+			cancel_mining_if_mainhand_changed(player, mining_mainhand_before);
 			resend(player, "reopen+u+cid");
 			success_response("data");
 		});
@@ -7497,6 +7818,13 @@ function init_io() {
 			}
 			can_reach.name = player.name;
 			var def = G.items[name];
+			if (def.purchase_requirement) {
+				try {
+					validateRequirements(name, [def.purchase_requirement], player.skills);
+				} catch (error) {
+					return fail_response(error.code || "skill_level_required", "buy", error);
+				}
+			}
 			if (!def.s) {
 				quantity = 1;
 			}
@@ -8976,7 +9304,7 @@ function init_io() {
 				};
 				player.to_resend = "u+cid";
 				resolve = { response: "data", place: data.name, success: false, in_progress: true };
-			} else if (data.name == "fishing" || data.name == "mining") {
+			} else if (data.name == "fishing") {
 				var direction = 0;
 				var the_zone = null;
 				consume_mp(player, gSkill.mp);
@@ -9008,6 +9336,32 @@ function init_io() {
 				}
 				resolve = { response: "data", place: data.name, success: false, in_progress: true };
 				player.to_resend = "u+cid";
+			} else if (data.name == "mining") {
+				cool = false;
+				resolve = null;
+				if (player.mining_start_call || player.mining_call || player.c.mining) {
+					return fail_response("in_progress", "mining");
+				}
+				player.mining_start_call = true;
+				(async function () {
+					try {
+						if (!players[socket.id] || player.rip) throw Object.assign(new Error("Mining character is unavailable"), { code: "mining_dead" });
+						await mining_runtime_for(player).start(player, data.id);
+						player.to_resend = "u+cid";
+						resend(player, player.to_resend);
+					} catch (error) {
+						clear_mining_attempt(player);
+						player.socket.emit("game_response", {
+							response: "data",
+							place: "mining",
+							failed: true,
+							reason: error.code || "state_unavailable",
+						});
+						log_mining_event(player, { outcome: "start_failed", exception_code: error && (error.code || error.name), reason: error.code || "state_unavailable" });
+					} finally {
+						delete player.mining_start_call;
+					}
+				})();
 			} else if (data.name == "light") {
 				consume_mp(player, gSkill.mp);
 				xy_emit(player, "light", { name: player.name });
@@ -9951,6 +10305,10 @@ function init_io() {
 				}
 				if (actual) {
 					var change = false;
+					if (player.c.mining) {
+						clear_mining_attempt(player, "moved");
+						change = true;
+					}
 					for (var id in player.c) {
 						if (G.conditions[id] && !G.conditions[id].can_move) {
 							change = true;
@@ -10511,7 +10869,16 @@ function init_io() {
 					cdata.code_version = code_version;
 				}
 				cdata.entities = send_all_xy(player, { raw: true });
+				if (player.map == G.mining.map) {
+					try {
+						var initial_mining_account = await load_mining_account_state(player);
+						cdata.mining_state = publicRockState(G.mining, initial_mining_account.state, Date.now());
+					} catch (error) {
+						log_mining_event(player, { outcome: "initial_state_failed", exception_code: error && (error.code || error.name) });
+					}
+				}
 				socket.emit("start", cdata);
+				if (player.map == G.mining.map) void emit_mining_state_for_player(player);
 				if (entity.friends && !entity.private) {
 					setTimeout(function () {
 						notify_friends(entity, server_regions[region] + " " + server_name).catch(console.error);
@@ -11112,6 +11479,7 @@ function init_io() {
 					change = true;
 				}
 				if (Object.keys(player.c).length) {
+					if (player.c.mining) clear_mining_attempt(player, "stopped");
 					player.c = {};
 					change = true;
 				}
@@ -11122,6 +11490,7 @@ function init_io() {
 				}
 			} else if (data.action == "channeling") {
 				if (Object.keys(player.c).length) {
+					if (player.c.mining) clear_mining_attempt(player, "stopped");
 					player.c = {};
 					change = true;
 				}
@@ -11445,7 +11814,7 @@ function init_io() {
 			// send "requesting_ack", to verify someone is actually connected [03/08/16]
 			server_log("requested_ack" + JSON.stringify(data), 1);
 		});
-		socket.on("disconnect", function () {
+			socket.on("disconnect", function () {
 			//#IMPORTANT: disconnect exceptions are fatal [07/08/16]
 			// console.log("disconnect!");
 			var player = players[socket.id];
@@ -11455,6 +11824,7 @@ function init_io() {
 			} catch (e) {}
 			if (player) {
 				player.dc = true;
+				clear_mining_attempt(player);
 				progression_ledger.removeCharacter(player.id || player.name);
 				try {
 					settlePlayerStand(player, Date.now(), { emit: false });
@@ -13443,22 +13813,24 @@ function update_instance(instance) {
 					}
 				}
 				if (name == "mining") {
-					if (Math.random() < 0.2) {
-						if (player.esize) {
-							exchange(player, ref.drop, { phrase: "Mined" });
-						}
-						consume_skill(player, "mining", true);
-						if (player.slots.mainhand) {
-							var prop = calculate_item_properties(player.slots.mainhand);
-							if (prop.breaks && Math.random() < max(0, prop.breaks / 100.0)) {
-								commit_equipment_loss(player, "mainhand");
-								player.socket.emit("game_log", "Your pickaxe broke down ...");
-							}
-						}
-						resend(player, "reopen");
-					} else {
-						player.socket.emit("ui", { type: "mining_none" });
+					if (player.mining_call) continue;
+					var mining_attempt = player.mining_attempt;
+					delete player.mining_attempt;
+					if (!mining_attempt) {
+						mining_terminal_cancel(player, ref, "state_unavailable");
+						continue;
 					}
+					player.mining_call = true;
+					(async function (mining_player, mining_attempt) {
+						try {
+							var result = await mining_runtime_for(mining_player).complete(mining_player, mining_attempt);
+							if (mining_character_view(mining_player).connected) resend(mining_player, result.outcome == "success" ? "reopen+u+cid" : "u+cid");
+						} catch (error) {
+							mining_terminal_cancel(mining_player, mining_attempt, "state_unavailable");
+						} finally {
+							delete mining_player.mining_call;
+						}
+					})(player, mining_attempt);
 				}
 				if (name == "revival") {
 					player.rip = false;
@@ -13966,6 +14338,35 @@ setTimeout(npc_loop, 10);
 setTimeout(instance_loop, 10);
 setTimeout(aura_loop, 10);
 setInterval(count_unique_users, 6000);
+
+setInterval(function () {
+	var active = {};
+	for (var socket_id in players) {
+		var player = players[socket_id];
+		if (player && player.owner && typeof G != "undefined" && G.mining && player.map == G.mining.map) active[player.owner] = true;
+	}
+	for (var known_owner in mining_account_refresh) if (!active[known_owner]) delete mining_account_refresh[known_owner];
+	var now = Date.now();
+	Object.keys(active).forEach(function (owner) {
+		var refresh = mining_account_refresh[owner] || { last: 0, inflight: false };
+		mining_account_refresh[owner] = refresh;
+		if (refresh.inflight || now - refresh.last < G.mining.refresh_ms) return;
+		refresh.inflight = true;
+		refresh.last = now;
+		get(owner)
+			.then(function (user) {
+				if (!user || !user.info) throw new Error("missing Mining account");
+				var state = normalizeRockState(G.mining, user.info.mining_rocks, Date.now());
+				broadcast_mining_state(owner, state);
+			})
+			.catch(function (error) {
+				server_log("mining account_refresh outcome=failed reason=" + (error.code || "state_unavailable"), 1);
+			})
+			.finally(function () {
+				refresh.inflight = false;
+			});
+	});
+}, 250);
 
 setInterval(function () {
 	try {
