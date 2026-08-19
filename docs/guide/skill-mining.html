@@ -1,3 +1,39 @@
-<p>Mining zone nearby!<p>
+<p>Mining is a level 1–99 skill available to every character.</p>
 
-<p>Craft a Pickaxe and your merchant can mine here.</p>
+<p>Equip a Mining pickaxe and enter the Tunnel. The Tunnel has three visible,
+account-private rocks for each ore tier. Click an available rock to target it;
+depleted rocks remain visible and show their respawn countdown. A successful
+attempt depletes that rock for 10 seconds for every character on your account,
+while other accounts remain independent.</p>
+
+<table>
+  <thead>
+    <tr><th>Ore</th><th>Mining level</th><th>Mining XP</th><th>Matching pickaxe time</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Copper</td><td>1</td><td>800</td><td>5.0 seconds</td></tr>
+    <tr><td>Iron</td><td>15</td><td>1,200</td><td>4.4 seconds</td></tr>
+    <tr><td>Gold</td><td>30</td><td>1,800</td><td>3.8 seconds</td></tr>
+    <tr><td>Mithril</td><td>55</td><td>2,800</td><td>3.2 seconds</td></tr>
+    <tr><td>Adamantite</td><td>70</td><td>4,000</td><td>2.6 seconds</td></tr>
+    <tr><td>Runite</td><td>85</td><td>6,000</td><td>2.0 seconds</td></tr>
+  </tbody>
+</table>
+
+<p>The times shown use each ore's matching pickaxe. Any equipped Mining
+pickaxe can attempt any ore unlocked by your Mining level; the tool tier changes
+the attempt time and success chance but does not add another ore requirement.</p>
+
+<p>Mining does not use MP or an ability cooldown. A failed roll gives no ore or
+XP and leaves the rock available. A successful roll gives one matching ore and
+Mining XP, with a possible Gem Fragment or nugget bonus. Ores stack to 9,999
+and sell through normal merchant rules.</p>
+
+<p>Mine Heathcliff stocks the Copper, Iron, Gold, Mithril, Adamantite, and Runite
+pickaxes, plus the level-99 Mining Cape. The cape costs 99,000,000 gold and
+adds five percentage points to Mining success.</p>
+
+<p>For scripts, the browser action is
+<code>use_ability("mining", rockId)</code>. Pass a stable rock ID such as
+<code>copper-1</code> to target that rock, or omit the ID to select the nearest
+eligible available rock.</p>
