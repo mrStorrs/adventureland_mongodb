@@ -7,10 +7,28 @@ const test = require("node:test");
 
 const { calculateStats } = require("../game/stats");
 const { loadSourceData } = require("../tools/acquisition-ranking");
+const { buildCombatMatrixFixture } = require("../tools/direct-equipment-authority");
+const { buildEquipmentCombatMatrix } = require("../tools/monster-combat-tiers");
+const { serializeFixture } = require("../tools/fixture-serialization");
 const { loadPropertyCalculators } = require("../tools/weapon-progression-parity");
 
 const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "weapon-loadout-balance.json"), "utf8"));
 const combatFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "equipment-combat-matrix.json"), "utf8"));
+
+test("combat fixture writer rejects violations before replacing the checked-in artifact", () => {
+	const source = fs.readFileSync(path.resolve(__dirname, "../tools/monster-combat-tiers.js"), "utf8");
+	const branchStart = source.indexOf('if (argv.includes("--write-combat"))');
+	const branchEnd = source.indexOf('if (argv.includes("--verify"))', branchStart);
+	const branch = source.slice(branchStart, branchEnd);
+	assert.ok(branchStart >= 0 && branchEnd > branchStart);
+	assert.ok(branch.indexOf("fixture.violations.length") >= 0);
+	assert.ok(branch.indexOf("fixture.violations.length") < branch.indexOf("fs.writeFileSync"));
+});
+
+test("both supported combat-matrix builders serialize the same armor-scoped evidence", () => {
+	assert.equal(serializeFixture(buildCombatMatrixFixture()), serializeFixture(buildEquipmentCombatMatrix()));
+	assert.equal(Object.hasOwn(combatFixture, "weapon_states"), false);
+});
 
 test("every intermediate direct weapon state is finite, positive, and monotone", () => {
 	const data = loadSourceData();
@@ -35,9 +53,16 @@ test("every intermediate direct weapon state is finite, positive, and monotone",
 
 test("canonical combat evidence contains the six-class safety envelope and Hunter unlock checks", () => {
 	assert.equal(combatFixture.schema_version, 4);
+	assert.equal(combatFixture.policy.set_threshold_publication, "production_cumulative");
 	assert.deepEqual(combatFixture.violations, []);
 	for (const [tier, required] of Object.entries(combatFixture.policy.minimum_solo_candidates)) assert.ok(combatFixture.universal_candidates[tier].length >= required, `tier ${tier}`);
-	assert.deepEqual(combatFixture.universal_candidates[5], ["poisio", "stoneworm"]);
+	assert.deepEqual(combatFixture.universal_candidates, {
+		2: ["osnake", "rat", "snake"],
+		3: ["armadillo", "croc", "minimush", "tortoise"],
+		4: ["bat", "crabx", "squigtoad"],
+		5: ["poisio", "stoneworm"],
+		6: ["ghost", "gscorpion", "scorpion", "spider"],
+	});
 	for (const id of ["mhspear", "mhhammer", "mhwand", "mhbook", "mhcrossbow", "mhdagger"]) {
 		const unlock = combatFixture.sidegrade_unlocks.find((row) => row.weapon_id === id);
 		assert.ok(unlock, id);

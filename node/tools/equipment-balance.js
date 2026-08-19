@@ -11,8 +11,8 @@ function buildDirectWeaponLoadoutBalanceFixture() {
 	return authority.buildWeaponLoadoutBalanceFixture();
 }
 
-function buildDirectArmorSetBalanceFixture() {
-	return authority.buildArmorSetBalanceFixture();
+function buildDirectArmorSetBalanceFixture(data) {
+	return authority.buildArmorSetBalanceFixture(data);
 }
 
 function validateDirectWeaponLoadoutBalanceFixture(fixture, generated = buildDirectWeaponLoadoutBalanceFixture()) {
@@ -22,14 +22,17 @@ function validateDirectWeaponLoadoutBalanceFixture(fixture, generated = buildDir
 }
 
 function validateDirectArmorSetBalanceFixture(fixture, generated = buildDirectArmorSetBalanceFixture()) {
-	if (!fixture || fixture.schema_version !== 3 || fixture.set_count !== 19 || JSON.stringify(fixture) !== JSON.stringify(generated))
+	if (fixture?.violations?.length) throw new Error("Direct armor-set fixture contains violations");
+	if (!fixture || fixture.schema_version !== 4 || fixture.counts?.sets !== 20 || fixture.counts?.tiered_sets !== 13 || fixture.counts?.tiers !== 6 || JSON.stringify(fixture) !== JSON.stringify(generated))
 		throw new Error("Direct armor-set fixture drifted from the catalog");
 	return true;
 }
 
 function main(argv = process.argv.slice(2)) {
 	if (argv.includes("--write-armor")) {
-		fs.writeFileSync(path.join(FIXTURE_DIRECTORY, "armor-set-balance.json"), serializeFixture(buildDirectArmorSetBalanceFixture()));
+		const fixture = buildDirectArmorSetBalanceFixture();
+		validateDirectArmorSetBalanceFixture(fixture, fixture);
+		authority.writeFixture("armor-set-balance.json", fixture);
 		return;
 	}
 	if (argv.includes("--write")) {

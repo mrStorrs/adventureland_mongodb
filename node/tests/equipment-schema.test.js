@@ -2,38 +2,28 @@
 
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { createRequire } = require("node:module");
 const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
-const { validateEquipmentSchema } = require("../game/equipment_schema");
+
+const {
+	ARMOR_PROGRESSION_SET_TIERS,
+	ARMOR_SLOTS,
+	RETIRED_ARMOR_ITEM_IDS,
+	publishCumulativeSetThresholds,
+	validateEquipmentSchema,
+} = require("../game/equipment_schema");
 const { calculateStats } = require("../game/stats");
-const { extractFunctionBody, extractSourceBlock } = require("./source-extract");
+const { loadSourceData } = require("../tools/acquisition-ranking");
+const { hash } = require("../tools/direct-equipment-authority");
+const { extractFunctionBody } = require("./source-extract");
 
 const designRoot = path.resolve(__dirname, "../../design");
-const acquisitionFixturePath = path.join(__dirname, "fixtures/equipment-acquisition-ranking.json");
-const slots = ["helmet", "chest", "pants", "gloves", "shoes"];
 const expectedPlaceholders = {
 	arcstaff: ["weapon", "Arcane Staff", undefined, undefined, "staff"],
-	tigerarmor: ["chest", "Armor of the Tiger", "tiger", "heavy", "tigerhelmet"],
-	tigerpants: ["pants", "Pants of the Tiger", "tiger", "heavy", "tigerhelmet"],
-	tigergloves: ["gloves", "Gloves of the Tiger", "tiger", "heavy", "tigerhelmet"],
-	tigerboots: ["shoes", "Boots of the Tiger", "tiger", "heavy", "tigerhelmet"],
 	vhelmet: ["helmet", "Vampiric Hood", "vampires", "medium", "vgloves"],
 	vpants: ["pants", "Vampiric Pants", "vampires", "medium", "vattire"],
-	mpxhelmet: ["helmet", "Mana Hood", "mpx", "light", "mpxgloves"],
-	mpxarmor: ["chest", "Mana Robe", "mpx", "light", "mpxgloves"],
-	mpxpants: ["pants", "Mana Pants", "mpx", "light", "mpxgloves"],
-	mpxboots: ["shoes", "Mana Boots", "mpx", "light", "mpxgloves"],
-	furyarmor: ["chest", "Armor of Fury", "fury", "heavy", "fury"],
-	furygloves: ["gloves", "Gloves of Fury", "fury", "heavy", "fury"],
-	furyboots: ["shoes", "Boots of Fury", "fury", "heavy", "fury"],
-	legendhelmet: ["helmet", "Legendary Visor", "legends", "heavy", "warpvest"],
-	legendboots: ["shoes", "Legendary Boots", "legends", "heavy", "warpvest"],
-	swifthelmet: ["helmet", "Helm of Swift Judgement", "swift", "medium", "wingedboots"],
-	swiftarmor: ["chest", "Armor of Swift Judgement", "swift", "medium", "wingedboots"],
-	swiftpants: ["pants", "Pants of Swift Judgement", "swift", "medium", "wingedboots"],
-	epants: ["pants", "Fluffy Pants", "bunny", "light", "epyjamas"],
-	egloves: ["gloves", "Fluffy Gloves", "bunny", "light", "epyjamas"],
 	mpalhelmet: ["helmet", "Helmet of the Hunter Paladin", "mpaladin", "heavy", "mwhelmet"],
 	mpalarmor: ["chest", "Armor of the Hunter Paladin", "mpaladin", "heavy", "mwarmor"],
 	mpalpants: ["pants", "Underarmor of the Hunter Paladin", "mpaladin", "heavy", "mwpants"],
@@ -62,42 +52,32 @@ function loadItems() {
 	return JSON.parse(JSON.stringify({ items: context.items, sets: context.sets }));
 }
 
-function loadDrops() {
-	const { items } = loadItems();
-	const context = { items, console: { log() {} } };
-	vm.createContext(context);
-	vm.runInContext(fs.readFileSync(path.join(designRoot, "drops.js"), "utf8"), context, { filename: "drops.js" });
-	return JSON.parse(JSON.stringify(context.drops));
+function thresholdKeys(set) {
+	return Object.keys(set).filter((key) => /^\d+$/.test(key)).map(Number).sort((left, right) => left - right);
 }
 
-function loadAcquisitionFixture() {
-	return JSON.parse(fs.readFileSync(acquisitionFixturePath, "utf8"));
-}
-
-test("equipment schema publishes 19 complete armor themes and the exact placeholder inventory", () => {
+test("equipment schema publishes 20 variable-size armor themes and only retained placeholders", () => {
 	const { items, sets } = loadItems();
-	const fixture = loadAcquisitionFixture();
 	assert.doesNotThrow(() => validateEquipmentSchema(items, sets));
-	assert.equal(Object.keys(sets).length, 19);
-	assert.ok(sets.mpaladin);
+	assert.equal(Object.keys(sets).length, 20);
+	assert.ok(sets.basic);
 	for (const [setId, set] of Object.entries(sets)) {
-		assert.deepEqual(Object.keys(set.bonus_items), slots, setId);
-		assert.deepEqual(Object.keys(set).filter((key) => /^\d+$/.test(key)).sort(), ["2", "3", "4", "5"], setId);
+		const populatedSlots = Object.keys(set.bonus_items);
+		assert.ok(populatedSlots.length >= 1 && populatedSlots.every((slot) => ARMOR_SLOTS.includes(slot)), setId);
 		assert.equal(new Set(set.items).size, set.items.length, setId);
-		for (const slot of slots) assert.ok(set.bonus_items[slot].length, `${setId}.${slot}`);
-		assert.deepEqual(
-			set.bonus_items,
-			Object.fromEntries(Object.entries(fixture.ladders.armor_set_details[setId].slots).map(([slot, rows]) => [slot, [...new Set(rows.map((row) => row.item_id))]])),
-			setId,
-		);
+		for (const [slot, members] of Object.entries(set.bonus_items)) {
+			assert.ok(members.length, `${setId}.${slot}`);
+			for (const itemId of members) assert.equal(items[itemId].type, slot, `${setId}.${slot}.${itemId}`);
+		}
+		const thresholds = thresholdKeys(set);
+		assert.ok(thresholds.length, setId);
+		assert.equal(thresholds.at(-1), populatedSlots.length, setId);
+		assert.ok(thresholds.every((count) => count >= 1 && count <= populatedSlots.length), setId);
 	}
-	assert.equal(sets.fury.items.filter((itemId) => itemId === "suckerpunch").length, 1);
-	assert.deepEqual(sets.legends.bonus_items.gloves, ["powerglove", "goldenpowerglove"]);
-	assert.deepEqual(sets.vampires.bonus_items.chest, ["mcape", "vattire"]);
-	assert.deepEqual(sets.holidays.bonus_items.gloves, ["mittens", "supermittens"]);
-	assert.deepEqual(sets.mpaladin.bonus_items, {
-		helmet: ["mpalhelmet"], chest: ["mpalarmor"], pants: ["mpalpants"], gloves: ["mpalgloves"], shoes: ["mpalboots"],
-	});
+	assert.deepEqual(
+		Object.fromEntries(Object.entries(sets).filter(([, set]) => set.armor_progression).map(([setId, set]) => [setId, set.armor_progression])),
+		ARMOR_PROGRESSION_SET_TIERS,
+	);
 	assert.deepEqual(Object.keys(expectedPlaceholders).sort(), Object.entries(items).filter(([, item]) => item.placeholder_art).map(([id]) => id).sort());
 	for (const [itemId, [type, name, set, weight, source]] of Object.entries(expectedPlaceholders)) {
 		const item = items[itemId];
@@ -106,20 +86,25 @@ test("equipment schema publishes 19 complete armor themes and the exact placehol
 		assert.match(item.explanation, /Placeholder artwork/, itemId);
 		assert.equal(item.skin, items[source].skin, itemId);
 	}
+	for (const retiredId of RETIRED_ARMOR_ITEM_IDS) assert.equal(items[retiredId], undefined, retiredId);
 });
 
-test("equipment schema fails closed for malformed weights, slots, thresholds, and placeholder metadata", () => {
+test("equipment schema fails closed for malformed slots, thresholds, tiers, retirements, and placeholders", () => {
 	const cases = [
 		({ items }) => { items.tigerhelmet.armor_weight = "mythic"; },
 		({ sets }) => { sets.tiger.bonus_items.helmet = []; },
-		({ sets }) => { sets.tiger.bonus_items.helmet = ["tigerarmor"]; },
+		({ sets }) => { sets.tiger.bonus_items.helmet = ["mpxgloves"]; },
 		({ sets }) => { sets.tiger.items.push("tigerhelmet"); },
 		({ sets }) => { sets.tiger.items = sets.tiger.items.filter((itemId) => itemId !== "tigercape"); },
 		({ sets }) => { sets.tiger.items[0] = "missing"; },
 		({ items }) => { items.ecape.armor_weight = "heavy"; },
 		({ items, sets }) => { items[sets.tiger.items.find((itemId) => !Object.values(sets.tiger.bonus_items).flat().includes(itemId))].set = "other"; },
-		({ sets }) => { sets.tiger[6] = {}; },
-		({ items }) => { items.tigerarmor.placeholder_asset = "missing"; },
+		({ sets }) => { sets.tiger[2] = {}; },
+		({ sets }) => { delete sets.tiger[1]; },
+		({ sets }) => { sets.basic.armor_progression.shared_tier = 2; },
+		({ sets }) => { sets.tiger.armor_progression = { shared_tier: 1, role: "progression", anchor: true }; },
+		({ items }) => { items.vhelmet.placeholder_asset = "missing"; },
+		({ items }) => { items.tigerarmor = { ...items.tigerhelmet, name: "retired" }; },
 	];
 	for (const mutate of cases) {
 		const candidate = loadItems();
@@ -127,30 +112,37 @@ test("equipment schema fails closed for malformed weights, slots, thresholds, an
 		assert.throws(() => validateEquipmentSchema(candidate.items, candidate.sets), { code: "invalid_equipment_schema" });
 	}
 	const reordered = loadItems();
-	reordered.sets.tiger.bonus_items = Object.fromEntries(Object.entries(reordered.sets.tiger.bonus_items).reverse());
+	reordered.sets.basic.bonus_items = Object.fromEntries(Object.entries(reordered.sets.basic.bonus_items).reverse());
 	assert.doesNotThrow(() => validateEquipmentSchema(reordered.items, reordered.sets));
 });
 
-test("incomplete armor themes publish their reviewed source-table allocations", () => {
-	const drops = loadDrops();
+test("retired acquisition entries disappear without changing surviving box routes or weights", () => {
+	const data = loadSourceData();
 	const selected = (entries, itemIds) => entries.filter((entry) => itemIds.includes(entry[1])).map(([probability, itemId]) => [probability, itemId]);
 	const opened = (entries, tableId) => entries.find((entry) => entry[1] === "open" && entry[2] === tableId);
-	assert.deepEqual(opened(drops.monsters.tiger, "tigerarmorbox"), [0.1, "open", "tigerarmorbox"]);
-	assert.deepEqual(selected(drops.tigerarmorbox, ["tigerhelmet", "tigerarmor", "tigerpants", "tigergloves", "tigerboots"]), [[1, "tigerhelmet"], [1, "tigerarmor"], [1, "tigerpants"], [1, "tigergloves"], [1, "tigerboots"]]);
-	assert.deepEqual(opened(drops.monsters.a1, "vampirea1armorbox"), [0.1, "open", "vampirea1armorbox"]);
-	assert.deepEqual(selected(drops.vampirea1armorbox, ["vattire", "vpants"]), [[1, "vattire"], [1, "vpants"]]);
-	assert.deepEqual(opened(drops.monsters.a3, "vampirea3armorbox"), [0.1, "open", "vampirea3armorbox"]);
-	assert.deepEqual(selected(drops.vampirea3armorbox, ["vgloves", "vhelmet"]), [[1, "vgloves"], [1, "vhelmet"]]);
-	assert.deepEqual(opened(drops.monsters.franky, "mpxarmorbox"), [1 / 2000, "open", "mpxarmorbox"]);
-	assert.deepEqual(selected(drops.mpxarmorbox, ["mpxgloves", "mpxhelmet", "mpxarmor", "mpxpants", "mpxboots"]), [[1, "mpxgloves"], [1, "mpxhelmet"], [1, "mpxarmor"], [1, "mpxpants"], [1, "mpxboots"]]);
-	assert.deepEqual(selected(drops.armorbox, ["fury", "furyarmor", "fallen", "furygloves", "furyboots"]), [[0.001, "fury"], [0.001, "furyarmor"], [0.001, "fallen"], [0.001, "furygloves"], [0.001, "furyboots"]]);
-	assert.deepEqual(selected(drops.basketofeggs, ["epyjamas", "epants", "egloves"]), [[1 / 3, "epyjamas"], [1 / 3, "epants"], [1 / 3, "egloves"]]);
-	assert.deepEqual(selected(drops.mysterybox, ["warpvest", "legendhelmet", "legendboots"]), [[1 / 3, "warpvest"], [1 / 3, "legendhelmet"], [1 / 3, "legendboots"]]);
+	assert.deepEqual(opened(data.drops.monsters.tiger, "tigerarmorbox"), [0.1, "open", "tigerarmorbox"]);
+	assert.deepEqual(data.drops.tigerarmorbox, [[1, "tigerhelmet"]]);
+	assert.deepEqual(opened(data.drops.monsters.a1, "vampirea1armorbox"), [0.1, "open", "vampirea1armorbox"]);
+	assert.deepEqual(selected(data.drops.vampirea1armorbox, ["vattire", "vpants"]), [[1, "vattire"], [1, "vpants"]]);
+	assert.deepEqual(opened(data.drops.monsters.a3, "vampirea3armorbox"), [0.1, "open", "vampirea3armorbox"]);
+	assert.deepEqual(selected(data.drops.vampirea3armorbox, ["vgloves", "vhelmet"]), [[1, "vgloves"], [1, "vhelmet"]]);
+	assert.deepEqual(opened(data.drops.monsters.franky, "mpxarmorbox"), [1 / 2000, "open", "mpxarmorbox"]);
+	assert.deepEqual(data.drops.mpxarmorbox, [[1, "mpxgloves"]]);
+	assert.deepEqual(selected(data.drops.armorbox, ["fury", "fallen"]), [[0.001, "fury"], [0.001, "fallen"]]);
+	assert.deepEqual(selected(data.drops.basketofeggs, ["eears", "epyjamas", "eslippers"]), [[1, "eears"], [1 / 3, "epyjamas"], [1, "eslippers"]]);
+	assert.deepEqual(selected(data.drops.mysterybox, ["warpvest"]), [[1 / 3, "warpvest"]]);
+	for (const retiredId of RETIRED_ARMOR_ITEM_IDS) {
+		assert.equal(data.craft[retiredId], undefined, retiredId);
+		assert.equal(JSON.stringify(data.drops).includes(`"${retiredId}"`), false, retiredId);
+	}
+	assert.equal(Object.keys(data.craft).length, 81);
+	assert.equal(hash(data.craft), "245f5ef2d5cef626c6e894ee4fa9f79c8ae577fe7733e4b658345586ce98559e");
 });
 
-test("both server publication paths reject malformed sets before continuing data publication", () => {
+test("all server data-processing callers bind and publish dynamic cumulative thresholds", () => {
 	const server = fs.readFileSync(path.resolve(__dirname, "../server.js"), "utf8");
 	const serverFunctions = fs.readFileSync(path.resolve(__dirname, "../server_functions.js"), "utf8");
+	const precompute = fs.readFileSync(path.resolve(__dirname, "../precompute_bfs.js"), "utf8");
 	const publicationPaths = [
 		["init_game", "async function init_game()"],
 		["reload_server", "async function reload_server(to_broadcast, change)"],
@@ -161,45 +153,55 @@ test("both server publication paths reject malformed sets before continuing data
 		assert.equal(validationStatements.length, 1, pathName);
 		assert.ok(body.indexOf(validationStatements[0]) < body.indexOf("const progression_data = buildProgressionData({"), pathName);
 		assert.ok(body.indexOf("const progression_data = buildProgressionData({") < body.indexOf("G = loadProgressionPublication("), pathName);
-		const candidate = loadItems();
-		candidate.sets.tiger.items = candidate.sets.tiger.items.filter((itemId) => itemId !== "tigercape");
-		const context = { items: candidate.items, sets: candidate.sets, validateEquipmentSchema, publicationContinued: false };
-		vm.createContext(context);
-		assert.throws(() => vm.runInContext(`${validationStatements[0]}\npublicationContinued = true;`, context), { code: "invalid_equipment_schema", set: "tiger", item: "tigercape" });
-		assert.equal(context.publicationContinued, false, pathName);
 	}
-	assert.match(serverFunctions, /for \(var i = 2; i <= 5; i\+\+\)/);
+	assert.match(serverFunctions, /require\("\.\/game\/equipment_schema"\)\.publishCumulativeSetThresholds/);
+	assert.match(serverFunctions, /G\.sets = publish_cumulative_set_thresholds\(G\.sets\);/);
+	assert.match(precompute, /server_functions\.js/);
+	assert.match(precompute, /sprocess_game_data\(\);/);
+	const directEvalContext = {
+		console: { log() {}, error() {} },
+		require: createRequire(path.resolve(__dirname, "../server_functions.js")),
+	};
+	vm.runInNewContext(`${serverFunctions}\nthis.publication_contract = { processor: typeof sprocess_game_data, helper: typeof publish_cumulative_set_thresholds };`, directEvalContext, { filename: "server_functions.js" });
+	assert.deepEqual({ ...directEvalContext.publication_contract }, { processor: "function", helper: "function" });
+	assert.doesNotMatch(serverFunctions, /for \(var i = 2; i <= 5; i\+\+\)/);
+	const raw = {
+		example: {
+			name: "Example", weight: "medium", items: ["helmet", "chest", "pants", "gloves", "shoes"],
+			bonus_items: { helmet: ["helmet"], chest: ["chest"], pants: ["pants"], gloves: ["gloves"], shoes: ["shoes"] },
+			1: { armor: 1 }, 3: { armor: 3, speed: 1 }, 5: { armor: 5 },
+		},
+	};
+	const published = publishCumulativeSetThresholds(raw);
+	assert.deepEqual(raw.example[3], { armor: 3, speed: 1 });
+	assert.deepEqual(published.example[1], { armor: 1 });
+	assert.deepEqual(published.example[3], { armor: 4, speed: 1 });
+	assert.deepEqual(published.example[5], { armor: 9, speed: 1 });
+	assert.equal(published.example[2], undefined);
+	assert.equal(published.example[4], undefined);
 });
 
-test("set counts use only the matching armor slot membership", () => {
+test("set counts use only matching populated armor slots at exact published thresholds", () => {
 	const items = {
-		helmet: { type: "helmet", set: "example" }, chest: { type: "chest", set: "example" }, pants: { type: "pants", set: "example" }, gloves: { type: "gloves", set: "example" }, shoes: { type: "shoes", set: "example" },
-		cape: { type: "cape", set: "example" }, weapon: { type: "weapon", set: "example", wtype: "short_sword", attack: 1 },
+		helmet: { type: "helmet", set: "example" }, chest: { type: "chest", set: "example" }, pants: { type: "pants", set: "example" },
+		gloves: { type: "gloves", set: "example" }, shoes: { type: "shoes", set: "example" }, cape: { type: "cape", set: "example" },
+		weapon: { type: "weapon", set: "example", wtype: "short_sword", damage: 1 }, alt: { type: "chest", set: "example" },
 	};
-	const serverFunctions = fs.readFileSync(path.resolve(__dirname, "../server_functions.js"), "utf8");
-	const cumulativeLoop = extractSourceBlock(serverFunctions, "for (var sname in G.sets) {");
-	const context = {
-		G: { sets: { example: { bonus_items: { helmet: ["helmet"], chest: ["chest"], pants: ["pants"], gloves: ["gloves"], shoes: ["shoes"] }, 2: { armor: 2 }, 3: { armor: 3 }, 4: { armor: 4 }, 5: { armor: 5 }, 6: { armor: 99 } } } },
-	};
-	vm.createContext(context);
-	vm.runInContext(cumulativeLoop, context);
-	const sets = context.G.sets;
-	assert.deepEqual(sets.example[2], { armor: 2 });
-	assert.deepEqual(sets.example[3], { armor: 5 });
-	assert.deepEqual(sets.example[4], { armor: 9 });
-	assert.deepEqual(sets.example[5], { armor: 14 });
-	assert.deepEqual(sets.example[6], { armor: 99 });
-	const cumulativeArmor = [0, 0, 2, 5, 9, 14];
+	const sets = publishCumulativeSetThresholds({
+		example: {
+			bonus_items: { helmet: ["helmet"], chest: ["chest", "alt"], pants: ["pants"], gloves: ["gloves"], shoes: ["shoes"] },
+			1: { armor: 1 }, 3: { armor: 3 }, 5: { armor: 5 },
+		},
+	});
+	const expectedArmor = [0, 1, 0, 4, 0, 9];
 	for (let count = 0; count <= 5; count += 1) {
-		const selected = Object.fromEntries(slots.slice(0, count).map((slot) => [slot, { name: slot }]));
-		selected.cape = { name: "cape" };
-		selected.mainhand = { name: "weapon" };
-		const stats = calculateStats({ slots: selected, items, sets });
+		const slots = Object.fromEntries(ARMOR_SLOTS.slice(0, count).map((slot) => [slot, { name: slot }]));
+		slots.cape = { name: "cape" };
+		slots.mainhand = { name: "weapon" };
+		const stats = calculateStats({ slots, items, sets });
 		assert.deepEqual(stats.sets, count ? { example: count } : {});
-		assert.equal(stats.armor, cumulativeArmor[count]);
+		assert.equal(stats.armor, expectedArmor[count]);
 	}
-	const alternateItems = structuredClone(items);
-	alternateItems.alt = { type: "chest", set: "example" };
-	sets.example.bonus_items.chest.push("alt");
-	assert.deepEqual(calculateStats({ slots: { chest: { name: "alt" }, cape: { name: "cape" } }, items: alternateItems, sets }).sets, { example: 1 });
+	assert.deepEqual(calculateStats({ slots: { chest: { name: "alt" }, cape: { name: "cape" } }, items, sets }).sets, { example: 1 });
+	assert.equal(calculateStats({ slots: { chest: { name: "alt" } }, items, sets }).armor, 1);
 });

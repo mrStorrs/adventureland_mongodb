@@ -29,7 +29,6 @@ test("deterministic compact equipment fixtures stay outside Prettier and GitHub 
 	const attributes = fs.readFileSync(path.join(__dirname, "../../.gitattributes"), "utf8").split(/\r?\n/).filter(Boolean);
 	const fixtures = [
 		"armor-set-balance.json",
-		"equipment-acquisition-ranking.json",
 		"equipment-balance-contract.json",
 		"equipment-combat-matrix.json",
 		"hunter-weapon-economy.json",
@@ -46,4 +45,8 @@ test("deterministic compact equipment fixtures stay outside Prettier and GitHub 
 		assert.ok(ignoredPaths.includes(`tests/fixtures/${fixture}`), `${fixture} Prettier ignore`);
 		assert.ok(attributes.includes(`node/tests/fixtures/${fixture} linguist-generated=true`), `${fixture} generated attribute`);
 	}
+	const obsoleteFixture = "equipment-acquisition-ranking.json";
+	assert.equal(fs.existsSync(path.join(__dirname, "fixtures", obsoleteFixture)), false, `${obsoleteFixture} removed`);
+	assert.equal(ignoredPaths.includes(`tests/fixtures/${obsoleteFixture}`), false, `${obsoleteFixture} Prettier entry removed`);
+	assert.equal(attributes.includes(`node/tests/fixtures/${obsoleteFixture} linguist-generated=true`), false, `${obsoleteFixture} generated attribute removed`);
 });

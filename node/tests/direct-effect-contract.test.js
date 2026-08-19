@@ -12,6 +12,8 @@ const {
 	validateDirectBonus,
 	validateDirectVector,
 } = require("../game/direct_effects");
+const { REDUCED_ARMOR_SET_COMPLETION_COUNTS, RETIRED_ARMOR_ITEM_IDS } = require("../game/equipment_schema");
+const { loadCurrentCatalog, verifyCurrent } = require("../tools/direct-effect-conversion");
 
 const fixturePath = path.join(__dirname, "fixtures", "direct-effect-conversion.json");
 
@@ -112,4 +114,33 @@ test("the oracle preserves isolated direct and special effect identities", () =>
 		assert.match(row.preexisting_effect_hash, /^[a-f0-9]{64}$/i, `${row.source_kind}:${row.source_id}`);
 		assert.ok(!Object.hasOwn(row.direct_delta, "stat_type"));
 	}
+});
+
+test("current conversion verification accepts only exact armor retirements and threshold collapses", () => {
+	const current = loadCurrentCatalog();
+	const result = verifyCurrent({ currentCatalog: current });
+	assert.equal(result.retired_items, RETIRED_ARMOR_ITEM_IDS.length);
+	assert.deepEqual(result.collapsed_sets, REDUCED_ARMOR_SET_COMPLETION_COUNTS);
+	for (const itemId of RETIRED_ARMOR_ITEM_IDS) assert.equal(current.items[itemId], undefined, itemId);
+	for (const [setId, count] of Object.entries(REDUCED_ARMOR_SET_COMPLETION_COUNTS)) {
+		assert.deepEqual(Object.keys(current.sets[setId]).filter((key) => /^\d+$/.test(key)).map(Number), [count], setId);
+	}
+});
+
+test("current conversion verification rejects a 19th retirement, unrelated threshold loss, signature drift, or unrelated core drift", () => {
+	const missingItem = loadCurrentCatalog();
+	delete missingItem.items.arcstaff;
+	assert.throws(() => verifyCurrent({ currentCatalog: missingItem }), /Converted source is missing.*arcstaff/i);
+
+	const missingThreshold = loadCurrentCatalog();
+	delete missingThreshold.sets.holidays[2];
+	assert.throws(() => verifyCurrent({ currentCatalog: missingThreshold }), /Converted source is missing.*holidays.*pieces:2/i);
+
+	const signatureDrift = loadCurrentCatalog();
+	signatureDrift.sets.wt4[2].reflection = 2;
+	assert.throws(() => verifyCurrent({ currentCatalog: signatureDrift }), /Special effect drifted.*wt4.*reflection/i);
+
+	const coreDrift = loadCurrentCatalog();
+	coreDrift.items.angelwings.hp += 1;
+	assert.throws(() => verifyCurrent({ currentCatalog: coreDrift }), /Core effect drifted.*angelwings.*hp/i);
 });

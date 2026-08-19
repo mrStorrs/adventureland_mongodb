@@ -6,10 +6,20 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
+const {
+	ARMOR_PROGRESSION_SET_TIERS,
+	ARMOR_SET_SIGNATURES,
+	ARMOR_SLOTS,
+	REDUCED_ARMOR_SET_COMPLETION_COUNTS,
+	REDUCED_ARMOR_SET_COMPLETION_PAYLOADS,
+	RETIRED_ARMOR_ITEM_IDS,
+} = require("../game/equipment_schema");
+
 const SOURCE_REVISION = "80655fd";
 const ROOT = path.resolve(__dirname, "../..");
 const FIXTURE_PATH = path.join(ROOT, "node/tests/fixtures/direct-effect-conversion.json");
 const PRIMARY_KEYS = new Set(["str", "dex", "int", "vit", "for"]);
+const ARMOR_CORE_KEYS = Object.freeze(["hp", "mp", "armor", "resistance"]);
 const SOURCE_FILES = Object.freeze([
 	"design/items.js",
 	"design/conditions.js",
@@ -323,10 +333,20 @@ function assertCurrentNumber(value, path) {
 	if (typeof value !== "number" || !Number.isFinite(value)) throw conversionError(`Current catalog has no finite ${path}`);
 }
 
-function verifyCurrent({ fixturePath = FIXTURE_PATH } = {}) {
+function verifyCurrent({ fixturePath = FIXTURE_PATH, currentCatalog = null } = {}) {
 	const oracle = verifyOracle({ fixturePath });
-	const current = loadCurrentCatalog();
+	const current = currentCatalog || loadCurrentCatalog();
+	const filesystemCatalog = currentCatalog ? loadCurrentCatalog() : current;
 	const legacyCatalog = loadSourceCatalog(SOURCE_REVISION);
+	const retiredItems = new Set(RETIRED_ARMOR_ITEM_IDS);
+	const tieredSetIds = new Set(Object.keys(ARMOR_PROGRESSION_SET_TIERS));
+	const armorSlots = new Set(ARMOR_SLOTS);
+	const allowsApprovedArmorCoreDrift = (row) => {
+		if (row.source_kind === "set_threshold") return tieredSetIds.has(row.source_id) || Object.hasOwn(REDUCED_ARMOR_SET_COMPLETION_COUNTS, row.source_id);
+		if (row.source_kind !== "item") return false;
+		const item = current.items?.[row.source_id];
+		return Boolean(item && tieredSetIds.has(item.set) && armorSlots.has(item.type));
+	};
 	const forbidden = [...PRIMARY_KEYS, "stat", "stat_type"];
 	const checkNoPrimary = (value, label) => {
 		if (!value || typeof value !== "object") return;
@@ -342,8 +362,43 @@ function verifyCurrent({ fixturePath = FIXTURE_PATH } = {}) {
 			if (!(item.damage > 0 && item.attacks_per_second > 0)) throw conversionError(`Weapon ${itemId} must publish positive direct combat values`);
 		}
 	}
-	for (const [setId, set] of Object.entries(current.sets || {}))
-		for (const count of [2, 3, 4, 5]) checkNoPrimary(set[count], `set:${setId}:${count}`);
+	for (const itemId of RETIRED_ARMOR_ITEM_IDS) {
+		if (current.items?.[itemId]) throw conversionError(`Retired armor item remains: ${itemId}`);
+	}
+	for (const itemId of Object.keys(legacyCatalog.items || {})) {
+		if (!retiredItems.has(itemId) && !current.items?.[itemId]) throw conversionError(`Converted source is missing item:${itemId}`);
+	}
+	for (const itemId of Object.keys(filesystemCatalog.items || {})) {
+		if (!current.items?.[itemId] && !retiredItems.has(itemId)) throw conversionError(`Converted source is missing item:${itemId}`);
+	}
+	for (const [setId, set] of Object.entries(current.sets || {})) {
+		for (const count of Object.keys(set).filter((key) => /^\d+$/.test(key)).map(Number)) checkNoPrimary(set[count], `set:${setId}:${count}`);
+	}
+	for (const [setId, completionCount] of Object.entries(REDUCED_ARMOR_SET_COMPLETION_COUNTS)) {
+		const thresholds = Object.keys(current.sets?.[setId] || {}).filter((key) => /^\d+$/.test(key)).map(Number).sort((left, right) => left - right);
+		if (JSON.stringify(thresholds) !== JSON.stringify([completionCount])) {
+			throw conversionError(`Converted source has invalid collapsed thresholds for ${setId}`);
+		}
+		if (JSON.stringify(current.sets[setId][completionCount]) !== JSON.stringify(REDUCED_ARMOR_SET_COMPLETION_PAYLOADS[setId])) {
+			throw conversionError(`Converted source has invalid collapsed payload for ${setId}`);
+		}
+	}
+	for (const [setId, legacySet] of Object.entries(legacyCatalog.sets || {})) {
+		if (Object.hasOwn(REDUCED_ARMOR_SET_COMPLETION_COUNTS, setId)) continue;
+		for (const count of Object.keys(legacySet).filter((key) => /^\d+$/.test(key)).map(Number)) {
+			if (!current.sets?.[setId]?.[count]) throw conversionError(`Converted source is missing set:${setId}:pieces:${count}`);
+		}
+	}
+	for (const [setId, signatures] of Object.entries(ARMOR_SET_SIGNATURES)) {
+		for (const count of [2, 3, 4, 5]) {
+			const currentSignature = Object.fromEntries(Object.entries(current.sets?.[setId]?.[count] || {}).filter(([key]) => !["hp", "mp", "armor", "resistance"].includes(key)));
+			const expectedSignature = signatures[count] || {};
+			if (JSON.stringify(currentSignature) !== JSON.stringify(expectedSignature)) {
+				const changedKey = [...new Set([...Object.keys(currentSignature), ...Object.keys(expectedSignature)])].find((key) => currentSignature[key] !== expectedSignature[key]) || "unknown";
+				throw conversionError(`Special effect drifted for ${setId}:pieces:${count}:${changedKey}`);
+			}
+		}
+	}
 	for (const [name, value] of Object.entries(current.conditions || {})) checkNoPrimary(value, `condition:${name}`);
 	for (const [name, value] of Object.entries(current.titles || {})) checkNoPrimary(value, `title:${name}`);
 	for (const [name, value] of Object.entries(current.abilities || {})) checkNoPrimary(value?.requirements, `ability:${name}:requirements`);
@@ -351,30 +406,43 @@ function verifyCurrent({ fixturePath = FIXTURE_PATH } = {}) {
 
 	for (const row of oracle.sources) {
 		const currentValue = row.source_kind === "item" ? currentItemState(current, row) : currentSourceValue(current, row);
-		if (!currentValue) throw conversionError(`Converted source is missing: ${row.source_kind}:${row.source_id}:${row.state}`);
+		if (!currentValue) {
+			if (row.source_kind === "item" && retiredItems.has(row.source_id)) continue;
+			if (row.source_kind === "set_threshold" && Object.hasOwn(REDUCED_ARMOR_SET_COMPLETION_COUNTS, row.source_id)) continue;
+			throw conversionError(`Converted source is missing: ${row.source_kind}:${row.source_id}:${row.state}`);
+		}
 		if (row.source_kind === "ability_requirement") {
 			if (row.source_id === "mentalburst" && currentValue.max_mp !== 100 + Number(row.direct_delta.mp || 0))
 				throw conversionError("Mental Burst does not preserve its direct Max MP requirement");
 			continue;
 		}
+		const legacyValue = currentSourceValue(legacyCatalog, row);
 		for (const [key, value] of Object.entries(row.direct_delta)) {
 			assertCurrentNumber(currentValue[key], `${row.source_id}:${row.state}:${key}`);
 			const legacy = currentValue[key] - value;
 			if (!Number.isFinite(legacy)) throw conversionError(`Converted ${key} is invalid for ${row.source_id}:${row.state}`);
 		}
-		const legacyValue = row.source_kind === "item"
-			? (() => {
-				const source = legacyCatalog.items[row.source_id];
-				return row.state === "base" ? source : source?.[row.state];
-			})()
-			: null;
 		if (!legacyValue) continue;
+		if (!allowsApprovedArmorCoreDrift(row)) {
+			for (const key of ARMOR_CORE_KEYS) {
+				const legacyCore = typeof legacyValue[key] === "number" ? legacyValue[key] : 0;
+				const convertedCore = typeof row.direct_delta[key] === "number" ? row.direct_delta[key] : 0;
+				const expected = legacyCore + convertedCore;
+				const actual = typeof currentValue[key] === "number" ? currentValue[key] : 0;
+				if (actual !== expected) throw conversionError(`Core effect drifted for ${row.source_id}:${row.state}:${key}`);
+			}
+		}
 		for (const [key, value] of Object.entries(nonPrimaryEffects(legacyValue))) {
-			if (["hp", "mp", "attack", "frequency"].includes(key)) continue;
+			if ([...ARMOR_CORE_KEYS, "attack", "frequency"].includes(key)) continue;
 			if (currentValue[key] !== value) throw conversionError(`Special effect drifted for ${row.source_id}:${row.state}:${key}`);
 		}
 	}
-	return { sources: oracle.sources.length, weapons: Object.values(current.items).filter((item) => item.type === "weapon" && item.progression).length };
+	return {
+		sources: oracle.sources.length,
+		weapons: Object.values(current.items).filter((item) => item.type === "weapon" && item.progression).length,
+		retired_items: RETIRED_ARMOR_ITEM_IDS.length,
+		collapsed_sets: { ...REDUCED_ARMOR_SET_COMPLETION_COUNTS },
+	};
 }
 
 function parseArguments(argv) {
@@ -423,6 +491,7 @@ module.exports = {
 	FIXTURE_PATH,
 	buildOracle,
 	conversionError,
+	loadCurrentCatalog,
 	serialize,
 	verifyCurrent,
 	verifyOracle,

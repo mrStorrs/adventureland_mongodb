@@ -938,8 +938,6 @@ var drops = {
 		//[1,"pyjamas"],
 		[1, "eears"],
 		[1.0 / 3, "epyjamas"],
-		[1.0 / 3, "epants"],
-		[1.0 / 3, "egloves"],
 		[1, "ecape"],
 		[1, "eslippers"],
 		[0.5, "carrotsword"],
@@ -1208,20 +1206,13 @@ var drops = {
 		[0.05, "xboots"],
 
 		[0.001, "fury"],
-		[0.001, "furyarmor"],
 		[0.001, "fallen"],
-		[0.001, "furygloves"],
-		[0.001, "furyboots"],
 		[0.005, "starkillers"],
 
 		[14, "shoes1"],
 	],
 	tigerarmorbox: [
 		[1, "tigerhelmet"],
-		[1, "tigerarmor"],
-		[1, "tigerpants"],
-		[1, "tigergloves"],
-		[1, "tigerboots"],
 	],
 	vampirea1armorbox: [
 		[1, "vattire"],
@@ -1233,10 +1224,6 @@ var drops = {
 	],
 	mpxarmorbox: [
 		[1, "mpxgloves"],
-		[1, "mpxhelmet"],
-		[1, "mpxarmor"],
-		[1, "mpxpants"],
-		[1, "mpxboots"],
 	],
 	armorx: [
 		[1, "hhelmet"], //tier3
@@ -1255,8 +1242,6 @@ var drops = {
 		[20, "scroll3"],
 		[4, "cscroll3"],
 		[1 / 3, "warpvest"],
-		[1 / 3, "legendhelmet"],
-		[1 / 3, "legendboots"],
 		[1, "scroll4"],
 	],
 	test: [

@@ -2007,9 +2007,15 @@ function equipment_requirements_pass(requirements, skill_state) {
 
 function equipment_set_bonus_groups(set) {
 	var slots = ["helmet", "chest", "pants", "gloves", "shoes"];
-	return slots.map(function (slot) {
+	return slots.filter(function (slot) {
+		return set.bonus_items && Array.isArray(set.bonus_items[slot]) && set.bonus_items[slot].length;
+	}).map(function (slot) {
 		return { slot: slot, items: (set.bonus_items && set.bonus_items[slot]) || [] };
 	});
+}
+
+function equipment_armor_tier_label(set) {
+	return set && set.armor_progression ? set.armor_progression.shared_tier + "/6" : "";
 }
 
 function render_equip_info(name) {
@@ -2030,6 +2036,8 @@ function render_equip_info(name) {
 		html += "</div>";
 	}
 	if (def.armor_weight) html += "<div style='color:#DDDDDD'>Weight: " + def.armor_weight.toTitleCase() + "</div>";
+	var armor_tier = def.set && G.sets[def.set] && equipment_armor_tier_label(G.sets[def.set]);
+	if (armor_tier) html += "<div style='color:#f1c054'>Armor Tier " + armor_tier + "</div>";
 	if (def.placeholder_art) html += "<div style='color:#C3C3C3'>Placeholder artwork</div>";
 	html += "</div>";
 	show_modal(html, { wrap: false, hideinbackground: true });
@@ -3775,6 +3783,8 @@ function render_item(selector, args) {
 		if (item.multiplier && item.multiplier != 1) html += bold_prop_line("Multiplier", item.multiplier, "gray");
 		if (prop.set) {
 			html += "<div><span style='color: #f1c054;'>Set</span>: <span class='clickable' onclick='stpr(event); render_set(\"" + prop.set + "\")'>" + G.sets[prop.set].name + "</span></div>";
+			var armor_tier = equipment_armor_tier_label(G.sets[prop.set]);
+			if (armor_tier) html += bold_prop_line("Armor Tier", armor_tier, "#f1c054");
 		}
 		if (args.minutes !== undefined) {
 			html += prop_remains(args.minutes / 60.0);
@@ -4161,6 +4171,8 @@ function render_set(name) {
 		selector = last_selector;
 	var html = "<div style='background-color: black; border: 5px solid gray; font-size: 24px; display: inline-block; padding: 20px; line-height: 24px; max-width: 280px;' class='buyitem'>";
 	html += "<div style='color: #f1c054; border-bottom: 2px dashed #C7CACA; margin-bottom: 3px' class='cbold'>" + set.name + "</div>";
+	var armor_tier = equipment_armor_tier_label(set);
+	if (armor_tier) html += "<div style='color:#f1c054'>Armor Tier " + armor_tier + "</div>";
 	equipment_set_bonus_groups(set).forEach(function (group) {
 		var labels = group.items.map(function (item_id) { return G.items[item_id].name; });
 		html += "<div style='color:#8A8D8F'>Bonus " + group.slot.toTitleCase() + ": " + labels.join(" or ") + "</div>";
@@ -4174,7 +4186,7 @@ function render_set(name) {
 		html += "<div style='color:#8A8D8F'>Themed items (do not count toward armor bonus)</div>";
 		non_counting.forEach(function (item_id) { html += item_container({ skin: G.items[item_id].skin }); });
 	}
-	[2, 3, 4, 5].forEach(function (num) {
+	Object.keys(set).filter(function (key) { return /^\d+$/.test(key); }).map(Number).sort(function (a, b) { return a - b; }).forEach(function (num) {
 		var rep = num + "+";
 		if (set[num] && Object.keys(set[num]).length)
 			html += "<div><span style='color:#8A8D8F'>[" + rep + " Equipped]</span> " + render_item("html", { pure: true, item: set[num], prop: set[num] }) + "</div>";

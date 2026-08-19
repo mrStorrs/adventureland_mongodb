@@ -483,8 +483,8 @@ var items={
 		"skin": "helmet",
 		"scroll": true,
 		"upgrade": {
-			"armor": 0.5,
-			"resistance": 0.5
+			"armor": 0.25,
+			"resistance": 0.25
 		},
 		"name": "Helmet",
 		"g": 3200,
@@ -495,10 +495,9 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 145,
-		"mp": 47,
-		"armor": 6,
-		"resistance": 4
+		"hp": 116,
+		"mp": 8,
+		"set": "basic"
 	},
 	"cyber": {
 		"mcourage": 1,
@@ -545,8 +544,8 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 27,
-		"mp": 15,
+		"hp": 312,
+		"mp": 33,
 		"armor": 2,
 		"resistance": 1
 	},
@@ -619,10 +618,10 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "medium",
-		"hp": 99,
+		"hp": 516,
 		"mp": 21,
-		"armor": 12,
-		"resistance": 10
+		"armor": 10,
+		"resistance": 8
 	},
 	"mwhelmet": {
 		"class": [
@@ -634,8 +633,8 @@ var items={
 		"skin": "mwhelmet",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Helmet of the Hunter Warrior",
 		"explanation": "You served our realm well",
@@ -648,10 +647,10 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "heavy",
-		"hp": 35,
-		"mp": 5,
-		"armor": 8,
-		"resistance": 4
+		"hp": 650,
+		"mp": 17,
+		"armor": 28,
+		"resistance": 14
 	},
 	"mmhat": {
 		"class": [
@@ -663,8 +662,8 @@ var items={
 		"skin": "mmhat",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Hat of the Hunter Mage",
 		"explanation": "You served our realm well",
@@ -677,10 +676,10 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "light",
-		"hp": 205,
-		"mp": 107,
-		"armor": 16,
-		"resistance": 16
+		"hp": 877,
+		"mp": 110,
+		"armor": 17,
+		"resistance": 17
 	},
 	"mphat": {
 		"class": [
@@ -692,8 +691,8 @@ var items={
 		"skin": "mphat",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Hat of the Hunter Priest",
 		"explanation": "You served our realm well",
@@ -706,10 +705,10 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "light",
-		"hp": 205,
-		"mp": 107,
-		"armor": 16,
-		"resistance": 16
+		"hp": 877,
+		"mp": 110,
+		"armor": 17,
+		"resistance": 17
 	},
 	"mrnhat": {
 		"class": [
@@ -721,8 +720,8 @@ var items={
 		"skin": "mrnhat",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Hat of the Hunter Ranger",
 		"explanation": "You served our realm well",
@@ -735,10 +734,10 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "medium",
-		"hp": 515,
-		"mp": 60,
-		"armor": 19,
-		"resistance": 14
+		"hp": 746,
+		"mp": 70,
+		"armor": 22,
+		"resistance": 16
 	},
 	"mrhood": {
 		"class": [
@@ -750,8 +749,8 @@ var items={
 		"skin": "mrhood",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Hood of the Hunter Rogue",
 		"explanation": "You served our realm well",
@@ -764,10 +763,10 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "medium",
-		"hp": 515,
-		"mp": 60,
-		"armor": 19,
-		"resistance": 14
+		"hp": 746,
+		"mp": 70,
+		"armor": 22,
+		"resistance": 16
 	},
 	"mchat": {
 		"class": [
@@ -779,8 +778,8 @@ var items={
 		"skin": "mchat",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Hat of the Hunter Merchant",
 		"explanation": "Your comrades served our realm well",
@@ -793,10 +792,10 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "medium",
-		"hp": 515,
-		"mp": 60,
-		"armor": 19,
-		"resistance": 14
+		"hp": 746,
+		"mp": 70,
+		"armor": 22,
+		"resistance": 16
 	},
 	"partyhat": {
 		"tier": 1,
@@ -949,10 +948,10 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "heavy",
-		"hp": 159,
-		"mp": 29,
-		"armor": 16,
-		"resistance": 10
+		"hp": 700,
+		"mp": 38,
+		"armor": 21,
+		"resistance": 13
 	},
 	"xhelmet": {
 		"set": "wt4",
@@ -976,7 +975,7 @@ var items={
 		],
 		"protection": true,
 		"armor_weight": "heavy",
-		"hp": 269,
+		"hp": 886,
 		"mp": 57,
 		"armor": 25,
 		"resistance": 15
@@ -1232,8 +1231,8 @@ var items={
 		"skin": "coat",
 		"scroll": true,
 		"upgrade": {
-			"armor": 0.5,
-			"resistance": 0.5
+			"armor": 0.25,
+			"resistance": 0.25
 		},
 		"name": "Coat",
 		"g": 6000,
@@ -1244,10 +1243,9 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 1363,
-		"mp": 157,
-		"armor": 40,
-		"resistance": 44
+		"hp": 232,
+		"mp": 17,
+		"set": "basic"
 	},
 	"wattire": {
 		"set": "wanderers",
@@ -1268,8 +1266,8 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 55,
-		"mp": 31,
+		"hp": 623,
+		"mp": 67,
 		"armor": 4,
 		"resistance": 3
 	},
@@ -1345,10 +1343,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 150,
+		"hp": 1032,
 		"mp": 41,
-		"armor": 24,
-		"resistance": 19
+		"armor": 20,
+		"resistance": 16
 	},
 	"mwarmor": {
 		"class": [
@@ -1360,8 +1358,8 @@ var items={
 		"skin": "mwarmor",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Armor of the Hunter Warrior",
 		"explanation": "You served our realm well",
@@ -1373,10 +1371,10 @@ var items={
 			12
 		],
 		"armor_weight": "heavy",
-		"hp": 118,
-		"mp": 11,
-		"armor": 17,
-		"resistance": 9
+		"hp": 2192,
+		"mp": 38,
+		"armor": 59,
+		"resistance": 31
 	},
 	"mmarmor": {
 		"class": [
@@ -1388,8 +1386,8 @@ var items={
 		"skin": "mmarmor",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Armor of the Hunter Mage",
 		"explanation": "You served our realm well",
@@ -1401,10 +1399,10 @@ var items={
 			12
 		],
 		"armor_weight": "light",
-		"hp": 361,
-		"mp": 214,
-		"armor": 32,
-		"resistance": 32
+		"hp": 1544,
+		"mp": 219,
+		"armor": 33,
+		"resistance": 33
 	},
 	"mparmor": {
 		"class": [
@@ -1416,8 +1414,8 @@ var items={
 		"skin": "mparmor",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Armor of the Hunter Priest",
 		"explanation": "You served our realm well",
@@ -1429,10 +1427,10 @@ var items={
 			12
 		],
 		"armor_weight": "light",
-		"hp": 361,
-		"mp": 214,
-		"armor": 32,
-		"resistance": 32
+		"hp": 1544,
+		"mp": 219,
+		"armor": 33,
+		"resistance": 33
 	},
 	"mrnarmor": {
 		"class": [
@@ -1444,8 +1442,8 @@ var items={
 		"skin": "mrnarmor",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Armor of the Hunter Ranger",
 		"explanation": "You served our realm well",
@@ -1457,10 +1455,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 1079,
-		"mp": 119,
-		"armor": 37,
-		"resistance": 28
+		"hp": 1563,
+		"mp": 139,
+		"armor": 43,
+		"resistance": 33
 	},
 	"mrarmor": {
 		"class": [
@@ -1472,8 +1470,8 @@ var items={
 		"skin": "mrarmor",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Armor of the Hunter Rogue",
 		"explanation": "You served our realm well",
@@ -1485,10 +1483,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 1079,
-		"mp": 119,
-		"armor": 37,
-		"resistance": 28
+		"hp": 1563,
+		"mp": 139,
+		"armor": 43,
+		"resistance": 33
 	},
 	"mcarmor": {
 		"class": [
@@ -1500,8 +1498,8 @@ var items={
 		"skin": "mcarmor",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Armor of the Hunter Merchant",
 		"explanation": "Your comrades served our realm well",
@@ -1513,10 +1511,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 1079,
-		"mp": 119,
-		"armor": 37,
-		"resistance": 28
+		"hp": 1563,
+		"mp": 139,
+		"armor": 43,
+		"resistance": 33
 	},
 	"harmor": {
 		"set": "wt3",
@@ -1538,10 +1536,10 @@ var items={
 			10
 		],
 		"armor_weight": "heavy",
-		"hp": 318,
-		"mp": 59,
-		"armor": 33,
-		"resistance": 19
+		"hp": 1399,
+		"mp": 78,
+		"armor": 43,
+		"resistance": 25
 	},
 	"cdragon": {
 		"type": "chest",
@@ -1592,7 +1590,7 @@ var items={
 			10
 		],
 		"armor_weight": "heavy",
-		"hp": 585,
+		"hp": 1771,
 		"mp": 113,
 		"armor": 50,
 		"resistance": 29
@@ -1604,10 +1602,10 @@ var items={
 		"skin": "mcape",
 		"scroll": true,
 		"upgrade": {
-			"armor": 2.5,
-			"hp": 30,
+			"armor": 3,
+			"hp": 35,
 			"lifesteal": 0.2,
-			"resistance": 2.5
+			"resistance": 8
 		},
 		"name": "Dracul's Attire",
 		"g": 480000,
@@ -1619,7 +1617,7 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 1894,
+		"hp": 1868,
 		"mp": 248,
 		"armor": 51,
 		"resistance": 17
@@ -1631,10 +1629,10 @@ var items={
 		"skin": "vattire",
 		"scroll": true,
 		"upgrade": {
-			"armor": 5.5,
-			"hp": 300,
+			"armor": 6,
+			"hp": 325,
 			"lifesteal": 0.2,
-			"resistance": 5.5
+			"resistance": 6
 		},
 		"name": "Spike's Attire",
 		"g": 4800000,
@@ -1645,7 +1643,7 @@ var items={
 			10
 		],
 		"armor_weight": "medium",
-		"hp": 1894,
+		"hp": 1868,
 		"mp": 248,
 		"armor": 51,
 		"resistance": 17
@@ -1744,8 +1742,8 @@ var items={
 		"skin": "pants",
 		"scroll": true,
 		"upgrade": {
-			"armor": 0.5,
-			"resistance": 0.5
+			"armor": 0.25,
+			"resistance": 0.25
 		},
 		"name": "Pants",
 		"g": 7800,
@@ -1756,10 +1754,9 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 1945,
-		"mp": 258,
-		"armor": 53,
-		"resistance": 17
+		"hp": 193,
+		"mp": 14,
+		"set": "basic"
 	},
 	"fallen": {
 		"set": "fury",
@@ -1810,8 +1807,8 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 46,
-		"mp": 26,
+		"hp": 520,
+		"mp": 57,
 		"armor": 4,
 		"resistance": 2
 	},
@@ -1860,10 +1857,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 133,
+		"hp": 860,
 		"mp": 34,
-		"armor": 20,
-		"resistance": 16
+		"armor": 17,
+		"resistance": 14
 	},
 	"mwpants": {
 		"class": [
@@ -1875,8 +1872,8 @@ var items={
 		"skin": "mwpants",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Underarmor of the Hunter Warrior",
 		"explanation": "You served our realm well",
@@ -1888,10 +1885,10 @@ var items={
 			12
 		],
 		"armor_weight": "heavy",
-		"hp": 58,
-		"mp": 9,
-		"armor": 14,
-		"resistance": 8
+		"hp": 1077,
+		"mp": 31,
+		"armor": 48,
+		"resistance": 28
 	},
 	"mmpants": {
 		"class": [
@@ -1903,8 +1900,8 @@ var items={
 		"skin": "mmpants",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Pants of the Hunter Mage",
 		"explanation": "You served our realm well",
@@ -1916,10 +1913,10 @@ var items={
 			12
 		],
 		"armor_weight": "light",
-		"hp": 277,
-		"mp": 178,
-		"armor": 26,
-		"resistance": 26
+		"hp": 1185,
+		"mp": 183,
+		"armor": 27,
+		"resistance": 27
 	},
 	"mppants": {
 		"class": [
@@ -1931,8 +1928,8 @@ var items={
 		"skin": "mppants",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Pants of the Hunter Priest",
 		"explanation": "You served our realm well",
@@ -1944,10 +1941,10 @@ var items={
 			12
 		],
 		"armor_weight": "light",
-		"hp": 277,
-		"mp": 178,
-		"armor": 26,
-		"resistance": 26
+		"hp": 1185,
+		"mp": 183,
+		"armor": 27,
+		"resistance": 27
 	},
 	"mrnpants": {
 		"class": [
@@ -1959,8 +1956,8 @@ var items={
 		"skin": "mrnpants",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Pants of the Hunter Ranger",
 		"explanation": "You served our realm well",
@@ -1972,10 +1969,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 875,
-		"mp": 99,
-		"armor": 31,
-		"resistance": 23
+		"hp": 1268,
+		"mp": 115,
+		"armor": 36,
+		"resistance": 27
 	},
 	"mrpants": {
 		"class": [
@@ -1987,8 +1984,8 @@ var items={
 		"skin": "mrpants",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Pants of the Hunter Rogue",
 		"explanation": "You served our realm well",
@@ -2000,10 +1997,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 875,
-		"mp": 99,
-		"armor": 31,
-		"resistance": 23
+		"hp": 1268,
+		"mp": 115,
+		"armor": 36,
+		"resistance": 27
 	},
 	"mcpants": {
 		"class": [
@@ -2015,8 +2012,8 @@ var items={
 		"skin": "mcpants",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Pants of the Hunter Merchant",
 		"explanation": "Your comrades served our realm well",
@@ -2028,10 +2025,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 875,
-		"mp": 99,
-		"armor": 31,
-		"resistance": 23
+		"hp": 1268,
+		"mp": 115,
+		"armor": 36,
+		"resistance": 27
 	},
 	"starkillers": {
 		"set": "legends",
@@ -2088,10 +2085,10 @@ var items={
 			10
 		],
 		"armor_weight": "heavy",
-		"hp": 233,
-		"mp": 49,
-		"armor": 27,
-		"resistance": 16
+		"hp": 1166,
+		"mp": 65,
+		"armor": 36,
+		"resistance": 21
 	},
 	"frankypants": {
 		"tier": 3,
@@ -2133,7 +2130,7 @@ var items={
 			10
 		],
 		"armor_weight": "heavy",
-		"hp": 512,
+		"hp": 1476,
 		"mp": 95,
 		"armor": 42,
 		"resistance": 25
@@ -2144,7 +2141,7 @@ var items={
 		"skin": "shoes",
 		"scroll": true,
 		"upgrade": {
-			"armor": 0.5,
+			"armor": 0.25,
 			"speed": 0.625
 		},
 		"name": "Shoes",
@@ -2156,10 +2153,9 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 64,
-		"mp": 31,
-		"armor": 4,
-		"resistance": 3
+		"hp": 77,
+		"mp": 6,
+		"set": "basic"
 	},
 	"wshoes": {
 		"set": "wanderers",
@@ -2180,8 +2176,8 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 18,
-		"mp": 10,
+		"hp": 208,
+		"mp": 22,
 		"armor": 1,
 		"resistance": 1
 	},
@@ -2328,10 +2324,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 34,
+		"hp": 344,
 		"mp": 14,
-		"armor": 8,
-		"resistance": 6
+		"armor": 6,
+		"resistance": 5
 	},
 	"mwboots": {
 		"class": [
@@ -2343,9 +2339,9 @@ var items={
 		"skin": "mwboots",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 2,
-			"speed": 1.03125
+			"speed": 1.03125,
+			"armor": 7.5,
+			"resistance": 3.75
 		},
 		"name": "Boots of the Hunter Warrior",
 		"explanation": "You served our realm well",
@@ -2357,10 +2353,10 @@ var items={
 			12
 		],
 		"armor_weight": "heavy",
-		"hp": 23,
-		"mp": 4,
-		"armor": 6,
-		"resistance": 3
+		"hp": 427,
+		"mp": 14,
+		"armor": 21,
+		"resistance": 10
 	},
 	"mmshoes": {
 		"class": [
@@ -2372,9 +2368,9 @@ var items={
 		"skin": "mmshoes",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 2,
-			"speed": 0.90625
+			"speed": 0.90625,
+			"armor": 7.5,
+			"resistance": 3.75
 		},
 		"name": "Shoes of the Hunter Mage",
 		"explanation": "You served our realm well",
@@ -2386,8 +2382,8 @@ var items={
 			12
 		],
 		"armor_weight": "light",
-		"hp": 120,
-		"mp": 71,
+		"hp": 513,
+		"mp": 73,
 		"armor": 10,
 		"resistance": 11
 	},
@@ -2401,9 +2397,9 @@ var items={
 		"skin": "mpshoes",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 2,
-			"speed": 0.90625
+			"speed": 0.90625,
+			"armor": 7.5,
+			"resistance": 3.75
 		},
 		"name": "Shoes of the Hunter Priest",
 		"explanation": "You served our realm well",
@@ -2415,8 +2411,8 @@ var items={
 			12
 		],
 		"armor_weight": "light",
-		"hp": 120,
-		"mp": 71,
+		"hp": 513,
+		"mp": 73,
 		"armor": 10,
 		"resistance": 11
 	},
@@ -2430,9 +2426,9 @@ var items={
 		"skin": "mrnboots",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 2,
-			"speed": 0.9375
+			"speed": 0.9375,
+			"armor": 7.5,
+			"resistance": 3.75
 		},
 		"name": "Boots of the Hunter Ranger",
 		"explanation": "You served our realm well",
@@ -2444,10 +2440,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 360,
-		"mp": 40,
-		"armor": 12,
-		"resistance": 9
+		"hp": 522,
+		"mp": 46,
+		"armor": 14,
+		"resistance": 10
 	},
 	"mrboots": {
 		"class": [
@@ -2459,9 +2455,9 @@ var items={
 		"skin": "mrboots",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 2,
-			"speed": 0.9375
+			"speed": 0.9375,
+			"armor": 7.5,
+			"resistance": 3.75
 		},
 		"name": "Boots of the Hunter Rogue",
 		"explanation": "You served our realm well",
@@ -2473,10 +2469,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 360,
-		"mp": 40,
-		"armor": 12,
-		"resistance": 9
+		"hp": 522,
+		"mp": 46,
+		"armor": 14,
+		"resistance": 10
 	},
 	"mcboots": {
 		"class": [
@@ -2488,9 +2484,9 @@ var items={
 		"skin": "mcboots",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 2,
-			"speed": 1.0625
+			"speed": 1.0625,
+			"armor": 7.5,
+			"resistance": 3.75
 		},
 		"name": "Boots of the Hunter Merchant",
 		"explanation": "Your comrades served our realm well",
@@ -2502,10 +2498,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 360,
-		"mp": 40,
-		"armor": 12,
-		"resistance": 9
+		"hp": 522,
+		"mp": 46,
+		"armor": 14,
+		"resistance": 10
 	},
 	"hboots": {
 		"set": "wt3",
@@ -2528,10 +2524,10 @@ var items={
 			10
 		],
 		"armor_weight": "heavy",
-		"hp": 122,
-		"mp": 20,
-		"armor": 11,
-		"resistance": 7
+		"hp": 466,
+		"mp": 26,
+		"armor": 14,
+		"resistance": 9
 	},
 	"xboots": {
 		"set": "wt4",
@@ -2554,7 +2550,7 @@ var items={
 			10
 		],
 		"armor_weight": "heavy",
-		"hp": 195,
+		"hp": 590,
 		"mp": 38,
 		"armor": 17,
 		"resistance": 10
@@ -2565,8 +2561,8 @@ var items={
 		"skin": "gloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 0.5,
-			"resistance": 0.5
+			"armor": 0.25,
+			"resistance": 0.25
 		},
 		"name": "Gloves",
 		"g": 3400,
@@ -2577,10 +2573,9 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 141,
-		"mp": 36,
-		"armor": 14,
-		"resistance": 11
+		"hp": 78,
+		"mp": 6,
+		"set": "basic"
 	},
 	"vgloves": {
 		"set": "vampires",
@@ -2589,8 +2584,8 @@ var items={
 		"skin": "vgloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 5.5,
-			"resistance": 5.5
+			"armor": 6,
+			"resistance": 6
 		},
 		"name": "Vampiric Gloves",
 		"g": 340000,
@@ -2601,7 +2596,7 @@ var items={
 			10
 		],
 		"armor_weight": "medium",
-		"hp": 599,
+		"hp": 622,
 		"mp": 82,
 		"armor": 17,
 		"resistance": 5
@@ -2613,8 +2608,8 @@ var items={
 		"skin": "vboots",
 		"scroll": true,
 		"upgrade": {
-			"armor": 5.5,
-			"resistance": 2.75,
+			"armor": 6,
+			"resistance": 3,
 			"speed": 1.125
 		},
 		"name": "Vampiric Boots",
@@ -2626,7 +2621,7 @@ var items={
 			10
 		],
 		"armor_weight": "medium",
-		"hp": 648,
+		"hp": 623,
 		"mp": 83,
 		"armor": 17,
 		"resistance": 6
@@ -2702,8 +2697,8 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 18,
-		"mp": 10,
+		"hp": 208,
+		"mp": 22,
 		"armor": 1,
 		"resistance": 1
 	},
@@ -2897,10 +2892,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 82,
+		"hp": 344,
 		"mp": 14,
-		"armor": 8,
-		"resistance": 7
+		"armor": 7,
+		"resistance": 6
 	},
 	"mpxgloves": {
 		"set": "mpx",
@@ -2940,8 +2935,8 @@ var items={
 		"skin": "mwgloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Gloves of the Hunter Warrior",
 		"explanation": "You served our realm well",
@@ -2953,10 +2948,10 @@ var items={
 			12
 		],
 		"armor_weight": "heavy",
-		"hp": 23,
-		"mp": 4,
-		"armor": 5,
-		"resistance": 3
+		"hp": 427,
+		"mp": 14,
+		"armor": 17,
+		"resistance": 10
 	},
 	"mmgloves": {
 		"class": [
@@ -2968,8 +2963,8 @@ var items={
 		"skin": "mmgloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Gloves of the Hunter Mage",
 		"explanation": "You served our realm well",
@@ -2981,8 +2976,8 @@ var items={
 			12
 		],
 		"armor_weight": "light",
-		"hp": 120,
-		"mp": 71,
+		"hp": 513,
+		"mp": 73,
 		"armor": 11,
 		"resistance": 11
 	},
@@ -2997,8 +2992,8 @@ var items={
 		"skin": "mpgloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Gloves of the Hunter Priest",
 		"explanation": "You served our realm well",
@@ -3010,8 +3005,8 @@ var items={
 			12
 		],
 		"armor_weight": "light",
-		"hp": 120,
-		"mp": 71,
+		"hp": 513,
+		"mp": 73,
 		"armor": 11,
 		"resistance": 11
 	},
@@ -3025,8 +3020,8 @@ var items={
 		"skin": "mrngloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Gloves of the Hunter Ranger",
 		"explanation": "You served our realm well",
@@ -3038,10 +3033,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 360,
-		"mp": 40,
-		"armor": 12,
-		"resistance": 9
+		"hp": 522,
+		"mp": 47,
+		"armor": 14,
+		"resistance": 10
 	},
 	"mrgloves": {
 		"class": [
@@ -3053,8 +3048,8 @@ var items={
 		"skin": "mrgloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Gloves of the Hunter Rogue",
 		"explanation": "You served our realm well",
@@ -3066,10 +3061,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 360,
-		"mp": 40,
-		"armor": 12,
-		"resistance": 9
+		"hp": 522,
+		"mp": 47,
+		"armor": 14,
+		"resistance": 10
 	},
 	"mcgloves": {
 		"gold": 5,
@@ -3082,8 +3077,8 @@ var items={
 		"skin": "mcgloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Gloves of the Hunter Merchant",
 		"explanation": "Your comrades served our realm well",
@@ -3095,10 +3090,10 @@ var items={
 			12
 		],
 		"armor_weight": "medium",
-		"hp": 360,
-		"mp": 40,
-		"armor": 12,
-		"resistance": 9
+		"hp": 522,
+		"mp": 47,
+		"armor": 14,
+		"resistance": 10
 	},
 	"hgloves": {
 		"set": "wt3",
@@ -3120,10 +3115,10 @@ var items={
 			10
 		],
 		"armor_weight": "heavy",
-		"hp": 74,
-		"mp": 20,
-		"armor": 11,
-		"resistance": 6
+		"hp": 466,
+		"mp": 26,
+		"armor": 14,
+		"resistance": 8
 	},
 	"xgloves": {
 		"set": "wt4",
@@ -3145,7 +3140,7 @@ var items={
 			10
 		],
 		"armor_weight": "heavy",
-		"hp": 195,
+		"hp": 590,
 		"mp": 38,
 		"armor": 17,
 		"resistance": 10
@@ -11054,146 +11049,6 @@ var items={
 		"g": 120000,
 		"grade": 0
 	},
-	"tigerarmor": {
-		"set": "tiger",
-		"tier": 2,
-		"type": "chest",
-		"skin": "tigerhelmet",
-		"scroll": true,
-		"rogue": {
-			"crit": 2,
-			"upgrade": {
-				"crit": 0.25
-			}
-		},
-		"upgrade": {
-			"armor": 2.5,
-			"resistance": 2.5
-		},
-		"name": "Armor of the Tiger",
-		"grades": [
-			0,
-			6,
-			10,
-			12
-		],
-		"g": 640000,
-		"a": true,
-		"protection": true,
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "tigerhelmet",
-		"explanation": "Placeholder artwork: uses the existing tigerhelmet asset.",
-		"hp": 1455,
-		"mp": 253,
-		"armor": 53,
-		"resistance": 41
-	},
-	"tigerpants": {
-		"set": "tiger",
-		"tier": 2,
-		"type": "pants",
-		"skin": "tigerhelmet",
-		"scroll": true,
-		"rogue": {
-			"crit": 2,
-			"upgrade": {
-				"crit": 0.25
-			}
-		},
-		"upgrade": {
-			"armor": 2.5,
-			"resistance": 2.5
-		},
-		"name": "Pants of the Tiger",
-		"grades": [
-			0,
-			6,
-			10,
-			12
-		],
-		"g": 640000,
-		"a": true,
-		"protection": true,
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "tigerhelmet",
-		"explanation": "Placeholder artwork: uses the existing tigerhelmet asset.",
-		"hp": 1180,
-		"mp": 210,
-		"armor": 44,
-		"resistance": 34
-	},
-	"tigergloves": {
-		"set": "tiger",
-		"tier": 2,
-		"type": "gloves",
-		"skin": "tigerhelmet",
-		"scroll": true,
-		"rogue": {
-			"crit": 2,
-			"upgrade": {
-				"crit": 0.25
-			}
-		},
-		"upgrade": {
-			"armor": 2.5,
-			"resistance": 2.5
-		},
-		"name": "Gloves of the Tiger",
-		"grades": [
-			0,
-			6,
-			10,
-			12
-		],
-		"g": 640000,
-		"a": true,
-		"protection": true,
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "tigerhelmet",
-		"explanation": "Placeholder artwork: uses the existing tigerhelmet asset.",
-		"hp": 501,
-		"mp": 84,
-		"armor": 18,
-		"resistance": 13
-	},
-	"tigerboots": {
-		"set": "tiger",
-		"tier": 2,
-		"type": "shoes",
-		"skin": "tigerhelmet",
-		"scroll": true,
-		"rogue": {
-			"crit": 2,
-			"upgrade": {
-				"crit": 0.25
-			}
-		},
-		"upgrade": {
-			"armor": 2.5,
-			"resistance": 2.5
-		},
-		"name": "Boots of the Tiger",
-		"grades": [
-			0,
-			6,
-			10,
-			12
-		],
-		"g": 640000,
-		"a": true,
-		"protection": true,
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "tigerhelmet",
-		"explanation": "Placeholder artwork: uses the existing tigerhelmet asset.",
-		"hp": 501,
-		"mp": 84,
-		"armor": 18,
-		"resistance": 14
-	},
 	"vhelmet": {
 		"set": "vampires",
 		"tier": 3,
@@ -11201,8 +11056,8 @@ var items={
 		"skin": "vgloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 5.5,
-			"resistance": 5.5
+			"armor": 6,
+			"resistance": 6
 		},
 		"name": "Vampiric Hood",
 		"g": 340000,
@@ -11216,7 +11071,7 @@ var items={
 		"placeholder_art": true,
 		"placeholder_asset": "vgloves",
 		"explanation": "Placeholder artwork: uses the existing vgloves asset.",
-		"hp": 947,
+		"hp": 934,
 		"mp": 124,
 		"armor": 26,
 		"resistance": 8
@@ -11228,10 +11083,10 @@ var items={
 		"skin": "vattire",
 		"scroll": true,
 		"upgrade": {
-			"armor": 5.5,
-			"hp": 300,
+			"armor": 6,
+			"hp": 325,
 			"lifesteal": 0.2,
-			"resistance": 5.5
+			"resistance": 6
 		},
 		"name": "Vampiric Pants",
 		"g": 4800000,
@@ -11245,466 +11100,10 @@ var items={
 		"placeholder_art": true,
 		"placeholder_asset": "vattire",
 		"explanation": "Placeholder artwork: uses the existing vattire asset.",
-		"hp": 1547,
+		"hp": 1556,
 		"mp": 206,
 		"armor": 43,
 		"resistance": 14
-	},
-	"mpxhelmet": {
-		"set": "mpx",
-		"tier": 2,
-		"type": "helmet",
-		"skin": "mpxgloves",
-		"ability": "restore_mp",
-		"attr0": 2,
-		"scroll": true,
-		"upgrade": {
-			"armor": 2.5,
-			"attr0": 0.5,
-			"resistance": 2.5
-		},
-		"name": "Mana Hood",
-		"explanation": "Placeholder artwork: uses the existing mpxgloves asset.",
-		"grades": [
-			0,
-			0,
-			9,
-			12
-		],
-		"g": 34000000,
-		"armor_weight": "light",
-		"placeholder_art": true,
-		"placeholder_asset": "mpxgloves",
-		"hp": 205,
-		"mp": 107,
-		"armor": 16,
-		"resistance": 16
-	},
-	"mpxarmor": {
-		"set": "mpx",
-		"tier": 2,
-		"type": "chest",
-		"skin": "mpxgloves",
-		"ability": "restore_mp",
-		"attr0": 2,
-		"scroll": true,
-		"upgrade": {
-			"armor": 2.5,
-			"attr0": 0.5,
-			"resistance": 2.5
-		},
-		"name": "Mana Robe",
-		"explanation": "Placeholder artwork: uses the existing mpxgloves asset.",
-		"grades": [
-			0,
-			0,
-			9,
-			12
-		],
-		"g": 34000000,
-		"armor_weight": "light",
-		"placeholder_art": true,
-		"placeholder_asset": "mpxgloves",
-		"hp": 361,
-		"mp": 214,
-		"armor": 32,
-		"resistance": 32
-	},
-	"mpxpants": {
-		"set": "mpx",
-		"tier": 2,
-		"type": "pants",
-		"skin": "mpxgloves",
-		"ability": "restore_mp",
-		"attr0": 2,
-		"scroll": true,
-		"upgrade": {
-			"armor": 2.5,
-			"attr0": 0.5,
-			"resistance": 2.5
-		},
-		"name": "Mana Pants",
-		"explanation": "Placeholder artwork: uses the existing mpxgloves asset.",
-		"grades": [
-			0,
-			0,
-			9,
-			12
-		],
-		"g": 34000000,
-		"armor_weight": "light",
-		"placeholder_art": true,
-		"placeholder_asset": "mpxgloves",
-		"hp": 277,
-		"mp": 178,
-		"armor": 26,
-		"resistance": 26
-	},
-	"mpxboots": {
-		"set": "mpx",
-		"tier": 2,
-		"type": "shoes",
-		"skin": "mpxgloves",
-		"ability": "restore_mp",
-		"attr0": 2,
-		"scroll": true,
-		"upgrade": {
-			"armor": 2.5,
-			"attr0": 0.5,
-			"resistance": 2.5
-		},
-		"name": "Mana Boots",
-		"explanation": "Placeholder artwork: uses the existing mpxgloves asset.",
-		"grades": [
-			0,
-			0,
-			9,
-			12
-		],
-		"g": 34000000,
-		"armor_weight": "light",
-		"placeholder_art": true,
-		"placeholder_asset": "mpxgloves",
-		"hp": 120,
-		"mp": 71,
-		"armor": 11,
-		"resistance": 11
-	},
-	"furyarmor": {
-		"set": "fury",
-		"tier": 1.5,
-		"type": "chest",
-		"class": [
-			"rogue",
-			"warrior",
-			"ranger",
-			"paladin"
-		],
-		"skin": "fury",
-		"scroll": true,
-		"upgrade": {
-			"apiercing": 10,
-			"armor": 1.5,
-			"crit": 0.5,
-			"resistance": 1.5
-		},
-		"legacy": {
-			"class": null,
-			"set": null
-		},
-		"name": "Armor of Fury",
-		"grades": [
-			0,
-			0,
-			10,
-			12
-		],
-		"g": 6400000,
-		"a": true,
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "fury",
-		"explanation": "Placeholder artwork: uses the existing fury asset.",
-		"hp": 1455,
-		"mp": 253,
-		"armor": 53,
-		"resistance": 41
-	},
-	"furygloves": {
-		"set": "fury",
-		"tier": 1.5,
-		"type": "gloves",
-		"class": [
-			"rogue",
-			"warrior",
-			"ranger",
-			"paladin"
-		],
-		"skin": "fury",
-		"scroll": true,
-		"upgrade": {
-			"apiercing": 10,
-			"armor": 1.5,
-			"crit": 0.5,
-			"resistance": 1.5
-		},
-		"legacy": {
-			"class": null,
-			"set": null
-		},
-		"name": "Gloves of Fury",
-		"grades": [
-			0,
-			0,
-			10,
-			12
-		],
-		"g": 6400000,
-		"a": true,
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "fury",
-		"explanation": "Placeholder artwork: uses the existing fury asset.",
-		"hp": 501,
-		"mp": 84,
-		"armor": 18,
-		"resistance": 13
-	},
-	"furyboots": {
-		"set": "fury",
-		"tier": 1.5,
-		"type": "shoes",
-		"class": [
-			"rogue",
-			"warrior",
-			"ranger",
-			"paladin"
-		],
-		"skin": "fury",
-		"scroll": true,
-		"upgrade": {
-			"apiercing": 10,
-			"armor": 1.5,
-			"crit": 0.5,
-			"resistance": 1.5
-		},
-		"legacy": {
-			"class": null,
-			"set": null
-		},
-		"name": "Boots of Fury",
-		"grades": [
-			0,
-			0,
-			10,
-			12
-		],
-		"g": 6400000,
-		"a": true,
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "fury",
-		"explanation": "Placeholder artwork: uses the existing fury asset.",
-		"hp": 501,
-		"mp": 84,
-		"armor": 18,
-		"resistance": 14
-	},
-	"legendhelmet": {
-		"set": "legends",
-		"tier": 3,
-		"type": "helmet",
-		"skin": "warpvest",
-		"scroll": true,
-		"upgrade": {
-			"armor": 5.5,
-			"resistance": 5.5,
-			"hp": 30.72,
-			"pvp_damage_reduction": 4.761904761904767
-		},
-		"name": "Legendary Visor",
-		"explanation": "Placeholder artwork: uses the existing warpvest asset.",
-		"ability": "warp",
-		"charge": 1,
-		"g": 36400000,
-		"a": 2,
-		"edge": 5,
-		"grades": [
-			0,
-			0,
-			6,
-			10
-		],
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "warpvest",
-		"hp": 269,
-		"mp": 57,
-		"armor": 25,
-		"resistance": 15
-	},
-	"legendboots": {
-		"set": "legends",
-		"tier": 3,
-		"type": "shoes",
-		"skin": "warpvest",
-		"scroll": true,
-		"upgrade": {
-			"armor": 5.5,
-			"resistance": 5.5,
-			"hp": 30.72,
-			"pvp_damage_reduction": 4.761904761904767
-		},
-		"name": "Legendary Boots",
-		"explanation": "Placeholder artwork: uses the existing warpvest asset.",
-		"ability": "warp",
-		"charge": 1,
-		"g": 36400000,
-		"a": 2,
-		"edge": 5,
-		"grades": [
-			0,
-			0,
-			6,
-			10
-		],
-		"armor_weight": "heavy",
-		"placeholder_art": true,
-		"placeholder_asset": "warpvest",
-		"hp": 195,
-		"mp": 38,
-		"armor": 17,
-		"resistance": 10
-	},
-	"swifthelmet": {
-		"set": "swift",
-		"tier": 1.5,
-		"type": "helmet",
-		"skin": "wingedboots",
-		"scroll": true,
-		"upgrade": {
-			"armor": 1.5,
-			"resistance": 1.5,
-			"speed": 1,
-			"attacks_per_second": 0.00625
-		},
-		"name": "Helm of Swift Judgement",
-		"g": 150000,
-		"credit": "Pluet",
-		"grades": [
-			4,
-			8,
-			10,
-			12
-		],
-		"armor_weight": "medium",
-		"placeholder_art": true,
-		"placeholder_asset": "wingedboots",
-		"explanation": "Placeholder artwork: uses the existing wingedboots asset.",
-		"hp": 134,
-		"mp": 32,
-		"armor": 12,
-		"resistance": 11
-	},
-	"swiftarmor": {
-		"set": "swift",
-		"tier": 1.5,
-		"type": "chest",
-		"skin": "wingedboots",
-		"scroll": true,
-		"upgrade": {
-			"armor": 1.5,
-			"resistance": 1.5,
-			"speed": 1,
-			"attacks_per_second": 0.00625
-		},
-		"name": "Armor of Swift Judgement",
-		"g": 150000,
-		"credit": "Pluet",
-		"grades": [
-			4,
-			8,
-			10,
-			12
-		],
-		"armor_weight": "medium",
-		"placeholder_art": true,
-		"placeholder_asset": "wingedboots",
-		"explanation": "Placeholder artwork: uses the existing wingedboots asset.",
-		"hp": 269,
-		"mp": 65,
-		"armor": 25,
-		"resistance": 22
-	},
-	"swiftpants": {
-		"set": "swift",
-		"tier": 1.5,
-		"type": "pants",
-		"skin": "wingedboots",
-		"scroll": true,
-		"upgrade": {
-			"armor": 1.5,
-			"resistance": 1.5,
-			"speed": 1,
-			"attacks_per_second": 0.00625
-		},
-		"name": "Pants of Swift Judgement",
-		"g": 150000,
-		"credit": "Pluet",
-		"grades": [
-			4,
-			8,
-			10,
-			12
-		],
-		"armor_weight": "medium",
-		"placeholder_art": true,
-		"placeholder_asset": "wingedboots",
-		"explanation": "Placeholder artwork: uses the existing wingedboots asset.",
-		"hp": 240,
-		"mp": 54,
-		"armor": 21,
-		"resistance": 18
-	},
-	"epants": {
-		"set": "bunny",
-		"tier": 1.5,
-		"type": "pants",
-		"skin": "epyjamas",
-		"scroll": true,
-		"charisma": -5,
-		"upgrade": {
-			"armor": 1.5,
-			"hp": 50,
-			"resistance": 1.5
-		},
-		"name": "Fluffy Pants",
-		"g": 48000,
-		"a": 2,
-		"grades": [
-			5,
-			8,
-			10,
-			12
-		],
-		"explanation": "Placeholder artwork: uses the existing epyjamas asset.",
-		"armor_weight": "light",
-		"placeholder_art": true,
-		"placeholder_asset": "epyjamas",
-		"hp": 262,
-		"mp": 164,
-		"armor": 24,
-		"resistance": 24
-	},
-	"egloves": {
-		"set": "bunny",
-		"tier": 1.5,
-		"type": "gloves",
-		"skin": "epyjamas",
-		"scroll": true,
-		"charisma": -5,
-		"upgrade": {
-			"armor": 1.5,
-			"hp": 50,
-			"resistance": 1.5
-		},
-		"name": "Fluffy Gloves",
-		"g": 48000,
-		"a": 2,
-		"grades": [
-			5,
-			8,
-			10,
-			12
-		],
-		"explanation": "Placeholder artwork: uses the existing epyjamas asset.",
-		"armor_weight": "light",
-		"placeholder_art": true,
-		"placeholder_asset": "epyjamas",
-		"hp": 115,
-		"mp": 66,
-		"armor": 10,
-		"resistance": 10
 	},
 	"mpalhelmet": {
 		"class": [
@@ -11716,8 +11115,8 @@ var items={
 		"skin": "mwhelmet",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Helmet of the Hunter Paladin",
 		"explanation": "Placeholder artwork: uses the existing mwhelmet asset.",
@@ -11732,10 +11131,10 @@ var items={
 		"armor_weight": "heavy",
 		"placeholder_art": true,
 		"placeholder_asset": "mwhelmet",
-		"hp": 35,
-		"mp": 5,
-		"armor": 8,
-		"resistance": 4
+		"hp": 650,
+		"mp": 17,
+		"armor": 28,
+		"resistance": 14
 	},
 	"mpalarmor": {
 		"class": [
@@ -11747,8 +11146,8 @@ var items={
 		"skin": "mwarmor",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Armor of the Hunter Paladin",
 		"explanation": "Placeholder artwork: uses the existing mwarmor asset.",
@@ -11762,10 +11161,10 @@ var items={
 		"armor_weight": "heavy",
 		"placeholder_art": true,
 		"placeholder_asset": "mwarmor",
-		"hp": 118,
-		"mp": 11,
-		"armor": 17,
-		"resistance": 9
+		"hp": 2192,
+		"mp": 38,
+		"armor": 59,
+		"resistance": 31
 	},
 	"mpalpants": {
 		"class": [
@@ -11777,8 +11176,8 @@ var items={
 		"skin": "mwpants",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Underarmor of the Hunter Paladin",
 		"explanation": "Placeholder artwork: uses the existing mwpants asset.",
@@ -11792,10 +11191,10 @@ var items={
 		"armor_weight": "heavy",
 		"placeholder_art": true,
 		"placeholder_asset": "mwpants",
-		"hp": 58,
-		"mp": 9,
-		"armor": 14,
-		"resistance": 8
+		"hp": 1077,
+		"mp": 31,
+		"armor": 48,
+		"resistance": 28
 	},
 	"mpalgloves": {
 		"class": [
@@ -11807,8 +11206,8 @@ var items={
 		"skin": "mwgloves",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 4
+			"armor": 7.5,
+			"resistance": 7.5
 		},
 		"name": "Gloves of the Hunter Paladin",
 		"explanation": "Placeholder artwork: uses the existing mwgloves asset.",
@@ -11822,10 +11221,10 @@ var items={
 		"armor_weight": "heavy",
 		"placeholder_art": true,
 		"placeholder_asset": "mwgloves",
-		"hp": 23,
-		"mp": 4,
-		"armor": 5,
-		"resistance": 3
+		"hp": 427,
+		"mp": 14,
+		"armor": 17,
+		"resistance": 10
 	},
 	"mpalboots": {
 		"class": [
@@ -11837,9 +11236,9 @@ var items={
 		"skin": "mwboots",
 		"scroll": true,
 		"upgrade": {
-			"armor": 4,
-			"resistance": 2,
-			"speed": 1.03125
+			"speed": 1.03125,
+			"armor": 7.5,
+			"resistance": 3.75
 		},
 		"name": "Boots of the Hunter Paladin",
 		"explanation": "Placeholder artwork: uses the existing mwboots asset.",
@@ -11853,39 +11252,78 @@ var items={
 		"armor_weight": "heavy",
 		"placeholder_art": true,
 		"placeholder_asset": "mwboots",
-		"hp": 23,
-		"mp": 4,
-		"armor": 6,
-		"resistance": 3
+		"hp": 427,
+		"mp": 14,
+		"armor": 21,
+		"resistance": 10
 	}
 };
 
 var sets={
-	"tiger": {
+	"basic": {
 		"2": {
-			"hp": 168,
-			"mp": 28,
-			"armor": 6,
-			"resistance": 5,
-			"speed": 1
+			"hp": 1,
+			"mp": 1,
+			"armor": 1,
+			"resistance": 1
 		},
 		"3": {
-			"hp": 209,
-			"mp": 38,
-			"armor": 8,
-			"resistance": 6
+			"hp": 1,
+			"mp": 1,
+			"armor": 1,
+			"resistance": 1
 		},
 		"4": {
-			"hp": 297,
-			"mp": 47,
-			"armor": 10,
-			"resistance": 8
+			"hp": 1,
+			"mp": 1,
+			"armor": 1,
+			"resistance": 1
 		},
 		"5": {
-			"hp": 417,
-			"mp": 76,
-			"armor": 16,
-			"resistance": 12,
+			"hp": 1,
+			"mp": 1,
+			"armor": 1,
+			"resistance": 1
+		},
+		"name": "Basic Armor",
+		"items": [
+			"helmet",
+			"coat",
+			"pants",
+			"gloves",
+			"shoes"
+		],
+		"weight": "medium",
+		"bonus_items": {
+			"helmet": [
+				"helmet"
+			],
+			"chest": [
+				"coat"
+			],
+			"pants": [
+				"pants"
+			],
+			"gloves": [
+				"gloves"
+			],
+			"shoes": [
+				"shoes"
+			]
+		},
+		"armor_progression": {
+			"shared_tier": 1,
+			"role": "progression",
+			"anchor": true
+		}
+	},
+	"tiger": {
+		"1": {
+			"hp": 1091,
+			"mp": 189,
+			"armor": 40,
+			"resistance": 31,
+			"speed": 1,
 			"evasion": 1
 		},
 		"name": "Tigers'",
@@ -11893,28 +11331,12 @@ var sets={
 			"tigerhelmet",
 			"tigershield",
 			"tigercape",
-			"tigerstone",
-			"tigerarmor",
-			"tigerpants",
-			"tigergloves",
-			"tigerboots"
+			"tigerstone"
 		],
 		"weight": "heavy",
 		"bonus_items": {
 			"helmet": [
 				"tigerhelmet"
-			],
-			"chest": [
-				"tigerarmor"
-			],
-			"pants": [
-				"tigerpants"
-			],
-			"gloves": [
-				"tigergloves"
-			],
-			"shoes": [
-				"tigerboots"
 			]
 		}
 	},
@@ -11980,144 +11402,67 @@ var sets={
 			"shoes": [
 				"vboots"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 6,
+			"role": "progression",
+			"anchor": true
 		}
 	},
 	"mpx": {
-		"2": {
-			"hp": 24,
-			"mp": 24,
-			"armor": 4,
-			"resistance": 4,
-			"mp_reduction": 1
-		},
-		"3": {
-			"hp": 33,
-			"mp": 32,
-			"armor": 5,
-			"resistance": 5
-		},
-		"4": {
-			"hp": 89,
-			"mp": 40,
-			"armor": 6,
-			"resistance": 6
-		},
-		"5": {
-			"hp": 113,
-			"mp": 64,
-			"armor": 9,
-			"resistance": 9,
+		"1": {
+			"hp": 259,
+			"mp": 160,
+			"armor": 24,
+			"resistance": 24,
+			"mp_reduction": 1,
 			"manasteal": 1
 		},
 		"name": "MP X",
 		"items": [
 			"mpxbelt",
 			"mpxgloves",
-			"mpxamulet",
-			"mpxhelmet",
-			"mpxarmor",
-			"mpxpants",
-			"mpxboots"
+			"mpxamulet"
 		],
 		"weight": "light",
 		"bonus_items": {
-			"helmet": [
-				"mpxhelmet"
-			],
-			"chest": [
-				"mpxarmor"
-			],
-			"pants": [
-				"mpxpants"
-			],
 			"gloves": [
 				"mpxgloves"
-			],
-			"shoes": [
-				"mpxboots"
 			]
 		}
 	},
 	"fury": {
 		"2": {
-			"hp": 168,
-			"mp": 28,
-			"armor": 6,
-			"resistance": 5,
-			"attacks_per_second": 0.01
-		},
-		"3": {
-			"hp": 209,
-			"mp": 38,
-			"armor": 8,
-			"resistance": 6
-		},
-		"4": {
-			"hp": 297,
-			"mp": 47,
-			"armor": 10,
-			"resistance": 8
-		},
-		"5": {
-			"hp": 417,
-			"mp": 76,
-			"armor": 16,
-			"resistance": 12,
+			"hp": 1091,
+			"mp": 189,
+			"armor": 40,
+			"resistance": 31,
+			"attacks_per_second": 0.01,
 			"apiercing": 1
 		},
 		"name": "Rage and Fury",
 		"items": [
 			"suckerpunch",
 			"fury",
-			"fallen",
-			"furyarmor",
-			"furygloves",
-			"furyboots"
+			"fallen"
 		],
 		"weight": "heavy",
 		"bonus_items": {
 			"helmet": [
 				"fury"
 			],
-			"chest": [
-				"furyarmor"
-			],
 			"pants": [
 				"fallen"
-			],
-			"gloves": [
-				"furygloves"
-			],
-			"shoes": [
-				"furyboots"
 			]
 		}
 	},
 	"legends": {
-		"2": {
-			"hp": 50,
-			"mp": 13,
-			"armor": 6,
-			"resistance": 3,
-			"dreturn": 1
-		},
 		"3": {
-			"hp": 66,
-			"mp": 17,
-			"armor": 8,
-			"resistance": 4
-		},
-		"4": {
-			"hp": 131,
-			"mp": 21,
-			"armor": 9,
-			"resistance": 6
-		},
-		"5": {
-			"hp": 180,
-			"mp": 34,
-			"armor": 15,
-			"resistance": 9,
+			"hp": 427,
+			"mp": 85,
+			"armor": 38,
+			"resistance": 22,
+			"dreturn": 1,
 			"reflection": 1
 		},
 		"name": "The Legends",
@@ -12125,15 +11470,10 @@ var sets={
 			"warpvest",
 			"starkillers",
 			"powerglove",
-			"goldenpowerglove",
-			"legendhelmet",
-			"legendboots"
+			"goldenpowerglove"
 		],
 		"weight": "heavy",
 		"bonus_items": {
-			"helmet": [
-				"legendhelmet"
-			],
 			"chest": [
 				"warpvest"
 			],
@@ -12143,58 +11483,25 @@ var sets={
 			"gloves": [
 				"powerglove",
 				"goldenpowerglove"
-			],
-			"shoes": [
-				"legendboots"
 			]
 		}
 	},
 	"swift": {
 		"2": {
-			"hp": 20,
-			"mp": 7,
-			"armor": 3,
-			"resistance": 2,
-			"attacks_per_second": 0.01
-		},
-		"3": {
-			"hp": 26,
-			"mp": 10,
-			"armor": 4,
-			"resistance": 3
-		},
-		"4": {
-			"hp": 80,
-			"mp": 12,
-			"armor": 4,
-			"resistance": 4
-		},
-		"5": {
-			"hp": 100,
-			"mp": 20,
-			"armor": 7,
-			"resistance": 7,
+			"hp": 226,
+			"mp": 49,
+			"armor": 18,
+			"resistance": 16,
+			"attacks_per_second": 0.01,
 			"evasion": 1
 		},
 		"name": "Swift Judgement",
 		"items": [
 			"wingedboots",
-			"fierygloves",
-			"swifthelmet",
-			"swiftarmor",
-			"swiftpants"
+			"fierygloves"
 		],
 		"weight": "medium",
 		"bonus_items": {
-			"helmet": [
-				"swifthelmet"
-			],
-			"chest": [
-				"swiftarmor"
-			],
-			"pants": [
-				"swiftpants"
-			],
 			"gloves": [
 				"fierygloves"
 			],
@@ -12271,26 +11578,26 @@ var sets={
 	},
 	"wanderers": {
 		"2": {
-			"hp": 6,
-			"mp": 3,
+			"hp": 13,
+			"mp": 7,
 			"speed": 1
 		},
 		"3": {
-			"hp": 8,
-			"mp": 5,
-			"armor": 1
+			"hp": 17,
+			"mp": 11,
+			"armor": 2
 		},
 		"4": {
-			"hp": 10,
-			"mp": 6,
-			"armor": 1,
-			"resistance": 1
+			"hp": 22,
+			"mp": 13,
+			"armor": 2,
+			"resistance": 2
 		},
 		"5": {
-			"hp": 17,
-			"mp": 9,
-			"armor": 1,
-			"resistance": 1,
+			"hp": 37,
+			"mp": 20,
+			"armor": 2,
+			"resistance": 2,
 			"range": 1
 		},
 		"name": "Wanderer's Set",
@@ -12319,33 +11626,38 @@ var sets={
 			"shoes": [
 				"wshoes"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 2,
+			"role": "progression",
+			"anchor": true
 		}
 	},
 	"wt3": {
 		"2": {
-			"hp": 25,
-			"mp": 6,
-			"armor": 4,
-			"resistance": 2,
+			"hp": 33,
+			"mp": 8,
+			"armor": 5,
+			"resistance": 3,
 			"pnresistance": 1
 		},
 		"3": {
-			"hp": 33,
-			"mp": 9,
-			"armor": 5,
-			"resistance": 3
+			"hp": 43,
+			"mp": 12,
+			"armor": 7,
+			"resistance": 4
 		},
 		"4": {
-			"hp": 42,
-			"mp": 11,
-			"armor": 6,
-			"resistance": 3
+			"hp": 55,
+			"mp": 14,
+			"armor": 8,
+			"resistance": 4
 		},
 		"5": {
-			"hp": 115,
-			"mp": 18,
-			"armor": 10,
-			"resistance": 6,
+			"hp": 152,
+			"mp": 24,
+			"armor": 13,
+			"resistance": 8,
 			"stresistance": 1
 		},
 		"name": "Heavy Armor",
@@ -12373,6 +11685,11 @@ var sets={
 			"shoes": [
 				"hboots"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 4,
+			"role": "progression",
+			"anchor": true
 		}
 	},
 	"wt4": {
@@ -12427,6 +11744,11 @@ var sets={
 			"shoes": [
 				"xboots"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 5,
+			"role": "progression",
+			"anchor": true
 		}
 	},
 	"rugged": {
@@ -12482,33 +11804,38 @@ var sets={
 			"shoes": [
 				"shoes1"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 3,
+			"role": "progression",
+			"anchor": true
 		}
 	},
 	"mwarrior": {
 		"2": {
-			"hp": 8,
-			"mp": 1,
-			"armor": 2,
-			"resistance": 1,
+			"hp": 149,
+			"mp": 4,
+			"armor": 7,
+			"resistance": 4,
 			"crit": 1
 		},
 		"3": {
-			"hp": 10,
-			"mp": 2,
-			"armor": 2,
-			"resistance": 1
+			"hp": 186,
+			"mp": 7,
+			"armor": 7,
+			"resistance": 4
 		},
 		"4": {
-			"hp": 13,
-			"mp": 2,
-			"armor": 3,
-			"resistance": 2
+			"hp": 242,
+			"mp": 7,
+			"armor": 10,
+			"resistance": 7
 		},
 		"5": {
-			"hp": 21,
-			"mp": 3,
-			"armor": 5,
-			"resistance": 3,
+			"hp": 390,
+			"mp": 10,
+			"armor": 17,
+			"resistance": 10,
 			"apiercing": 1
 		},
 		"name": "Monster Hunter Warrior",
@@ -12537,31 +11864,36 @@ var sets={
 			"shoes": [
 				"mwboots"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 5,
+			"role": "hunter_sidegrade",
+			"anchor": false
 		}
 	},
 	"mmage": {
 		"2": {
-			"hp": 24,
+			"hp": 103,
 			"mp": 24,
 			"armor": 4,
 			"resistance": 4,
 			"rpiercing": 1
 		},
 		"3": {
-			"hp": 33,
-			"mp": 32,
+			"hp": 141,
+			"mp": 33,
 			"armor": 5,
 			"resistance": 5
 		},
 		"4": {
-			"hp": 89,
-			"mp": 40,
+			"hp": 381,
+			"mp": 41,
 			"armor": 6,
 			"resistance": 6
 		},
 		"5": {
-			"hp": 113,
-			"mp": 64,
+			"hp": 483,
+			"mp": 66,
 			"armor": 9,
 			"resistance": 9,
 			"crit": 1
@@ -12592,31 +11924,36 @@ var sets={
 			"shoes": [
 				"mmshoes"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 5,
+			"role": "hunter_sidegrade",
+			"anchor": false
 		}
 	},
 	"mpriest": {
 		"2": {
-			"hp": 24,
+			"hp": 103,
 			"mp": 24,
 			"armor": 4,
 			"resistance": 4,
 			"mp_reduction": 1
 		},
 		"3": {
-			"hp": 33,
-			"mp": 32,
+			"hp": 141,
+			"mp": 33,
 			"armor": 5,
 			"resistance": 5
 		},
 		"4": {
-			"hp": 89,
-			"mp": 40,
+			"hp": 381,
+			"mp": 41,
 			"armor": 6,
 			"resistance": 6
 		},
 		"5": {
-			"hp": 113,
-			"mp": 64,
+			"hp": 483,
+			"mp": 66,
 			"armor": 9,
 			"resistance": 9,
 			"stresistance": 1
@@ -12647,33 +11984,38 @@ var sets={
 			"shoes": [
 				"mpshoes"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 5,
+			"role": "hunter_sidegrade",
+			"anchor": false
 		}
 	},
 	"mranger": {
 		"2": {
-			"hp": 121,
-			"mp": 14,
-			"armor": 4,
-			"resistance": 3,
+			"hp": 175,
+			"mp": 16,
+			"armor": 5,
+			"resistance": 4,
 			"range": 1
 		},
 		"3": {
-			"hp": 145,
-			"mp": 18,
-			"armor": 6,
-			"resistance": 4
-		},
-		"4": {
-			"hp": 217,
-			"mp": 22,
+			"hp": 210,
+			"mp": 21,
 			"armor": 7,
 			"resistance": 5
 		},
+		"4": {
+			"hp": 314,
+			"mp": 26,
+			"armor": 8,
+			"resistance": 6
+		},
 		"5": {
-			"hp": 290,
-			"mp": 36,
-			"armor": 11,
-			"resistance": 9,
+			"hp": 420,
+			"mp": 42,
+			"armor": 13,
+			"resistance": 10,
 			"apiercing": 1
 		},
 		"name": "Monster Hunter Ranger",
@@ -12702,33 +12044,38 @@ var sets={
 			"shoes": [
 				"mrnboots"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 5,
+			"role": "hunter_sidegrade",
+			"anchor": false
 		}
 	},
 	"mrogue": {
 		"2": {
-			"hp": 121,
-			"mp": 14,
-			"armor": 4,
-			"resistance": 3,
+			"hp": 175,
+			"mp": 16,
+			"armor": 5,
+			"resistance": 4,
 			"evasion": 1
 		},
 		"3": {
-			"hp": 145,
-			"mp": 18,
-			"armor": 6,
-			"resistance": 4
-		},
-		"4": {
-			"hp": 217,
-			"mp": 22,
+			"hp": 210,
+			"mp": 21,
 			"armor": 7,
 			"resistance": 5
 		},
+		"4": {
+			"hp": 314,
+			"mp": 26,
+			"armor": 8,
+			"resistance": 6
+		},
 		"5": {
-			"hp": 290,
-			"mp": 36,
-			"armor": 11,
-			"resistance": 9,
+			"hp": 420,
+			"mp": 42,
+			"armor": 13,
+			"resistance": 10,
 			"crit": 1
 		},
 		"name": "Monster Hunter Rogue",
@@ -12757,33 +12104,38 @@ var sets={
 			"shoes": [
 				"mrboots"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 5,
+			"role": "hunter_sidegrade",
+			"anchor": false
 		}
 	},
 	"mmerchant": {
 		"2": {
-			"hp": 121,
-			"mp": 14,
-			"armor": 4,
-			"resistance": 3,
+			"hp": 175,
+			"mp": 16,
+			"armor": 5,
+			"resistance": 4,
 			"dreturn": 1
 		},
 		"3": {
-			"hp": 145,
-			"mp": 18,
-			"armor": 6,
-			"resistance": 4
-		},
-		"4": {
-			"hp": 217,
-			"mp": 22,
+			"hp": 210,
+			"mp": 21,
 			"armor": 7,
 			"resistance": 5
 		},
+		"4": {
+			"hp": 314,
+			"mp": 26,
+			"armor": 8,
+			"resistance": 6
+		},
 		"5": {
-			"hp": 290,
-			"mp": 36,
-			"armor": 11,
-			"resistance": 9,
+			"hp": 420,
+			"mp": 42,
+			"armor": 13,
+			"resistance": 10,
 			"speed": 1
 		},
 		"name": "Monster Hunter Merchant",
@@ -12812,33 +12164,20 @@ var sets={
 			"shoes": [
 				"mcboots"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 5,
+			"role": "hunter_sidegrade",
+			"anchor": false
 		}
 	},
 	"bunny": {
-		"2": {
-			"hp": 23,
-			"mp": 22,
-			"armor": 3,
-			"resistance": 3,
-			"speed": 1
-		},
 		"3": {
-			"hp": 30,
-			"mp": 30,
-			"armor": 4,
-			"resistance": 4
-		},
-		"4": {
-			"hp": 85,
-			"mp": 37,
-			"armor": 6,
-			"resistance": 6
-		},
-		"5": {
-			"hp": 108,
-			"mp": 59,
-			"armor": 9,
-			"resistance": 9,
+			"hp": 246,
+			"mp": 148,
+			"armor": 22,
+			"resistance": 22,
+			"speed": 1,
 			"reflection": 1
 		},
 		"name": "Bunny Set",
@@ -12848,9 +12187,7 @@ var sets={
 			"epyjamas",
 			"eslippers",
 			"pinkie",
-			"carrotsword",
-			"epants",
-			"egloves"
+			"carrotsword"
 		],
 		"explanation": "An Easter / Bunny themed set!",
 		"weight": "light",
@@ -12861,12 +12198,6 @@ var sets={
 			"chest": [
 				"epyjamas"
 			],
-			"pants": [
-				"epants"
-			],
-			"gloves": [
-				"egloves"
-			],
 			"shoes": [
 				"eslippers"
 			]
@@ -12874,29 +12205,29 @@ var sets={
 	},
 	"mpaladin": {
 		"2": {
-			"hp": 8,
-			"mp": 1,
-			"armor": 2,
-			"resistance": 1,
+			"hp": 149,
+			"mp": 4,
+			"armor": 7,
+			"resistance": 4,
 			"lifesteal": 1
 		},
 		"3": {
-			"hp": 10,
-			"mp": 2,
-			"armor": 2,
-			"resistance": 1
+			"hp": 186,
+			"mp": 7,
+			"armor": 7,
+			"resistance": 4
 		},
 		"4": {
-			"hp": 13,
-			"mp": 2,
-			"armor": 3,
-			"resistance": 2
+			"hp": 242,
+			"mp": 7,
+			"armor": 10,
+			"resistance": 7
 		},
 		"5": {
-			"hp": 21,
-			"mp": 3,
-			"armor": 5,
-			"resistance": 3,
+			"hp": 390,
+			"mp": 10,
+			"armor": 17,
+			"resistance": 10,
 			"stresistance": 1
 		},
 		"name": "Monster Hunter Paladin",
@@ -12924,6 +12255,11 @@ var sets={
 			"shoes": [
 				"mpalboots"
 			]
+		},
+		"armor_progression": {
+			"shared_tier": 5,
+			"role": "hunter_sidegrade",
+			"anchor": false
 		}
 	}
 };
