@@ -53,9 +53,9 @@ var skills = {
 		kind: "noncombat",
 		max_level: 99,
 	},
-	smelting: {
-		id: "smelting",
-		name: "Smelting",
+	smithing: {
+		id: "smithing",
+		name: "Smithing",
 		kind: "noncombat",
 		max_level: 99,
 	},

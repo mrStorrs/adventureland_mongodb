@@ -3,12 +3,12 @@
 const crypto = require("node:crypto");
 
 const EXPECTED_TIERS = Object.freeze([
-	[0, "copper", "Copper", 1, "copperore", "pickaxe", 800, 5000, 20, 2000],
-	[1, "iron", "Iron", 15, "ironore", "ironpickaxe", 1200, 4400, 100, 100000],
-	[2, "gold", "Gold", 30, "goldore", "goldpickaxe", 1800, 3800, 500, 1000000],
-	[3, "mithril", "Mithril", 55, "mithrilore", "mithrilpickaxe", 2800, 3200, 2000, 8000000],
-	[4, "adamantite", "Adamantite", 70, "adamantiteore", "adamantitepickaxe", 4000, 2600, 8000, 35000000],
-	[5, "runite", "Runite", 85, "runiteore", "runitepickaxe", 6000, 2000, 32000, 150000000],
+	[0, "copper", "Copper", 1, "copperore", "pickaxe", 6611, 5000, 1042, 2000],
+	[1, "iron", "Iron", 20, "ironore", "ironpickaxe", 13330, 5000, 1389, 100000],
+	[2, "gold", "Gold", 40, "goldore", "goldpickaxe", 18148, 5000, 2083, 1000000],
+	[3, "mithril", "Mithril", 60, "mithrilore", "mithrilpickaxe", 60787, 5000, 2778, 8000000],
+	[4, "adamantite", "Adamantite", 80, "adamantiteore", "adamantitepickaxe", 63581, 5000, 3472, 35000000],
+	[5, "runite", "Runite", 90, "runiteore", "runitepickaxe", 69939, 5000, 4630, 150000000],
 ]);
 const BONUS_IDS = Object.freeze(["gemfragment", "bronzenugget", "goldnugget", "platinumnugget"]);
 
@@ -37,10 +37,10 @@ function tierForRock(data, rock) {
 
 function validateMiningData(data, catalogs = {}) {
 	if (!data || typeof data !== "object") throw fail("invalid_mining_data", "Mining data must be an object");
-	if (data.version !== 1 || data.respawn_ms !== 10000 || data.refresh_ms !== 1000 || data.map !== "tunnel") {
+	if (data.version !== 2 || data.respawn_ms !== 10000 || data.refresh_ms !== 1000 || data.map !== "tunnel") {
 		throw fail("invalid_mining_data", "Mining version, timing, or map is invalid");
 	}
-	if (JSON.stringify(data.success) !== JSON.stringify({ base: 0.45, level_step: 0.005, tool_step: 0.06, min: 0.05, max: 0.95 })) {
+	if (JSON.stringify(data.success) !== JSON.stringify({ chance: 0.125 })) {
 		throw fail("invalid_mining_data", "Mining success constants differ from the canonical contract");
 	}
 	if (JSON.stringify(data.cape) !== JSON.stringify({ item: "miningcape", level: 99, bonus: 0.05, price: 99000000 })) {
@@ -169,8 +169,8 @@ function miningChance(data, { level, oreTier, pickaxeTier, hasCape = false }) {
 	if (!Number.isInteger(level) || level < ore.level || level > 99) {
 		throw fail("mining_level", `Mining level ${ore.level} is required for ${ore.name}`, { rock: ore.id, required: ore.level });
 	}
-	const raw = data.success.base + data.success.level_step * (level - ore.level) + data.success.tool_step * (pickaxeTier - oreTier) + (hasCape && level >= data.cape.level ? data.cape.bonus : 0);
-	return Number(clamp(data.success.min, data.success.max, raw).toFixed(12));
+	if (pickaxeTier < oreTier) throw fail("mining_tool", `Mining level ${ore.level} pickaxe is required`, { tool: String(pickaxeTier) });
+	return data.success.chance;
 }
 
 function miningDuration(data, pickaxeTier) {

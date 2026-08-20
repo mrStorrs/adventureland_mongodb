@@ -1,9 +1,10 @@
 "use strict";
 
 const { SKILL_IDS, MAX_LEVEL, cumulativeXp, maxXpForSkill } = require("./skill_domain");
+const { skill_xp } = require("../../design/skill_xp");
 const { progression } = require("../../design/progression");
 const PRE_MINING_SKILL_IDS = Object.freeze(SKILL_IDS.slice(0, SKILL_IDS.indexOf("mining")));
-const PRE_SMELTING_SKILL_IDS = Object.freeze(SKILL_IDS.slice(0, SKILL_IDS.indexOf("smelting")));
+const PRE_SMITHING_SKILL_IDS = Object.freeze(SKILL_IDS.slice(0, SKILL_IDS.indexOf("smithing")));
 
 function stateError(path, reason, details = {}) {
 	const error = new Error(`Invalid character skill state at ${path}: ${reason}`);
@@ -95,31 +96,45 @@ function loadCharacterState(character, options = {}) {
 		SKILL_IDS.includes("mining") &&
 		actualIds.length === PRE_MINING_SKILL_IDS.length &&
 		actualIds.every((id, index) => id === PRE_MINING_SKILL_IDS[index]);
-	const smeltingMigration =
-		SKILL_IDS.at(-1) === "smelting" &&
-		actualIds.length === PRE_SMELTING_SKILL_IDS.length &&
-		actualIds.every((id, index) => id === PRE_SMELTING_SKILL_IDS[index]);
+	const smithingMigration =
+		SKILL_IDS.at(-1) === "smithing" &&
+		actualIds.length === PRE_SMITHING_SKILL_IDS.length &&
+		actualIds.every((id, index) => id === PRE_SMITHING_SKILL_IDS[index]);
+	const smeltingRename = actualIds.length === SKILL_IDS.length && actualIds.at(-1) === "smelting" && actualIds.slice(0, -1).every((id, index) => id === SKILL_IDS[index]);
 	if (miningMigration) {
 		skills.mining = { level: 1, xp: 0 };
-		skills.smelting = { level: 1, xp: 0 };
-	} else if (smeltingMigration) {
-		skills.smelting = { level: 1, xp: 0 };
+		skills.smithing = { level: 1, xp: 0 };
+	} else if (smithingMigration) {
+		skills.smithing = { level: 1, xp: 0 };
+	} else if (smeltingRename) {
+		skills.smithing = skills.smelting;
+		delete skills.smelting;
 	}
 	const legacyCurve = character.info.skill_curve_version !== progression.COMBAT_XP_CURVE_VERSION;
 	if (legacyCurve) {
 		for (const id of ids) {
 			if (id === "merchant" || !skills[id] || !Number.isSafeInteger(skills[id].xp)) continue;
-			let level = 1;
-			for (let candidate = 2; candidate <= MAX_LEVEL; candidate += 1) {
-				if (cumulativeXp(candidate, id) > skills[id].xp) break;
-				level = candidate;
+			if (id === "mining" || id === "smithing") {
+				const level = Math.min(MAX_LEVEL, Math.max(1, Number.isInteger(skills[id].level) ? skills[id].level : 1));
+				const oldStart = skill_xp.merchant[level];
+				const oldEnd = level === MAX_LEVEL ? oldStart : skill_xp.merchant[level + 1];
+				const fraction = oldEnd === oldStart ? 0 : Math.max(0, Math.min(1, (skills[id].xp - oldStart) / (oldEnd - oldStart)));
+				const newStart = cumulativeXp(level, id);
+				const newEnd = level === MAX_LEVEL ? newStart : cumulativeXp(level + 1, id);
+				skills[id] = { level, xp: level === MAX_LEVEL ? newStart : Math.floor(newStart + fraction * (newEnd - newStart)) };
+			} else {
+				let level = 1;
+				for (let candidate = 2; candidate <= MAX_LEVEL; candidate += 1) {
+					if (cumulativeXp(candidate, id) > skills[id].xp) break;
+					level = candidate;
+				}
+				skills[id].level = level;
 			}
-			skills[id].level = level;
 		}
 	}
 	validateSkillState(skills, { registry, xpTable: options.xpTable });
 	const total_level = computeTotalLevel(skills, registry);
-	if (!miningMigration && !smeltingMigration && !legacyCurve && character.total_level !== undefined && character.total_level !== total_level) {
+	if (!miningMigration && !smithingMigration && !smeltingRename && !legacyCurve && character.total_level !== undefined && character.total_level !== total_level) {
 		throw stateError("total_level", "does not equal the sum of registered skill levels", {
 			actual: character.total_level,
 			expected: total_level,
@@ -147,5 +162,5 @@ module.exports = {
 	withSkillState,
 	stateError,
 	PRE_MINING_SKILL_IDS,
-	PRE_SMELTING_SKILL_IDS,
+	PRE_SMITHING_SKILL_IDS,
 };

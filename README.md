@@ -329,33 +329,32 @@ node tools/combat-xp-pacing.js --verify
 
 ## Mining skill
 
-Mining is a per-character, noncombat skill with levels 1–99 and the same
-900,000,000-XP noncombat curve used by Merchant. The six ore tiers and their
-matching permanent main-hand pickaxes unlock at Mining levels 1, 15, 30, 55,
-70, and 85:
+Mining is a per-character skill with levels 1–99. It uses the Warrior XP curve
+and feeds the timed Smithing progression. The six ore tiers and their matching
+permanent main-hand pickaxes unlock at Mining levels 1, 20, 40, 60, 80, and 90:
 
-| Ore | Unlock | XP per success | Matching pickaxe time |
-|---|---:|---:|---:|
-| Copper | 1 | 800 | 5.0s |
-| Iron | 15 | 1,200 | 4.4s |
-| Gold | 30 | 1,800 | 3.8s |
-| Mithril | 55 | 2,800 | 3.2s |
-| Adamantite | 70 | 4,000 | 2.6s |
-| Runite | 85 | 6,000 | 2.0s |
+| Ore | Unlock | XP per success | Ore value | Pickaxe time |
+|---|---:|---:|---:|---:|
+| Copper | 1 | 6,611 | 1,042g | 5.0s |
+| Iron | 20 | 13,330 | 1,389g | 5.0s |
+| Gold | 40 | 18,148 | 2,083g | 5.0s |
+| Mithril | 60 | 60,787 | 2,778g | 5.0s |
+| Adamantite | 80 | 63,581 | 3,472g | 5.0s |
+| Runite | 90 | 69,939 | 4,630g | 5.0s |
 
-The times above use each ore's matching pickaxe. Any equipped Mining pickaxe
-can attempt any ore unlocked by level; its tier affects attempt time and
-success chance but does not add another ore requirement.
+Every attempt uses the same five-second server timer and the fixed Mining
+success model, averaging 1.5 ore per minute (90 ore per hour) at a normal
+rotation. The matching or a higher-tier Mining pickaxe is required for an ore;
+higher-tier pickaxes do not gather faster.
 
 The Tunnel publishes three reachable rocks for each tier. Rocks are visible in
 the browser and their depletion is private to an account, shared by its
 characters, and isolated from other accounts. A successful claim makes one
 rock unavailable for 10 seconds; failures do not deplete it. Mining consumes no
 MP and has no ability cooldown. Success awards one ore, Mining XP, and an
-optional Gem Fragment or nugget bonus. Ore stacks to 9,999 and sells through
-the normal merchant path. Mine Heathcliff stocks all pickaxes and a level-99
-Mining Cape for 99,000,000 gold; the cape adds 0.05 to Mining success before
-the server's 0.95 cap.
+optional legacy Gem Fragment or nugget bonus. Ore stacks to 9,999 and sells
+through the normal merchant path. Mine Heathcliff stocks all pickaxes and a
+level-99 Mining Cape for 99,000,000 gold.
 
 The browser action is `use_ability("mining", rockId)`. Supplying a stable rock
 ID (for example, `copper-1`) targets that rock; omitting the ID chooses the
@@ -370,31 +369,46 @@ node --test node/tests/mining-domain.test.js node/tests/mining-runtime.test.js n
 node --test node/tests/*.test.js
 ```
 
-## Smelting skill
+## Smithing skill
 
-Smelting is a per-character, noncombat skill independent of Mining, with levels
-1–99 and the same 900,000,000-XP curve used by Mining and Merchant. For
-Smelting, the existing Craftsman exposes six zero-gold recipes that each refine
-ten matching ores into one stackable, exclusive bar:
+Smithing is a per-character skill independent of Mining, with levels 1–99 and
+the Warrior XP curve. The Craftsman exposes six zero-gold, server-timed refine
+recipes. Each consumes two matching ores and takes the material's listed time;
+the same timer applies when forging a weapon:
 
-| Bar | Smelting unlock | Ore input | XP per bar | Bar value |
-|---|---:|---:|---:|---:|
-| Copper Bar | 1 | 10 Copper Ore | 8,000 | 200g |
-| Iron Bar | 15 | 10 Iron Ore | 12,000 | 1,000g |
-| Gold Bar | 30 | 10 Gold Ore | 18,000 | 5,000g |
-| Mithril Bar | 55 | 10 Mithril Ore | 28,000 | 20,000g |
-| Adamantite Bar | 70 | 10 Adamantite Ore | 40,000 | 80,000g |
-| Runite Bar | 85 | 10 Runite Ore | 60,000 | 320,000g |
+| Bar | Smithing unlock | Ore input | Action time | XP per completion | Bar value | Scrap value |
+|---|---:|---:|---:|---:|---:|---:|
+| Copper Bar | 1 | 2 Copper Ore | 30s | 4,958 | 2,084g | 639g |
+| Iron Bar | 20 | 2 Iron Ore | 36s | 11,997 | 2,778g | 1,013g |
+| Gold Bar | 40 | 2 Gold Ore | 42s | 19,055 | 4,166g | 1,766g |
+| Mithril Bar | 60 | 2 Mithril Ore | 48s | 72,944 | 5,556g | 2,687g |
+| Adamantite Bar | 80 | 2 Adamantite Ore | 54s | 85,834 | 6,944g | 3,772g |
+| Runite Bar | 90 | 2 Runite Ore | 60s | 104,909 | 9,260g | 5,574g |
 
-Bar value equals the ten consumed ores, so refining does not create gold. The
-Craftsman validates Smelting level before consuming materials. Existing
-characters receive `smelting: { level: 1, xp: 0 }` during normal skill-state
-loading; malformed skill records remain rejected.
+Forging follows a six-material, six-class chain. It consumes five current-tier
+bars plus the exact preceding weapon at `+0`, and produces the next weapon at
+`+0`; crafted weapons can then use the normal upgrade path through `+4`. The
+server owns the timer, level gate, inputs, outcome, and XP award. The client
+receives the authoritative duration and progress state and cannot choose the
+outcome or completion time.
 
-Run the deterministic Smelting contracts with:
+Smithing awards XP on every completed attempt. A successful refine yields one
+bar; a failed refine yields one same-material bar scrap. A successful forge
+yields the next weapon; a failed forge returns the preceding `+0` weapon and
+five same-material bar scraps. Cancelling, disconnecting, dying, or otherwise
+invalidating an active action releases its inputs without output or XP. The
+level-based success roll is intentionally low and is not exposed as a client
+input.
+
+Existing persisted Smelting state is accepted as a migration input and renamed
+to Smithing while preserving its level and within-level progress. New persisted
+state and public snapshots use Smithing only; malformed skill records remain
+rejected.
+
+Run the deterministic Smithing, migration, and browser contracts with:
 
 ```sh
-node --test node/tests/smelting-domain.test.js node/tests/smelting-runtime.test.js node/tests/browser-smelting-contract.test.js
+node --test node/tests/smithing-domain.test.js node/tests/smithing-runtime.test.js node/tests/browser-smithing-contract.test.js node/tests/progression-runtime.test.js node/tests/publication-persistence-contract.test.js
 node --test node/tests/*.test.js
 ```
 

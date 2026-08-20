@@ -37,7 +37,7 @@ Object.freeze(monster_progression);
 var progression = {
 	MAX_LEVEL: 99,
 	MAX_XP: 900000000,
-	COMBAT_XP_CURVE_VERSION: 2,
+	COMBAT_XP_CURVE_VERSION: 3,
 	COMBAT_XP_PACING: Object.freeze({
 		reference_skill: "warrior",
 		legacy_cap_floor: 900000000,
@@ -92,7 +92,7 @@ var progression = {
 		"merchant_upgrade",
 		"merchant_compound",
 		"mining",
-		"smelting",
+		"smithing",
 	],
 	WEAPON_RANK_REQUIREMENTS: Object.freeze([1, 20, 40, 60, 80, 90, 99]),
 	WEAPON_PROGRESSION_ANCHORS: Object.freeze({
