@@ -60,18 +60,18 @@ function makeAttempt(character = readyCharacter(), overrides = {}) {
 	});
 }
 
-test("[AC-2] fresh characters publish nine ordered skills and Mining uses the 900m noncombat curve", () => {
-	assert.deepEqual(Object.keys(skills), ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smelting"]);
+test("[AC-2] fresh characters publish nine ordered skills and Mining uses the Warrior curve", () => {
+	assert.deepEqual(Object.keys(skills), ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smithing"]);
 	assert.equal(skills.mining.kind, "noncombat");
-	assert.equal(skills.smelting.kind, "noncombat");
+	assert.equal(skills.smithing.kind, "noncombat");
 	assert.equal(skill_xp.merchant[99], 900000000);
 	assert.deepEqual(createCharacterState(), { skills: characterDefinition.skills, total_level: 9 });
 });
 
-test("[AC-3] exact predecessor shapes receive only their additive Mining or Smelting backfill", () => {
-	const preSmeltingSkills = Object.fromEntries(Object.entries(characterDefinition.skills).filter(([id]) => id !== "smelting"));
+test("[AC-3] predecessor shapes add Smithing and migrate the legacy Smelting key", () => {
+	const preSmeltingSkills = Object.fromEntries(Object.entries(characterDefinition.skills).filter(([id]) => id !== "smithing"));
 	const smeltingMigrated = loadCharacterState({ info: { skills: preSmeltingSkills, skill_curve_version: 2 }, total_level: 8 });
-	assert.deepEqual(smeltingMigrated.skills.smelting, { level: 1, xp: 0 });
+	assert.deepEqual(smeltingMigrated.skills.smithing, { level: 1, xp: 0 });
 	assert.equal(smeltingMigrated.total_level, 9);
 
 	const progressedPreSmeltingSkills = structuredClone(preSmeltingSkills);
@@ -84,16 +84,16 @@ test("[AC-3] exact predecessor shapes receive only their additive Mining or Smel
 		total_level: progressedTotal,
 	});
 	assert.deepEqual(
-		Object.fromEntries(Object.entries(progressedMigration.skills).filter(([id]) => id !== "smelting")),
-		progressedPreSmeltingSkills,
+		Object.keys(progressedMigration.skills),
+		Object.keys(characterDefinition.skills),
 	);
-	assert.deepEqual(progressedMigration.skills.smelting, { level: 1, xp: 0 });
+	assert.deepEqual(progressedMigration.skills.smithing, { level: 1, xp: 0 });
 	assert.equal(progressedMigration.total_level, progressedTotal + 1);
 
 	const preMiningSkills = Object.fromEntries(Object.entries(preSmeltingSkills).filter(([id]) => id !== "mining"));
 	const miningMigrated = loadCharacterState({ info: { skills: preMiningSkills, skill_curve_version: 2 }, total_level: 7 });
 	assert.deepEqual(miningMigrated.skills.mining, { level: 1, xp: 0 });
-	assert.deepEqual(miningMigrated.skills.smelting, { level: 1, xp: 0 });
+	assert.deepEqual(miningMigrated.skills.smithing, { level: 1, xp: 0 });
 	assert.equal(miningMigrated.total_level, 9);
 
 	const reordered = Object.fromEntries([...Object.entries(preSmeltingSkills)].reverse());
@@ -103,12 +103,27 @@ test("[AC-3] exact predecessor shapes receive only their additive Mining or Smel
 	assert.throws(() => loadCharacterState({ info: { skills: { ...preSmeltingSkills, unknown: { level: 1, xp: 0 } }, skill_curve_version: 2 } }), {
 		code: "invalid_character_skill_state",
 	});
-	assert.throws(() => loadCharacterState({ info: { skills: { ...preSmeltingSkills, smelting: { level: 1 } }, skill_curve_version: 2 } }), {
+	assert.throws(() => loadCharacterState({ info: { skills: { ...preSmeltingSkills, smithing: { level: 1 } }, skill_curve_version: 2 } }), {
 		code: "invalid_character_skill_state",
 	});
 	assert.throws(() => loadCharacterState({ info: { skills: { ...preSmeltingSkills, merchant: { level: 2, xp: 0 } }, skill_curve_version: 2 } }), {
 		code: "invalid_character_skill_state",
 	});
+
+	const legacySmithingSkills = structuredClone(characterDefinition.skills);
+	const oldStart = skill_xp.merchant[40];
+	const oldEnd = skill_xp.merchant[41];
+	const legacyXp = oldStart + Math.floor((oldEnd - oldStart) * 0.37);
+	legacySmithingSkills.smelting = { level: 40, xp: legacyXp };
+	delete legacySmithingSkills.smithing;
+	const migratedSmithing = loadCharacterState({
+		info: { skills: legacySmithingSkills, skill_curve_version: 2 },
+		total_level: Object.values(legacySmithingSkills).reduce((total, progress) => total + progress.level, 0),
+	});
+	const newStart = cumulativeXp(40, "smithing");
+	const newEnd = cumulativeXp(41, "smithing");
+	assert.deepEqual(migratedSmithing.skills.smithing, { level: 40, xp: Math.floor(newStart + ((legacyXp - oldStart) / (oldEnd - oldStart)) * (newEnd - newStart)) });
+	assert.equal(Object.hasOwn(migratedSmithing.skills, "smelting"), false);
 });
 
 test("[AC-6] start gates tool, level, range, and capacity without MP or cooldown", () => {
@@ -187,9 +202,9 @@ test("[AC-8] deterministic failure is mutation-free and success grants one ore p
 	const success = await completeMiningAttempt(mining, attempt, { ...common, random: () => 0, bonusRandom: () => 1 });
 	assert.equal(success.outcome, "success");
 	assert.equal(success.ore, "copperore");
-	assert.equal(success.xp, 800);
+	assert.equal(success.xp, 6611);
 	assert.deepEqual(rewards, ["copperore"]);
-	assert.deepEqual(xp, [{ skill: "mining", xp: 800, sourceId: "mining:action-a" }]);
+	assert.deepEqual(xp, [{ skill: "mining", xp: 6611, sourceId: "mining:action-a" }]);
 });
 
 test("[AC-9] an atomic account claim has one winner while another account remains independent", async () => {
@@ -268,7 +283,7 @@ test("[AC-9, AC-10] server persistence is transactional, owner-private, and refr
 	}
 	assert.ok((source.match(/emit_mining_state_for_player\(player\)/g) || []).length >= 2, "login and Tunnel entry emit immediate private state");
 	assert.match(source, /cdata\.mining_state = publicRockState/);
-	assert.match(source, /preserve_mining_channel\(player\)/);
+	assert.match(source, /preserve_action_channels\(player\)/);
 	assert.match(source, /cancel_mining_if_mainhand_changed\(player, mining_mainhand_before\)/);
 	const serverFunctions = fs.readFileSync(path.join(root, "node/server_functions.js"), "utf8");
 	assert.match(serverFunctions, /clear_mining_attempt\(player, "dead"\)/);
@@ -582,7 +597,7 @@ test("[AC-7] invalid or unrelated equipment actions preserve Mining and committe
 		socket: { emit: (event, payload) => events.push([event, payload]) },
 	};
 	const before = context.mining_tool_marker(player.slots.mainhand);
-	context.preserve_mining_channel(player);
+	context.preserve_action_channels(player);
 	assert.deepEqual(JSON.parse(JSON.stringify(player.c)), { mining: { ms: 1000, len: 5000, rock_id: "copper-1" } });
 	assert.equal(context.cancel_mining_if_mainhand_changed(player, before), false);
 	assert.equal(events.length, 0);
@@ -652,7 +667,7 @@ test("[AC-6 through AC-10] injectable runtime executes private start, transactio
 	const result = await runtime.complete(characters[0], started.attempt);
 	assert.equal(result.outcome, "success");
 	assert.deepEqual(characters[0].inventory, ["copperore"]);
-	assert.equal(characters[0].mining_xp, 800);
+	assert.equal(characters[0].mining_xp, 6611);
 	assert.ok(events.some(([id, event, state]) => id === "a2" && event === "mining_state" && state["copper-1"]));
 	assert.equal(events.some(([id, event, state]) => id === "b1" && event === "mining_state" && state["copper-1"]), false);
 	assert.equal(logs.find(([, entry]) => entry.outcome === "success")[1].claim_ms, 25);
@@ -710,7 +725,7 @@ test("[AC-13] production buy and sell socket adapters enforce Mining gates and t
 		y: 0,
 		gold: items.ironpickaxe.g,
 		items: [],
-		skills: { mining: { level: 14 } },
+		skills: { mining: { level: 19 } },
 	};
 	const buyContext = {
 		G: { items: { ironpickaxe: items.ironpickaxe }, maps: { tunnel: { items: { ironpickaxe: [npc] } } }, inflation: 1 },
@@ -738,7 +753,7 @@ test("[AC-13] production buy and sell socket adapters enforce Mining gates and t
 	assert.equal(buyFailures.at(-1)[0], "skill_level_required");
 	assert.equal(buyer.gold, items.ironpickaxe.g);
 	assert.deepEqual(buyer.items, []);
-	buyer.skills.mining.level = 15;
+	buyer.skills.mining.level = 20;
 	buyHandlers.buy({ name: "ironpickaxe", quantity: 1 });
 	assert.equal(buySuccesses.at(-1)[0], "buy_success");
 	assert.equal(buyer.gold, 0);
@@ -773,9 +788,9 @@ test("[AC-13] production buy and sell socket adapters enforce Mining gates and t
 	vm.runInContext(valueSource, sellContext);
 	vm.runInContext(socketSource("sell", "buy_shells"), sellContext);
 	sellHandlers.sell({ num: 0, quantity: 1 });
-	assert.equal(seller.gold, items.copperore.g * 0.6);
+	assert.equal(seller.gold, Math.round(items.copperore.g * 0.6));
 	assert.equal(sellSuccesses.at(-1)[0], "gold_received");
-	assert.equal(sellSuccesses.at(-1)[1].gold, items.copperore.g * 0.6);
+	assert.equal(sellSuccesses.at(-1)[1].gold, Math.round(items.copperore.g * 0.6));
 });
 
 test("[AC-17] Mining production changes remain inside the approved game boundaries", () => {

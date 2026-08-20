@@ -57,30 +57,6 @@ var craft={
 		],
 		"cost":100,
 	},
-	"copperbar":{
-		"items":[[10,"copperore"]],
-		"cost":0,
-	},
-	"ironbar":{
-		"items":[[10,"ironore"]],
-		"cost":0,
-	},
-	"goldbar":{
-		"items":[[10,"goldore"]],
-		"cost":0,
-	},
-	"mithrilbar":{
-		"items":[[10,"mithrilore"]],
-		"cost":0,
-	},
-	"adamantitebar":{
-		"items":[[10,"adamantiteore"]],
-		"cost":0,
-	},
-	"runitebar":{
-		"items":[[10,"runiteore"]],
-		"cost":0,
-	},
 	"stealthcape":{
 		"items":[
 			[1,"bcape",7],
@@ -595,6 +571,19 @@ var craft={
 	"elixirvit2":{"items":[[10,"elixirvit1"]],"cost":2400},
 	"elixirstr2":{"items":[[10,"elixirstr1"]],"cost":2400},
 };
+
+if(typeof smithing==="undefined"&&typeof module!=="undefined") var smithing=require("./smithing").smithing;
+if(typeof smithing_weapon_chain==="undefined"&&typeof module!=="undefined") var smithing_weapon_chain=require("./smithing").smithing_weapon_chain;
+if(typeof smithing_weapon_chain==="undefined"&&typeof smithing!=="undefined") var smithing_weapon_chain=smithing.weapons;
+for(var smithing_recipe_tier=0;smithing_recipe_tier<smithing.tiers.length;smithing_recipe_tier++){
+	var smithing_recipe_material=smithing.tiers[smithing_recipe_tier];
+	craft[smithing_recipe_material.bar]={items:[[smithing_recipe_material.ore_quantity,smithing_recipe_material.ore]],cost:0};
+}
+for(var smithing_recipe_weapon_index=0;smithing_recipe_weapon_index<smithing_weapon_chain.length;smithing_recipe_weapon_index++){
+	var smithing_recipe_weapon=smithing_weapon_chain[smithing_recipe_weapon_index];
+	var smithing_recipe_tier_data=smithing.tiers.filter(function(tier){return tier.id===smithing_recipe_weapon.tier_id;})[0];
+	craft[smithing_recipe_weapon.output]={items:[[smithing_recipe_tier_data.bars_per_weapon,smithing_recipe_tier_data.bar],[1,smithing_recipe_weapon.predecessor]],cost:0,smithing:true};
+}
 
 var dismantle={
 	"daggerofthedead":{

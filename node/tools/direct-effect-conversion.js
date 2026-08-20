@@ -308,6 +308,7 @@ function verifyOracle({ sourceRevision = SOURCE_REVISION, fixturePath = FIXTURE_
 function loadCurrentCatalog() {
 	const context = { console, multipliers: { shells_to_gold: 1 } };
 	vm.createContext(context);
+	vm.runInContext(fs.readFileSync(path.join(ROOT, "design/smithing.js"), "utf8"), context, { filename: "design/smithing.js" });
 	for (const sourcePath of SOURCE_FILES.filter((file) => file.startsWith("design/"))) {
 		vm.runInContext(fs.readFileSync(path.join(ROOT, sourcePath), "utf8"), context, { filename: sourcePath });
 	}

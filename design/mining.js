@@ -1,15 +1,9 @@
 var mining = {
-	version: 1,
+	version: 2,
 	respawn_ms: 10000,
 	refresh_ms: 1000,
 	map: "tunnel",
-	success: {
-		base: 0.45,
-		level_step: 0.005,
-		tool_step: 0.06,
-		min: 0.05,
-		max: 0.95,
-	},
+	success: { chance: 0.125 },
 	cape: {
 		item: "miningcape",
 		level: 99,
@@ -23,12 +17,12 @@ var mining = {
 		rocks_per_tier: 3,
 	},
 	tiers: [
-		{ index: 0, id: "copper", name: "Copper", level: 1, ore: "copperore", pickaxe: "pickaxe", xp: 800, duration_ms: 5000, ore_g: 20, pickaxe_g: 2000, art_column: 0 },
-		{ index: 1, id: "iron", name: "Iron", level: 15, ore: "ironore", pickaxe: "ironpickaxe", xp: 1200, duration_ms: 4400, ore_g: 100, pickaxe_g: 100000, art_column: 1 },
-		{ index: 2, id: "gold", name: "Gold", level: 30, ore: "goldore", pickaxe: "goldpickaxe", xp: 1800, duration_ms: 3800, ore_g: 500, pickaxe_g: 1000000, art_column: 2 },
-		{ index: 3, id: "mithril", name: "Mithril", level: 55, ore: "mithrilore", pickaxe: "mithrilpickaxe", xp: 2800, duration_ms: 3200, ore_g: 2000, pickaxe_g: 8000000, art_column: 3 },
-		{ index: 4, id: "adamantite", name: "Adamantite", level: 70, ore: "adamantiteore", pickaxe: "adamantitepickaxe", xp: 4000, duration_ms: 2600, ore_g: 8000, pickaxe_g: 35000000, art_column: 4 },
-		{ index: 5, id: "runite", name: "Runite", level: 85, ore: "runiteore", pickaxe: "runitepickaxe", xp: 6000, duration_ms: 2000, ore_g: 32000, pickaxe_g: 150000000, art_column: 5 },
+		{ index: 0, id: "copper", name: "Copper", level: 1, ore: "copperore", pickaxe: "pickaxe", xp: 6611, duration_ms: 5000, ore_g: 1042, pickaxe_g: 2000, art_column: 0 },
+		{ index: 1, id: "iron", name: "Iron", level: 20, ore: "ironore", pickaxe: "ironpickaxe", xp: 13330, duration_ms: 5000, ore_g: 1389, pickaxe_g: 100000, art_column: 1 },
+		{ index: 2, id: "gold", name: "Gold", level: 40, ore: "goldore", pickaxe: "goldpickaxe", xp: 18148, duration_ms: 5000, ore_g: 2083, pickaxe_g: 1000000, art_column: 2 },
+		{ index: 3, id: "mithril", name: "Mithril", level: 60, ore: "mithrilore", pickaxe: "mithrilpickaxe", xp: 60787, duration_ms: 5000, ore_g: 2778, pickaxe_g: 8000000, art_column: 3 },
+		{ index: 4, id: "adamantite", name: "Adamantite", level: 80, ore: "adamantiteore", pickaxe: "adamantitepickaxe", xp: 63581, duration_ms: 5000, ore_g: 3472, pickaxe_g: 35000000, art_column: 4 },
+		{ index: 5, id: "runite", name: "Runite", level: 90, ore: "runiteore", pickaxe: "runitepickaxe", xp: 69939, duration_ms: 5000, ore_g: 4630, pickaxe_g: 150000000, art_column: 5 },
 	],
 	rocks: [
 		{ id: "copper-1", map: "tunnel", tier: 0, x: -184, y: -136, range: 28, available_art: "mining_rock_copper", depleted_art: "mining_rock_copper_depleted" },

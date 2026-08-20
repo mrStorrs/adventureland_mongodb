@@ -357,7 +357,7 @@ test("browser evidence executes and validator rejects malformed evidence", async
 	const logPath = path.join(temporaryDirectory, "browser.log");
 	const resultPath = path.join(temporaryDirectory, "browser-result.json");
 	const skills = Object.fromEntries(
-		["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smelting"].map((name) => [name, { level: 1, xp: 0 }]),
+		["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smithing"].map((name) => [name, { level: 1, xp: 0 }]),
 	);
 	const browserMaxXp = Math.round(900_000_000 * ((1 / (99 - 1)) ** 2));
 	const skillXpEvent = (skill, xp, priorXp = {}) => {

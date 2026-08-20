@@ -7,7 +7,8 @@ const { progression } = require("../../design/progression");
 const { skill_xp: DESIGN_SKILL_XP } = require("../../design/skill_xp");
 const { mining: DESIGN_MINING } = require("../../design/mining");
 const { validateMiningData } = require("./mining");
-const { validateSmeltingData } = require("./smelting");
+const { smithing: DESIGN_SMITHING } = require("../../design/smithing");
+const { publicSmithingData, validateSmithingData } = require("./smithing");
 
 const SKILL_IDS = Object.freeze(Object.keys(DESIGN_SKILLS));
 const SKILL_DEFINITIONS = DESIGN_SKILLS;
@@ -17,6 +18,7 @@ const COMBAT_SKILL_IDS = Object.freeze(
 const MAX_LEVEL = progression.MAX_LEVEL;
 const MAX_XP = progression.MAX_XP;
 const COMBAT_SKILL_SET = new Set(COMBAT_SKILL_IDS);
+const WARRIOR_CURVE_SKILL_SET = new Set([...COMBAT_SKILL_IDS, "mining", "smithing"]);
 const STARTER_WEAPONS = Object.freeze([...(CHARACTER_DEFINITION.starter?.weapons || [])]);
 const EXPECTED_BASELINE = Object.freeze({ ...(CHARACTER_DEFINITION.baseline || {}) });
 const EQUIPPABLE_TYPES = new Set([
@@ -54,7 +56,7 @@ function fail(code, message, details) {
 }
 
 function tableForSkill(skillId) {
-	const key = COMBAT_SKILL_SET.has(skillId) ? "combat" : "merchant";
+	const key = WARRIOR_CURVE_SKILL_SET.has(skillId) ? "combat" : "merchant";
 	return DESIGN_SKILL_XP[key];
 }
 
@@ -519,7 +521,7 @@ function validateProgressionData(data) {
 	validateItemRequirements(data.items, data.item_requirements, data.skills, weaponOwners);
 	validateCharacterDefinition(data.character, data.items);
 	validateMiningData(data.mining, { items: data.items });
-	validateSmeltingData(data.smelting, { items: data.items });
+	validateSmithingData(data.smithing, { items: data.items });
 	return data;
 }
 
@@ -540,7 +542,7 @@ function buildProgressionData(data) {
 		character: JSON.parse(JSON.stringify(data.character)),
 		item_requirements: JSON.parse(JSON.stringify(data.item_requirements)),
 		mining: JSON.parse(JSON.stringify(data.mining)),
-		smelting: JSON.parse(JSON.stringify(data.smelting)),
+		smithing: JSON.parse(JSON.stringify(data.smithing)),
 	};
 	validateProgressionData(normalized);
 	Object.defineProperty(normalized, VALIDATED_PUBLICATION, { value: true });
@@ -567,7 +569,7 @@ function loadProgressionPublication(target, progressionData) {
 			// canonical character definition underneath it.
 			character: { ...next.character, xcx: [] },
 			mining: next.mining,
-			smelting: next.smelting,
+			smithing: publicSmithingData(next.smithing),
 		},
 	);
 }

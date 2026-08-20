@@ -24,8 +24,13 @@ function runtimeError(code, message, fields = {}) {
 	return error;
 }
 
+function migrateSmithingSourceId(sourceId) {
+	return sourceId.replace(/(^|:)smelting(?=:|$)/g, "$1smithing");
+}
+
 function normalizeSkillXpSource(entry, now) {
-	const sourceId = typeof entry === "string" ? entry : entry && entry.source_id;
+	const legacySourceId = typeof entry === "string" ? entry : entry && entry.source_id;
+	const sourceId = typeof legacySourceId === "string" ? migrateSmithingSourceId(legacySourceId) : legacySourceId;
 	if (typeof sourceId !== "string" || !sourceId) return null;
 	const expiresAt =
 		typeof entry === "object" && Number.isSafeInteger(entry.expires_at)
@@ -93,7 +98,13 @@ function ensurePlayerContainers(player, now = Date.now()) {
 	pruneSkillXpSources(player, now);
 	if (!player.t || typeof player.t !== "object") player.t = {};
 	if (!player.t.skill_xp || typeof player.t.skill_xp !== "object") player.t.skill_xp = {};
+	const legacySmeltingXp = Number(player.t.skill_xp.smelting);
+	if (Number.isFinite(legacySmeltingXp) && legacySmeltingXp > 0) {
+		player.t.skill_xp.smithing = (Number(player.t.skill_xp.smithing) || 0) + legacySmeltingXp;
+	}
+	delete player.t.skill_xp.smelting;
 	for (const skill of SKILL_IDS) player.t.skill_xp[skill] = Number(player.t.skill_xp[skill]) || 0;
+	player.t.total_skill_xp = SKILL_IDS.reduce((sum, skill) => sum + player.t.skill_xp[skill], 0);
 	const merchantId = player.real_id || player.id || player.name || "unknown";
 	if (!player.info.merchant_accrual || typeof player.info.merchant_accrual !== "object") {
 		player.info.merchant_accrual = createMerchantAccrual(merchantId);

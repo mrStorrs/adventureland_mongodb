@@ -51,7 +51,8 @@ const {
 	publicRockState,
 	validateMiningData,
 } = require("./game/mining");
-const { prepareSmeltingCraft, validateSmeltingData } = require("./game/smelting");
+const { validateSmithingData } = require("./game/smithing");
+const { createSmithingRuntime, recipeTier } = require("./game/smithing_runtime");
 const { createAtomicMiningRewardCommit, createMiningRuntime } = require("./game/mining_runtime");
 const {
 	initializePlayerProgression,
@@ -121,6 +122,7 @@ var server_auth = require("crypto").randomBytes(32).toString("hex");
 var players = {};
 var dc_players = {};
 var mining_account_refresh = {};
+var smithing_runtime_data = null;
 
 function mining_tool_marker(item) {
 	if (!item) return null;
@@ -281,9 +283,104 @@ function clear_mining_attempt(player, reason) {
 	if (player) delete player.mining_attempt;
 }
 
-function preserve_mining_channel(player) {
+function smithing_terminal_cancel(player, attempt, reason) {
+	if (!player || !attempt || !player.socket || player.dc) return;
+	player.socket.emit("game_response", {
+		response: "data",
+		place: "smithing",
+		cevent: true,
+		outcome: "cancelled",
+		output: attempt.output,
+		reason: reason,
+	});
+}
+
+function smithing_release_inputs(player, channel) {
+	if (!player || !channel || !Array.isArray(channel.inputs)) return;
+	for (var input of channel.inputs) {
+		if (player.items && player.items[input.slot]) delete player.items[input.slot].b;
+		if (player.citems && player.citems[input.slot]) delete player.citems[input.slot].b;
+	}
+}
+
+function smithing_outcome_capacity(player, attempt, outcome, outputs) {
+	var consumed = outcome == "success" || !attempt.forge ? attempt.recipeInputs : attempt.recipeInputs.filter(function (input) { return input.name == attempt.tier.bar; });
+	var released = consumed.filter(function (input) {
+		var selected = attempt.inputs.find(function (entry) { return entry.name == input.name; });
+		var current = selected && player.items[selected.slot];
+		return current && (current.q || 1) == input.quantity;
+	}).length;
+	return can_add_items(player, list_to_pseudo_items(outputs.map(function (output) { return [output.quantity, output.name]; })), { space: released });
+}
+
+function smithing_character_view(player) {
+	return {
+		rip: player.rip,
+		connected: Boolean(player.socket && !player.dc && players[player.socket.id] === player),
+		skills: player.skills,
+	};
+}
+
+function commit_smithing_rewards(player, currentAttempt, reward) {
+	var before = snapshot_progression_rewards(player);
+	try {
+		var consumed = reward.outcome == "success" || !currentAttempt.forge ? currentAttempt.recipeInputs : currentAttempt.recipeInputs.filter(function (input) { return input.name == currentAttempt.tier.bar; });
+		for (var input of consumed) {
+			var selected = currentAttempt.inputs.find(function (entry) { return entry.name == input.name; });
+			consume(player, selected.slot, input.quantity);
+		}
+		for (var output of reward.outputs) {
+			add_item(player, create_new_item(output.name, output.quantity), {
+				announce: false,
+				p: reward.outcome == "success" ? currentAttempt.property : false,
+			});
+		}
+		awardPlayerSkillXp(player, reward.skill, reward.xp, { source: "smithing", sourceId: reward.sourceId });
+	} catch (error) {
+		restore_progression_rewards(player, before);
+		throw error;
+	}
+}
+
+function smithing_runtime_for(player) {
+	return createSmithingRuntime(smithing_runtime_data, {
+		recipeForOutput: function (output) {
+			return G.craft[output];
+		},
+		inventoryCanAccept: function (current, attempt, outcome, outputs) {
+			return smithing_outcome_capacity(current, attempt, outcome, outputs);
+		},
+		reserve: function (current, channel) {
+			for (var input of channel.inputs) {
+				current.items[input.slot].b = true;
+				if (current.citems[input.slot]) current.citems[input.slot].b = true;
+			}
+		},
+		release: smithing_release_inputs,
+		characterView: smithing_character_view,
+		getItem: function (current, slot) {
+			return current.items[slot];
+		},
+		commit: commit_smithing_rewards,
+	});
+}
+
+function cancel_smithing_action(player, reason) {
+	if (!player || !player.c || !player.c.smithing) return null;
+	var channel = smithing_runtime_for(player).cancel(player);
+	if (channel && reason) {
+		log_smithing_event(player, { action_id: channel.action_id, tier_id: channel.tier_id, output: channel.output, kind: channel.kind, outcome: "cancelled", reason: reason });
+		smithing_terminal_cancel(player, channel, reason);
+	}
+	return channel;
+}
+
+function preserve_action_channels(player) {
 	var mining_channel = player.c && player.c.mining;
-	player.c = mining_channel ? { mining: mining_channel } : {};
+	var smithing_channel = player.c && player.c.smithing;
+	player.c = {};
+	if (mining_channel) player.c.mining = mining_channel;
+	if (smithing_channel) player.c.smithing = smithing_channel;
 }
 
 function cancel_mining_if_mainhand_changed(player, previous_marker) {
@@ -370,6 +467,19 @@ function log_mining_event(player, fields) {
 	];
 	for (var key of ["action_id", "rock_id", "outcome", "reason", "ore", "xp", "bonus", "exception_code", "claim_ms", "completion_ms"]) {
 		var value = mining_log_value(fields && fields[key], key == "xp" || key == "claim_ms" || key == "completion_ms" ? 24 : 128);
+		if (value !== null) parts.push(key + "=" + value);
+	}
+	server_log(parts.join(" "), 1);
+}
+
+function log_smithing_event(player, fields) {
+	var parts = [
+		"smithing",
+		"account_id=" + mining_opaque_log_id("account", player && player.owner),
+		"character_id=" + mining_opaque_log_id("character", player && (player.real_id || player.id || player.name)),
+	];
+	for (var key of ["action_id", "tier_id", "output", "kind", "outcome", "reason", "xp", "exception_code"]) {
+		var value = mining_log_value(fields && fields[key], key == "xp" ? 24 : 128);
 		if (value !== null) parts.push(key + "=" + value);
 	}
 	server_log(parts.join(" "), 1);
@@ -733,6 +843,7 @@ async function init_game() {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/maps.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/npcs.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/multipliers.js")));
+		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/smithing.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/item_requirements.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/items.js")));
 		validateEquipmentSchema(items, sets);
@@ -743,7 +854,6 @@ async function init_game() {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/abilities.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/character.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/mining.js")));
-		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/smelting.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/progression.js")));
 		const progression_data = buildProgressionData({
 			items: items,
@@ -753,8 +863,9 @@ async function init_game() {
 			abilities: abilities,
 			character: character,
 			mining: mining,
-			smelting: smelting,
+			smithing: smithing,
 		});
+		smithing_runtime_data = progression_data.smithing;
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/events.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/recipes.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/titles.js")));
@@ -763,7 +874,7 @@ async function init_game() {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/emotions.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/precomputed_images.js")));
 		validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
-		validateSmeltingData(smelting, { items: items, craft: craft });
+		validateSmithingData(smithing, { items: items, craft: craft, item_requirements: item_requirements });
 
 		// Load geometry from MongoDB (parallel fetch, following qwazy pattern)
 		var geometry = {};
@@ -935,6 +1046,7 @@ async function reload_server(to_broadcast, change) {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/maps.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/npcs.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/multipliers.js")));
+		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/smithing.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/item_requirements.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/items.js")));
 		validateEquipmentSchema(items, sets);
@@ -945,7 +1057,6 @@ async function reload_server(to_broadcast, change) {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/abilities.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/character.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/mining.js")));
-		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/smelting.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/progression.js")));
 		const progression_data = buildProgressionData({
 			items: items,
@@ -955,8 +1066,9 @@ async function reload_server(to_broadcast, change) {
 			abilities: abilities,
 			character: character,
 			mining: mining,
-			smelting: smelting,
+			smithing: smithing,
 		});
+		smithing_runtime_data = progression_data.smithing;
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/events.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/recipes.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/titles.js")));
@@ -965,7 +1077,7 @@ async function reload_server(to_broadcast, change) {
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/emotions.js")));
 		eval("" + fs.readFileSync(path.resolve(__dirname, "../design/precomputed_images.js")));
 		validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
-		validateSmeltingData(smelting, { items: items, craft: craft });
+		validateSmithingData(smithing, { items: items, craft: craft, item_requirements: item_requirements });
 
 		// Reload geometry from MongoDB
 		var geometry = {};
@@ -1211,6 +1323,12 @@ function player_to_client(player, stranger) {
 						rock_id: mining_log_value(data.c.mining.rock_id, 64),
 					};
 				}
+				if (data.c.smithing) {
+					data.c.smithing = {
+						ms: Number(data.c.smithing.ms) || 0,
+						len: Number(data.c.smithing.len) || 0,
+					};
+				}
 			} else if (p !== "s") data[p] = player[p];
 			else {
 				data.s = { ...player.s };
@@ -1437,6 +1555,7 @@ function clean_slate(player) {
 	player.mp = player.max_mp;
 	player.s = {};
 	clear_mining_attempt(player);
+	cancel_smithing_action(player, "reset");
 	player.c = {};
 }
 
@@ -4238,6 +4357,9 @@ function transport_player_to(player, name, point, effect) {
 	if (player.c && player.c.mining) {
 		clear_mining_attempt(player, "map_changed");
 	}
+	if (player.c && player.c.smithing) {
+		cancel_smithing_action(player, "map_changed");
+	}
 	var instance = instances[name];
 	var new_map = G.maps[instance.map];
 	var direction = 0;
@@ -6092,22 +6214,6 @@ function init_io() {
 			if (!player || player.user) {
 				return fail_response("cant_in_bank");
 			}
-			var smelting_craft_id =
-				typeof data.craft_id === "string" && /^[A-Za-z0-9]{1,64}$/.test(data.craft_id)
-					? data.craft_id
-					: randomStr(12);
-			var smelting_source_id = `${server_id}:smelting:${player.id}:${smelting_craft_id}`;
-			var smelting_replayed = Boolean(
-				player.p &&
-					Array.isArray(player.p.skill_xp_sources) &&
-					player.p.skill_xp_sources.some(function (entry) {
-						return entry && entry.source_id === smelting_source_id && entry.expires_at > Date.now();
-					}),
-			);
-			if (smelting_replayed) {
-				resend(player, "reopen+nc+inv");
-				return success_response("craft", { cevent: true, replayed: true });
-			}
 			data.items.forEach(function (x) {
 				if (!player.items[x[1]]) {
 					check = false;
@@ -6173,33 +6279,53 @@ function init_io() {
 			if (!enough) {
 				return fail_response("craft_cant_quantity");
 			}
-			var smelting_tier;
-			try {
-				smelting_tier = prepareSmeltingCraft(G.smelting, { output: name, level: player.skills && player.skills.smelting && player.skills.smelting.level });
-			} catch (error) {
-				if (error && error.code === "smelting_level") return fail_response("smelting_level", { required_level: error.required_level });
-				throw error;
-			}
-			if (smelting_tier) {
-				var smelting_before = snapshot_progression_rewards(player);
-				try {
-					consume(player, place[smelting_tier.ore], smelting_tier.ore_quantity);
-					var smelting_item_index = add_item(player, smelting_tier.bar, {
-						r: 1,
-						p: Object.keys(p).length && random_one(p),
-					});
-					awardPlayerSkillXp(player, "smelting", smelting_tier.xp, { source: "smelting", sourceId: smelting_source_id });
-				} catch (error) {
-					restore_progression_rewards(player, smelting_before);
-					throw error;
+			var smithing_details = recipeTier(smithing_runtime_data, G.craft[name], name);
+			if (smithing_details) {
+				var smithing_request_id =
+					typeof data.craft_id === "string" && /^[A-Za-z0-9]{1,64}$/.test(data.craft_id)
+						? data.craft_id
+						: randomStr(12);
+				var smithing_source_id = `${server_id}:smithing:${player.id}:${smithing_request_id}`;
+				var smithing_replayed = Boolean(
+					player.p &&
+						Array.isArray(player.p.skill_xp_sources) &&
+						player.p.skill_xp_sources.some(function (entry) {
+							return entry && entry.source_id === smithing_source_id && entry.expires_at > Date.now();
+						}),
+				);
+				if (smithing_replayed) {
+					resend(player, "reopen+nc+inv");
+					return success_response("craft", { cevent: true, replayed: true });
 				}
-				resend(player, "reopen+nc+inv");
-				return success_response("craft", {
-					num: smelting_item_index,
-					name: name,
-					cevent: true,
-					replayed: smelting_replayed,
+				var smithing_inputs = G.craft[name].items.map(function (entry) {
+					return { name: entry[1], quantity: entry[0], slot: place[entry[1]] };
 				});
+				var smithing_channel;
+				try {
+					smithing_channel = smithing_runtime_for(player).start(player, {
+						output: name,
+						level: player.skills && player.skills.smithing && player.skills.smithing.level,
+						actionId: "smithing-" + randomStr(24),
+						sourceId: smithing_source_id,
+						inputs: smithing_inputs,
+						property: Object.keys(p).length && random_one(p),
+						now: Date.now(),
+					});
+				} catch (error) {
+					log_smithing_event(player, { output: name, tier_id: smithing_details.tier.id, outcome: "start_failed", reason: error.code || "state_unavailable" });
+					return fail_response(error.code == "smithing_level" ? "smithing_level" : error.code == "smithing_inventory" ? "inventory_full" : error.code == "smithing_busy" ? "smithing_busy" : "craft_cant", error);
+				}
+				log_smithing_event(player, { action_id: smithing_channel.action_id, tier_id: smithing_channel.tier_id, output: name, kind: smithing_channel.kind, outcome: "started" });
+				player.socket.emit("game_response", {
+					response: "data",
+					place: "smithing",
+					success: false,
+					in_progress: true,
+					duration: smithing_channel.len,
+					output: name,
+				});
+				resend(player, "u+cid");
+				return;
 			}
 			player.gold -= G.craft[name].cost;
 			G.craft[name].items.forEach(function (x) {
@@ -7164,7 +7290,7 @@ function init_io() {
 				return;
 			}
 			let mining_mainhand_before = mining_tool_marker(player.slots && player.slots.mainhand);
-			preserve_mining_channel(player);
+			preserve_action_channels(player);
 			if (Array.isArray(data)) {
 				data.length = min(data.length, 15);
 				let resolve = [];
@@ -7229,7 +7355,7 @@ function init_io() {
 				return;
 			}
 			var mining_mainhand_before = mining_tool_marker(player.slots && player.slots.mainhand);
-			preserve_mining_channel(player);
+			preserve_action_channels(player);
 			data.num = to_number(data.num);
 			if (data.num >= player.items.length) {
 				return fail_response("invalid");
@@ -7485,7 +7611,7 @@ function init_io() {
 				return fail_response("no_space");
 			}
 			var mining_mainhand_before = mining_tool_marker(player.slots && player.slots.mainhand);
-			preserve_mining_channel(player);
+			preserve_action_channels(player);
 			try {
 				commit_unequip_transaction(player, data.slot, data.position);
 			} catch (error) {
@@ -10370,6 +10496,10 @@ function init_io() {
 						clear_mining_attempt(player, "moved");
 						change = true;
 					}
+					if (player.c.smithing) {
+						cancel_smithing_action(player, "moved");
+						change = true;
+					}
 					for (var id in player.c) {
 						if (G.conditions[id] && !G.conditions[id].can_move) {
 							change = true;
@@ -11541,6 +11671,7 @@ function init_io() {
 				}
 				if (Object.keys(player.c).length) {
 					if (player.c.mining) clear_mining_attempt(player, "stopped");
+					if (player.c.smithing) cancel_smithing_action(player, "stopped");
 					player.c = {};
 					change = true;
 				}
@@ -11552,6 +11683,7 @@ function init_io() {
 			} else if (data.action == "channeling") {
 				if (Object.keys(player.c).length) {
 					if (player.c.mining) clear_mining_attempt(player, "stopped");
+					if (player.c.smithing) cancel_smithing_action(player, "stopped");
 					player.c = {};
 					change = true;
 				}
@@ -11886,6 +12018,7 @@ function init_io() {
 			if (player) {
 				player.dc = true;
 				clear_mining_attempt(player);
+				cancel_smithing_action(player, "disconnected");
 				progression_ledger.removeCharacter(player.id || player.name);
 				try {
 					settlePlayerStand(player, Date.now(), { emit: false });
@@ -13814,9 +13947,24 @@ function update_instance(instance) {
 			}
 		}
 		for (var name in player.c) {
-			player.c[name].ms -= ms;
-			if (player.c[name].ms <= 0) {
-				var ref = player.c[name];
+			var ref = player.c[name];
+			ref.ms -= ms;
+			if (name == "smithing") {
+				if (ref.ms > 0 && (!ref.completes_at || Date.now() < ref.completes_at)) continue;
+				try {
+					var smithing_result = smithing_runtime_for(player).settle(player, ref, Date.now());
+					log_smithing_event(player, { action_id: ref.action_id, tier_id: ref.tier_id, output: ref.output, kind: ref.kind, outcome: smithing_result.outcome, xp: smithing_result.xp });
+					if (smithing_character_view(player).connected) {
+						player.socket.emit("game_response", smithing_result);
+						resend(player, "reopen+u+cid");
+					}
+				} catch (error) {
+					log_smithing_event(player, { action_id: ref.action_id, tier_id: ref.tier_id, output: ref.output, kind: ref.kind, outcome: "settle_failed", reason: error.reason || error.code || "state_unavailable", exception_code: error.code || error.name });
+					smithing_terminal_cancel(player, ref, error.reason || error.code || "state_unavailable");
+				}
+				continue;
+			}
+			if (ref.ms <= 0) {
 				delete player.c[name];
 				if (name == "town") {
 					decay_s(player, 4000);

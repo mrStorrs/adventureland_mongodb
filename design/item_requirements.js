@@ -923,11 +923,11 @@ var item_requirements = {
 			level: 1,
 		},
 	],
-	ironpickaxe: [{ skill: "mining", level: 15 }],
-	goldpickaxe: [{ skill: "mining", level: 30 }],
-	mithrilpickaxe: [{ skill: "mining", level: 55 }],
-	adamantitepickaxe: [{ skill: "mining", level: 70 }],
-	runitepickaxe: [{ skill: "mining", level: 85 }],
+ironpickaxe: [{ skill: "mining", level: 20 }],
+goldpickaxe: [{ skill: "mining", level: 40 }],
+mithrilpickaxe: [{ skill: "mining", level: 60 }],
+adamantitepickaxe: [{ skill: "mining", level: 80 }],
+runitepickaxe: [{ skill: "mining", level: 90 }],
 	miningcape: [{ skill: "mining", level: 99 }],
 	bow: [
 		{
@@ -1994,6 +1994,13 @@ function finalize_equipment_requirements(items,item_requirements){
 		var equipment_requirement_item=items[equipment_requirement_item_id];
 		if(ungated_equipment_types[equipment_requirement_item.type] && equipment_requirement_item_id.indexOf("wbook")!==0 && !mining_gated_items[equipment_requirement_item_id]) item_requirements[equipment_requirement_item_id]=[];
 	}
+}
+
+if(typeof smithing_weapon_chain==="undefined"&&typeof module!=="undefined") var smithing_weapon_chain=require("./smithing").smithing_weapon_chain;
+if(typeof smithing_weapon_chain==="undefined"&&typeof smithing!=="undefined") var smithing_weapon_chain=smithing.weapons;
+for(var smithing_requirement_weapon_index=0;smithing_requirement_weapon_index<smithing_weapon_chain.length;smithing_requirement_weapon_index++){
+	var smithing_requirement_weapon=smithing_weapon_chain[smithing_requirement_weapon_index];
+	item_requirements[smithing_requirement_weapon.output]=[{skill:smithing_requirement_weapon.skill,level:smithing_requirement_weapon.requirement}];
 }
 
 if (typeof module !== "undefined") module.exports = { item_requirements: item_requirements };

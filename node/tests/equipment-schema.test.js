@@ -48,6 +48,7 @@ const expectedPlaceholders = {
 function loadItems() {
 	const context = { multipliers: { shells_to_gold: 1 } };
 	vm.createContext(context);
+	vm.runInContext(fs.readFileSync(path.join(designRoot, "smithing.js"), "utf8"), context, { filename: "smithing.js" });
 	vm.runInContext(fs.readFileSync(path.join(designRoot, "items.js"), "utf8"), context, { filename: "items.js" });
 	return JSON.parse(JSON.stringify({ items: context.items, sets: context.sets }));
 }
@@ -135,8 +136,8 @@ test("retired acquisition entries disappear without changing surviving box route
 		assert.equal(data.craft[retiredId], undefined, retiredId);
 		assert.equal(JSON.stringify(data.drops).includes(`"${retiredId}"`), false, retiredId);
 	}
-	assert.equal(Object.keys(data.craft).length, 87);
-	assert.equal(hash(data.craft), "ce0538220a7e2740edd478333e86a845cc166ae75fc4a444d0bd657b0355e145");
+	assert.equal(Object.keys(data.craft).length, 123);
+	assert.equal(hash(data.craft), "6ebaeacc1afa9a8d9024056ddb29a70c73ce02b351cac7f7c93db6ebf9b29253");
 });
 
 test("all server data-processing callers bind and publish dynamic cumulative thresholds", () => {

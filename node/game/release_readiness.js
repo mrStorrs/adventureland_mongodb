@@ -14,10 +14,16 @@ function assertProtocol4Publication(publication) {
 	) {
 		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication must expose exactly the registered skills");
 	}
-	if (!publication.mining || publication.mining.version !== 1)
+	if (!publication.mining || publication.mining.version !== 2)
 		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing Mining data");
-	if (!publication.smelting || publication.smelting.version !== 1)
-		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing Smelting data");
+	if (!publication.smithing || publication.smithing.version !== 2)
+		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing Smithing data");
+	if (
+		Object.hasOwn(publication.smithing, "success_cap_multiplier") ||
+		publication.smithing.tiers?.some((tier) => Object.hasOwn(tier, "base_success"))
+	) {
+		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication must not expose Smithing success odds");
+	}
 	if (!publication.abilities || typeof publication.abilities !== "object") {
 		throw worldError("WORLD_PUBLICATION", "Protocol 4 publication is missing abilities");
 	}
