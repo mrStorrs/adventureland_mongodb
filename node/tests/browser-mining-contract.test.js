@@ -7,6 +7,7 @@ const test = require("node:test");
 const vm = require("node:vm");
 
 const { mining } = require("../../design/mining");
+const { sprites } = require("../../design/sprites");
 
 const root = path.resolve(__dirname, "../..");
 const game = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
@@ -43,6 +44,7 @@ test("[AC-6] browser ability wire carries explicit Mining IDs and preserves omit
 });
 
 test("[AC-11] Tunnel rock helpers render all rocks, enforce private depletion, click IDs, and clean up", () => {
+	assert.equal(sprites.mining_ores.type, "emblem");
 	const source = functionSource(game, "reset_mining_state", "report_progression_protocol_issue");
 	const events = [];
 	const destroyed = [];
@@ -80,7 +82,10 @@ test("[AC-11] Tunnel rock helpers render all rocks, enforce private depletion, c
 		mining_rock_sprites: {},
 		mining_state: { rocks: {} },
 		mining_state_ready: false,
-		new_sprite: sprite,
+		new_sprite: (art, type) => {
+			assert.equal(type, "emblem", "Mining rocks use their sprite-sheet renderer, not tile positions");
+			return sprite(art);
+		},
 		PIXI: {
 			Text: function (text) {
 				this.text = text;

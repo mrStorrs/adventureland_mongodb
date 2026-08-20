@@ -1,6 +1,7 @@
 var sprites = {
 	mining_ores: {
 		file: "/images/tiles/map/TOIMPORT_mining-ores-tf_1.png",
+		type: "emblem",
 		rows: 4,
 		columns: 8,
 		matrix: [

@@ -255,7 +255,7 @@ function update_mining_rock(sprite, now) {
 		available = !loading && mining_rock_available(rock.id, current),
 		art = available ? rock.available_art : rock.depleted_art;
 	if (sprite.skin != art && typeof textures != "undefined") {
-		var replacement = new_sprite(art, "static");
+		var replacement = new_sprite(art, "emblem");
 		sprite.texture = replacement.texture;
 		sprite.skin = art;
 	}
@@ -293,7 +293,7 @@ function create_mining_rocks() {
 	if (!G.mining || current_map != G.mining.map) return;
 	if (Object.keys(mining_rock_sprites).length) destroy_mining_rocks();
 	G.mining.rocks.forEach(function (rock) {
-		var sprite = new_sprite(rock.available_art, "static");
+		var sprite = new_sprite(rock.available_art, "emblem");
 		sprite.rock_id = rock.id;
 		sprite.mining_rock = true;
 		sprite.x = sprite.real_x = rock.x;
