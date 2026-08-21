@@ -778,6 +778,10 @@ if (server_name == "HARDCORE") {
 	gameplay = "normal";
 }
 
+if (region == "US") {
+	xpm *= 2;
+}
+
 // B.u_boundary=12; B.u_vision=12; B["vision"]=[320,270]
 // B.vision[0]*=100; B.vision[1]*=100;
 
