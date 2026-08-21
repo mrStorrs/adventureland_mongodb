@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const { buildProgressionData, loadProgressionPublication } = require("../game/skill_domain");
-const { validateSmeltingData } = require("../game/smelting");
+const { validateSmithingData } = require("../game/smithing");
 
 const root = path.resolve(__dirname, "../..");
 
@@ -19,6 +19,7 @@ function loadRawProgression() {
 	vm.createContext(context);
 	for (const file of [
 		"conditions.js",
+		"smithing.js",
 		"item_requirements.js",
 		"items.js",
 		"skills.js",
@@ -26,7 +27,6 @@ function loadRawProgression() {
 		"abilities.js",
 		"character.js",
 		"mining.js",
-		"smelting.js",
 	])
 		vm.runInContext(read(`design/${file}`), context, { filename: file });
 	return context;
@@ -41,7 +41,7 @@ function packageDataRoute(context) {
 	return vm.runInNewContext(`(${main.slice(functionStart, routeEnd + 2).trim()})`, context);
 }
 
-function runPackageDataRoute({ smelting = loadRawProgression().smelting } = {}) {
+function runPackageDataRoute({ smithing = loadRawProgression().smithing } = {}) {
 	const raw = loadRawProgression();
 	vm.runInContext(read("design/recipes.js"), raw, { filename: "recipes.js" });
 	const progression_data = buildProgressionData(raw);
@@ -62,10 +62,11 @@ function runPackageDataRoute({ smelting = loadRawProgression().smelting } = {}) 
 		get: async () => undefined,
 		get_domain: async () => ({}),
 		validateMiningData: () => {},
-		validateSmeltingData,
+		validateSmithingData,
 		mining: raw.mining,
-		smelting,
+		smithing,
 		items: raw.items,
+		item_requirements: raw.item_requirements,
 		craft: raw.craft,
 		loadProgressionPublication,
 		progression_data,
@@ -115,9 +116,12 @@ test("public progression publication is protocol 4 and contains no class or leve
 		"rogue",
 		"merchant",
 		"mining",
-		"smelting",
+		"smithing",
 	]);
-	assert.equal(publication.smelting.version, 1);
+	assert.equal(publication.smithing.version, 2);
+	assert.equal(Object.hasOwn(publication.smithing, "success_cap_multiplier"), false);
+	assert.equal(publication.smithing.tiers.some((tier) => Object.hasOwn(tier, "base_success")), false);
+	assert.equal(JSON.stringify(publication.smithing).includes("outcome"), false);
 	assert.equal(publication.character.appearances.length, 28);
 	assert.deepEqual(
 		Object.values(publication.character.skills).map(({ level, xp }) => [level, xp]),
@@ -125,18 +129,18 @@ test("public progression publication is protocol 4 and contains no class or leve
 	);
 });
 
-test("the package backend loads and validates canonical Smelting data", () => {
+test("the package backend loads and validates canonical Smithing data", () => {
 	const main = read("main.js");
-	assert.match(main, /require\("\.\/node\/game\/smelting"\)/);
-	assert.match(main, /design\/smelting\.js/);
-	assert.match(main, /validateSmeltingData\(smelting, \{ items: items, craft: craft \}\)/);
+	assert.match(main, /require\("\.\/node\/game\/smithing"\)/);
+	assert.match(main, /design\/smithing\.js/);
+	assert.match(main, /validateSmithingData\(smithing, \{ items: items, craft: craft, item_requirements: item_requirements \}\)/);
 	const progressionStart = main.indexOf("var progression_data = buildProgressionData({");
 	const progressionEnd = main.indexOf("});", progressionStart);
 	assert.ok(progressionStart >= 0 && progressionEnd > progressionStart);
-	assert.match(main.slice(progressionStart, progressionEnd), /smelting: smelting/);
+	assert.match(main.slice(progressionStart, progressionEnd), /smithing: smithing/);
 });
 
-test("the package /data.js route publishes Smelting and rejects malformed data before delivery", async () => {
+test("the package /data.js route publishes Smithing and rejects malformed data before delivery", async () => {
 	const response = await runPackageDataRoute();
 	const publication = JSON.parse(response.body.slice("var G=".length, -2));
 	assert.deepEqual(Object.keys(publication.skills), [
@@ -148,13 +152,13 @@ test("the package /data.js route publishes Smelting and rejects malformed data b
 		"rogue",
 		"merchant",
 		"mining",
-		"smelting",
+		"smithing",
 	]);
-	assert.equal(publication.smelting.version, 1);
+	assert.equal(publication.smithing.version, 2);
 
-	const malformed = structuredClone(loadRawProgression().smelting);
+	const malformed = structuredClone(loadRawProgression().smithing);
 	malformed.tiers[0].ore = "ironore";
-	await assert.rejects(() => runPackageDataRoute({ smelting: malformed }), /Invalid Smelting tier copper/);
+	await assert.rejects(() => runPackageDataRoute({ smithing: malformed }), /Invalid Smithing tier copper/);
 });
 
 test("browser skill-XP table validation rejects malformed per-skill publications", () => {

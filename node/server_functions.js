@@ -408,6 +408,13 @@ function rip(player) {
 			delete player.mining_attempt;
 		}
 	}
+	if (player && player.c && player.c.smithing) {
+		if (typeof cancel_smithing_action == "function") cancel_smithing_action(player, "dead");
+		else {
+			if (player.c && player.c.smithing && typeof smithing_terminal_cancel == "function") smithing_terminal_cancel(player, player.c.smithing, "dead");
+			if (player.c) delete player.c.smithing;
+		}
+	}
 	if (player && player.is_player) {
 		progression_ledger.removeCharacter(player.id || player.name);
 	}

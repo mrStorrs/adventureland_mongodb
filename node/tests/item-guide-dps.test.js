@@ -289,19 +289,24 @@ test("item guide groups visible weapons by combat profile and base DPS", () => {
 	const displayed = [];
 	for (const group of groups) {
 		const ranked = ranking.weapons.filter((weapon) => weapon.skill === group.id);
-		assert.equal(group.weapons.length, ranked.length, `${group.id} acquisition inventory`);
+		const smithingWeapons = group.weapons.filter((weapon) => weapon.role === "smithing");
+		assert.equal(group.weapons.length, ranked.length + 6, `${group.id} direct and Smithing inventory`);
+		assert.deepEqual(smithingWeapons.map((weapon) => weapon.shared_rank), [2, 3, 4, 5, 6, 7], `${group.id} Smithing ranks`);
 		const positions = new Map(group.weapons.map((weapon, index) => [weapon.id, index]));
 		for (const weapon of group.weapons) {
 			displayed.push(weapon.id);
 			assert.equal(guide.guide_weapon_owner(data.items[weapon.id]), group.id, weapon.id);
 			const target = ranked.find((row) => row.weapon_id === weapon.id);
-			assert.ok(target, `${weapon.id} acquisition row`);
+			if (weapon.role === "smithing") {
+				assert.equal(target, undefined, `${weapon.id} is not a monster-acquisition row`);
+			} else assert.ok(target, `${weapon.id} acquisition row`);
 			const properties = calculators.current.calculate_item_properties({ name: weapon.id, level: 0 });
 			const expectedMetrics = guide.guide_weapon_metrics(data.items[weapon.id], properties);
 			assert.equal(Number(weapon.dps.toPrecision(12)), Number(((expectedMetrics && expectedMetrics.dps) || 0).toPrecision(12)), `${weapon.id} displayed actual +0 DPS`);
-			assert.equal(weapon.shared_rank, target.shared_rank, `${weapon.id} displayed shared rank`);
-			assert.equal(weapon.role, target.role, `${weapon.id} displayed role`);
-			assert.equal(weapon.role, target.role, `${weapon.id} displayed role`);
+			if (target) {
+				assert.equal(weapon.shared_rank, target.shared_rank, `${weapon.id} displayed shared rank`);
+				assert.equal(weapon.role, target.role, `${weapon.id} displayed role`);
+			}
 		}
 		for (const easier of ranked)
 			for (const harder of ranked)

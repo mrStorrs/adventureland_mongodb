@@ -95,6 +95,7 @@ function loadSourceData() {
 	const data = loadBenchmarkData();
 	const source = loadVmSources(["character.js", "maps.js", "monsters.js", "npcs.js", "recipes.js", "tokens.js", "drops.js", "upgrades.js", "events.js"], {
 		items: data.items,
+		smithing: data.smithing,
 	});
 	return {
 		...data,

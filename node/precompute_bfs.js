@@ -47,6 +47,7 @@ async function run() {
 	eval("" + fs.readFileSync(path.resolve(__dirname, "../design/maps.js")));
 	eval("" + fs.readFileSync(path.resolve(__dirname, "../design/npcs.js")));
 	eval("" + fs.readFileSync(path.resolve(__dirname, "../design/multipliers.js")));
+	eval("" + fs.readFileSync(path.resolve(__dirname, "../design/smithing.js")));
 	eval("" + fs.readFileSync(path.resolve(__dirname, "../design/items.js")));
 	eval("" + fs.readFileSync(path.resolve(__dirname, "../design/upgrades.js")));
 	eval("" + fs.readFileSync(path.resolve(__dirname, "../design/drops.js")));

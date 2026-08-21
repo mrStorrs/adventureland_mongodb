@@ -80,7 +80,7 @@ function hash(value) {
 function loadPropertyCalculators(data = loadSourceData()) {
 	const sandbox = { console: { log() {}, error() {} }, Math, min: Math.min, max: Math.max, ceil: Math.ceil, round: Math.round, multipliers: { shells_to_gold: 1 }, G: {} };
 	vm.createContext(sandbox);
-	for (const file of ["multipliers.js", "items.js"])
+	for (const file of ["multipliers.js", "smithing.js", "items.js"])
 		vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../../design", file), "utf8"), sandbox, { filename: file });
 	sandbox.G.items = data.items;
 	vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../../js/old_common_functions.js"), "utf8"), sandbox, { filename: "old_common_functions.js" });
@@ -89,7 +89,7 @@ function loadPropertyCalculators(data = loadSourceData()) {
 
 function combatWeapons(data = loadSourceData()) {
 	return Object.entries(data.items)
-		.filter(([, item]) => item.type === "weapon" && item.progression && WEAPON_PROFILES[item.wtype])
+		.filter(([, item]) => item.type === "weapon" && item.progression && item.progression.role !== "smithing" && WEAPON_PROFILES[item.wtype])
 		.map(([weapon_id, definition]) => ({
 			weapon_id,
 			definition,

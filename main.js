@@ -2,7 +2,7 @@ var fs = require("fs"),
 	path = require("path");
 var { buildProgressionData, loadProgressionPublication } = require("./node/game/skill_domain");
 var { validateMiningData } = require("./node/game/mining");
-var { validateSmeltingData } = require("./node/game/smelting");
+var { validateSmithingData } = require("./node/game/smithing");
 var { ensureWorldIndexes, verifyWorldState } = require("./node/game/world_schema");
 var { rankingSort } = require("./node/game/rankings");
 var { assertProtocol4Publication } = require("./node/game/release_readiness");
@@ -69,6 +69,7 @@ eval("" + fs.readFileSync(path.resolve(__dirname, "design/monsters.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/maps.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/npcs.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/multipliers.js")));
+eval("" + fs.readFileSync(path.resolve(__dirname, "design/smithing.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/item_requirements.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/items.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/upgrades.js")));
@@ -78,7 +79,6 @@ eval("" + fs.readFileSync(path.resolve(__dirname, "design/skill_xp.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/abilities.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/character.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/mining.js")));
-eval("" + fs.readFileSync(path.resolve(__dirname, "design/smelting.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/progression.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/events.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/recipes.js")));
@@ -89,7 +89,7 @@ eval("" + fs.readFileSync(path.resolve(__dirname, "design/emotions.js")));
 eval("" + fs.readFileSync(path.resolve(__dirname, "design/precomputed_images.js")));
 
 validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites });
-validateSmeltingData(smelting, { items: items, craft: craft });
+validateSmithingData(smithing, { items: items, craft: craft, item_requirements: item_requirements });
 
 var progression_data = buildProgressionData({
 	items: items,
@@ -99,7 +99,7 @@ var progression_data = buildProgressionData({
 	abilities: abilities,
 	character: character,
 	mining: mining,
-	smelting: smelting,
+	smithing: smithing,
 });
 
 // docs
@@ -352,7 +352,7 @@ app.all("/data.js", async (req, res, next) => {
 		if (map) geometry[id] = map.info.data;
 	}
 	validateMiningData(mining, { items: items, maps: maps, npcs: npcs, sprites: sprites, geometry: geometry });
-	validateSmeltingData(smelting, { items: items, craft: craft });
+	validateSmithingData(smithing, { items: items, craft: craft, item_requirements: item_requirements });
 	var G = loadProgressionPublication(
 		{
 			version: Version,

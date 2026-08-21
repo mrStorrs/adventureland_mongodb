@@ -255,7 +255,7 @@ function update_mining_rock(sprite, now) {
 		available = !loading && mining_rock_available(rock.id, current),
 		art = available ? rock.available_art : rock.depleted_art;
 	if (sprite.skin != art && typeof textures != "undefined") {
-		var replacement = new_sprite(art, "static");
+		var replacement = new_sprite(art, "emblem");
 		sprite.texture = replacement.texture;
 		sprite.skin = art;
 	}
@@ -293,7 +293,7 @@ function create_mining_rocks() {
 	if (!G.mining || current_map != G.mining.map) return;
 	if (Object.keys(mining_rock_sprites).length) destroy_mining_rocks();
 	G.mining.rocks.forEach(function (rock) {
-		var sprite = new_sprite(rock.available_art, "static");
+		var sprite = new_sprite(rock.available_art, "emblem");
 		sprite.rock_id = rock.id;
 		sprite.mining_rock = true;
 		sprite.x = sprite.real_x = rock.x;
@@ -1968,6 +1968,19 @@ function init_socket(args) {
 				ui_log("Consumed the elixir", "gray");
 				d_text("YUM", character, { color: "elixir" });
 			} else if (response == "data") {
+				if (data.place == "smithing") {
+					if (data.in_progress) ui_log("Smithing in progress", "gray");
+					else if (data.outcome == "success") {
+						ui_log("Smithing succeeded: Received " + G.items[data.output].name, "white");
+						resolve_deferred("craft", data);
+					} else if (data.outcome == "failure") {
+						ui_log("Smithing failed: Received scrap", "#CF5C65");
+						reject_deferred("craft", { reason: "smithing_failure", output: data.output });
+					} else if (data.outcome == "cancelled") {
+						ui_log("Smithing cancelled", "gray");
+						reject_deferred("craft", { reason: data.reason || "smithing_cancelled", output: data.output });
+					}
+				}
 			} else if (response == "invalid") {
 				d_text("INVALID", character);
 			} else if (response == "error") {
@@ -2411,7 +2424,8 @@ function init_socket(args) {
 				ui_log("Defeated by " + G.monsters[data.monster].name, "#571F1B");
 			} else if (response == "dismantle_cant") ui_log("Can't dismantle", "gray");
 			else if (response == "inv_size") ui_log("Need more empty space", "gray");
-			else if (response == "smelting_level") ui_log("Requires Smelting level " + data.required_level, "gray");
+			else if (response == "smithing_level") ui_log("Requires Smithing level " + data.required_level, "gray");
+			else if (response == "smithing_busy") ui_log("Smithing already in progress", "gray");
 			else if (response == "craft_cant") ui_log("Can't craft", "gray");
 			else if (response == "craft_cant_quantity") ui_log("Not enough materials", "gray");
 			else if (response == "craft_atleast2") ui_log("You need to provide at least 2 items", "gray");

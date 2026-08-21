@@ -47,7 +47,7 @@ requirements.shield = [{ skill: "paladin", level: 1 }];
 
 test("character state is complete, ordered, derived, and rejects malformed shape", () => {
 	const fresh = createCharacterState();
-	assert.deepEqual(Object.keys(fresh.skills), ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smelting"]);
+	assert.deepEqual(Object.keys(fresh.skills), ["warrior", "paladin", "mage", "priest", "ranger", "rogue", "merchant", "mining", "smithing"]);
 	assert.equal(fresh.total_level, 9);
 	assert.deepEqual(projectPersistenceState(fresh), { info: { skills: fresh.skills }, total_level: 9 });
 	assert.throws(

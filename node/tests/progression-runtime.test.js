@@ -72,6 +72,45 @@ test("runtime requires persisted info.skills and repairs only the flattened alia
 	}
 });
 
+test("[AC-1] legacy Mining and Smelting progression, replay IDs, and telemetry migrate at hydration and persist without legacy keys", () => {
+	function projectedXp(skill, level, fraction) {
+		const oldStart = require("../../design/skill_xp").skill_xp.merchant[level];
+		const oldEnd = level === 99 ? oldStart : require("../../design/skill_xp").skill_xp.merchant[level + 1];
+		const legacyXp = level === 99 ? oldStart : Math.floor(oldStart + fraction * (oldEnd - oldStart));
+		const newStart = cumulativeXp(level, skill);
+		const newEnd = level === 99 ? newStart : cumulativeXp(level + 1, skill);
+		const actualFraction = oldEnd === oldStart ? 0 : (legacyXp - oldStart) / (oldEnd - oldStart);
+		return { legacyXp, projected: level === 99 ? newStart : Math.floor(newStart + actualFraction * (newEnd - newStart)) };
+	}
+	for (const [level, fraction] of [[1, 0], [20, 0.5], [40, 0.999999], [99, 0]]) {
+		const state = createCharacterState();
+		state.skills.mining = { level, xp: projectedXp("mining", level, fraction).legacyXp };
+		state.skills.smelting = { level, xp: projectedXp("smithing", level, fraction).legacyXp };
+		delete state.skills.smithing;
+		const persisted = {
+			id: "legacy-character",
+			info: { skills: state.skills, skill_curve_version: 2 },
+			total_level: Object.values(state.skills).reduce((sum, skill) => sum + skill.level, 0),
+			p: {
+				skill_xp_sources: [
+					{ source_id: "server:smelting:legacy-character:request", expires_at: 86_400_000 },
+					{ source_id: "server:mining:legacy-character:mine", expires_at: 86_400_000 },
+				],
+			},
+			t: { skill_xp: { smelting: 77, smithing: 3 }, total_skill_xp: 80 },
+		};
+		initializePlayerProgression(persisted, 0);
+		assert.deepEqual(persisted.info.skills.mining, { level, xp: projectedXp("mining", level, fraction).projected });
+		assert.deepEqual(persisted.info.skills.smithing, { level, xp: projectedXp("smithing", level, fraction).projected });
+		assert.equal(Object.hasOwn(persisted.info.skills, "smelting"), false);
+		assert.equal(Object.hasOwn(persisted.t.skill_xp, "smelting"), false);
+		assert.equal(persisted.t.skill_xp.smithing, 80);
+		assert.deepEqual(persisted.p.skill_xp_sources.map((entry) => entry.source_id), ["server:smithing:legacy-character:request", "server:mining:legacy-character:mine"]);
+		const saveBoundary = structuredClone({ info: persisted.info, p: persisted.p, t: persisted.t, total_level: persisted.total_level });
+		assert.equal(JSON.stringify(saveBoundary).includes("smelting"), false);
+	}
+});
+
 test("runtime rejects mismatched combat levels once the current curve marker is persisted", () => {
 	const character = player();
 	initializePlayerProgression(character, 0);
@@ -116,7 +155,7 @@ test("runtime awards persist complete skill deltas and reject replay", () => {
 		"rogue",
 		"merchant",
 		"mining",
-		"smelting",
+		"smithing",
 	]);
 	assert.equal(flushPlayerProgressionEvents(character), 1);
 	assert.equal(character.socket.events[0][0], "skill_xp");
@@ -128,7 +167,7 @@ test("runtime awards persist complete skill deltas and reject replay", () => {
 	assert.equal(skillXp.levels_gained, undefined);
 	assert.deepEqual(skillXp.skills.warrior, { level: 1, xp: 100, max_xp: cumulativeXp(2, "warrior") });
 	assert.deepEqual(skillXp.skills.merchant, { level: 1, xp: 0, max_xp: cumulativeXp(2, "merchant") });
-	assert.deepEqual(skillXp.skills.smelting, { level: 1, xp: 0, max_xp: cumulativeXp(2, "smelting") });
+	assert.deepEqual(skillXp.skills.smithing, { level: 1, xp: 0, max_xp: cumulativeXp(2, "smithing") });
 	const duplicate = awardPlayerSkillXp(character, "warrior", 100, {
 		source: "pve_damage",
 		sourceId: "encounter:1:warrior",
@@ -137,18 +176,18 @@ test("runtime awards persist complete skill deltas and reject replay", () => {
 	assert.equal(character.skills.warrior.xp, 100);
 });
 
-test("Smelting uses the allowlisted progression source and publishes its complete snapshot", () => {
+test("Smithing uses the allowlisted progression source and publishes its complete snapshot", () => {
 	const character = player();
 	initializePlayerProgression(character, 0);
-	const delta = awardPlayerSkillXp(character, "smelting", 8000, {
-		source: "smelting",
+	const delta = awardPlayerSkillXp(character, "smithing", 4958, {
+		source: "smithing",
 		sourceId: "craft:copper:1",
 	});
-	assert.equal(delta.skill, "smelting");
-	assert.equal(delta.accepted_xp, 8000);
-	assert.equal(character.skills.smelting.xp, 8000);
+	assert.equal(delta.skill, "smithing");
+	assert.equal(delta.accepted_xp, 4958);
+	assert.equal(character.skills.smithing.xp, 4958);
 	assert.equal(flushPlayerProgressionEvents(character), 1);
-	assert.equal(character.socket.events[0][1].skills.smelting.xp, 8000);
+	assert.equal(character.socket.events[0][1].skills.smithing.xp, 4958);
 });
 
 test("runtime emits exact multi-level snapshots and suppresses replay events", () => {
@@ -194,7 +233,7 @@ test("runtime emits exact multi-level snapshots and suppresses replay events", (
 					rogue: { level: 1, xp: 0, max_xp: cumulativeXp(2, "rogue") },
 					merchant: { level: 1, xp: 0, max_xp: cumulativeXp(2, "merchant") },
 					mining: { level: 1, xp: 0, max_xp: cumulativeXp(2, "mining") },
-					smelting: { level: 1, xp: 0, max_xp: cumulativeXp(2, "smelting") },
+					smithing: { level: 1, xp: 0, max_xp: cumulativeXp(2, "smithing") },
 				},
 			},
 		],
@@ -224,15 +263,15 @@ test("runtime keeps full player snapshots at the last emitted progression state"
 	assert.equal(clientSkillState(character).warrior.xp, 100);
 });
 
-test("runtime refreshes the client snapshot when legacy skills gain Mining and Smelting before queued XP", () => {
+test("runtime refreshes the client snapshot when legacy skills gain Mining and Smithing before queued XP", () => {
 	const character = player();
 	delete character.info.skills.mining;
-	delete character.info.skills.smelting;
+	delete character.info.skills.smithing;
 	character.total_level -= 2;
 
 	initializePlayerProgression(character, 0);
 	assert.deepEqual(character.info.skills.mining, { level: 1, xp: 0 });
-	assert.deepEqual(character.info.skills.smelting, { level: 1, xp: 0 });
+	assert.deepEqual(character.info.skills.smithing, { level: 1, xp: 0 });
 
 	awardPlayerSkillXp(character, "warrior", 1, {
 		source: "pve_damage",
@@ -240,12 +279,12 @@ test("runtime refreshes the client snapshot when legacy skills gain Mining and S
 	});
 	const pending = clientSkillState(character);
 	assert.deepEqual(pending.mining, { level: 1, xp: 0 });
-	assert.deepEqual(pending.smelting, { level: 1, xp: 0 });
+	assert.deepEqual(pending.smithing, { level: 1, xp: 0 });
 	assert.equal(pending.warrior.xp, 0);
 
 	assert.equal(flushPlayerProgressionEvents(character), 1);
 	assert.deepEqual(clientSkillState(character).mining, { level: 1, xp: 0 });
-	assert.deepEqual(clientSkillState(character).smelting, { level: 1, xp: 0 });
+	assert.deepEqual(clientSkillState(character).smithing, { level: 1, xp: 0 });
 	assert.equal(clientSkillState(character).warrior.xp, 1);
 });
 

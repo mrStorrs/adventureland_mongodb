@@ -59,5 +59,5 @@ test("legacy combat XP is reclassified without changing its raw value while Merc
 	assert.equal(loaded.skills.warrior.xp, cumulativeXp(90, "merchant"));
 	assert.notEqual(loaded.skills.warrior.level, 90);
 	assert.deepEqual(loaded.skills.merchant, initial.skills.merchant);
-	assert.equal(loaded.skill_curve_version, 2);
+	assert.equal(loaded.skill_curve_version, progression.COMBAT_XP_CURVE_VERSION);
 });

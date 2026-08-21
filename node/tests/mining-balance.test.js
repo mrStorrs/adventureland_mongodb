@@ -25,29 +25,15 @@ function tunnelGeometry() {
 	return unwrap(JSON.parse(line)).info.data;
 }
 
-test("[AC-15] final data meets leveling, unlock superiority, and self-funding targets", () => {
-	const rotation = { geometry: tunnelGeometry(), spawn: maps.tunnel.spawns[0], movementSpeed: mining.balance.rotation_speed };
-	const report = miningBalanceReport(mining, skill_xp.merchant, rotation);
-	assert.ok(report.copper_only_hours >= 1920 && report.copper_only_hours <= 2160, report.copper_only_hours);
-	assert.ok(report.best_route_hours >= 624 && report.best_route_hours <= 744, report.best_route_hours);
-	assert.ok(report.double_speed_hours >= 336, report.double_speed_hours);
-	assert.ok(report.double_speed_hours > report.best_route_hours / 2, "ten-second rock respawns still constrain the 2x route");
-	for (const band of report.unlock_bands.slice(1)) {
-		for (const previous of band.previous_options) {
-			assert.ok(band.expected_xp_per_hour > previous.expected_xp_per_hour, `${band.id} XP vs ${previous.id} with the newly unlocked tool`);
-			assert.ok(band.expected_gold_per_hour > previous.expected_gold_per_hour, `${band.id} gold vs ${previous.id} with the newly unlocked tool`);
-		}
-		assert.ok(band.rotation_ores_per_hour > 0 && band.rotation_ores_per_hour <= band.expected_xp_per_hour / mining.tiers.find((tier) => tier.id === band.id).xp, `${band.id} executable rotation`);
-		assert.ok(band.sale_fraction_for_next_pickaxe <= 0.75, `${band.id} funding`);
-	}
-	assert.ok(report.unlock_bands[0].rotation_ores_per_hour > 0);
-	assert.equal(mining.balance.action_overhead_ms, undefined);
-	assert.equal(mining.balance.sell_multiplier, 0.6);
-	assert.equal(mining.balance.rocks_per_tier, 3);
-	const rockCadence = mining.balance.rocks_per_tier * (3600000 / mining.respawn_ms);
-	for (const tier of mining.tiers) {
-		assert.ok(successfulOresPerHour(mining, tier.index, tier.index, tier.level) <= rockCadence);
-		assert.ok(rotationOresPerHour(mining, tier.index, tier.index, tier.level, rotation) <= successfulOresPerHour(mining, tier.index, tier.index, tier.level));
+test("[AC-2, AC-3, AC-8] Mining keeps the locked flat action rate, Warrior gates, and raw-sale premium", () => {
+	assert.deepEqual(mining.tiers.map((tier) => tier.level), [1, 20, 40, 60, 80, 90]);
+	assert.ok(mining.tiers.every((tier) => tier.duration_ms === 5000));
+	assert.equal(mining.success.chance, 0.125);
+	assert.equal(3600000 / 5000 * mining.success.chance, 90);
+	const expectedRawSalePerHour = [56250, 75000, 112500, 150000, 187500, 250000];
+	for (const [index, tier] of mining.tiers.entries()) {
+		assert.ok(Math.abs(90 * tier.ore_g * mining.balance.sell_multiplier - expectedRawSalePerHour[index]) <= 30, tier.id);
+		assert.equal(tier.xp > 0, true);
 	}
 });
 

@@ -15,6 +15,7 @@ function loadProgression() {
 	vm.createContext(context);
 	for (const file of [
 		"conditions.js",
+		"smithing.js",
 		"item_requirements.js",
 		"items.js",
 		"skills.js",
@@ -22,7 +23,6 @@ function loadProgression() {
 		"abilities.js",
 		"character.js",
 		"mining.js",
-		"smelting.js",
 	])
 		vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../../design", file), "utf8"), context, {
 			filename: file,

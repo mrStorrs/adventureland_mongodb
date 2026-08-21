@@ -3751,27 +3751,27 @@ var items={
 	"ironpickaxe": {
 		"type": "tool", "wtype": "pickaxe", "tier": 2, "skin": "pickaxe", "name": "Iron Pickaxe", "g": 100000,
 		"exclusive": true,
-		"purchase_requirement": { "skill": "mining", "level": 15 }
+		"purchase_requirement": { "skill": "mining", "level": 20 }
 	},
 	"goldpickaxe": {
 		"type": "tool", "wtype": "pickaxe", "tier": 3, "skin": "pickaxe", "name": "Gold Pickaxe", "g": 1000000,
 		"exclusive": true,
-		"purchase_requirement": { "skill": "mining", "level": 30 }
+		"purchase_requirement": { "skill": "mining", "level": 40 }
 	},
 	"mithrilpickaxe": {
 		"type": "tool", "wtype": "pickaxe", "tier": 4, "skin": "pickaxe", "name": "Mithril Pickaxe", "g": 8000000,
 		"exclusive": true,
-		"purchase_requirement": { "skill": "mining", "level": 55 }
+		"purchase_requirement": { "skill": "mining", "level": 60 }
 	},
 	"adamantitepickaxe": {
 		"type": "tool", "wtype": "pickaxe", "tier": 5, "skin": "pickaxe", "name": "Adamantite Pickaxe", "g": 35000000,
 		"exclusive": true,
-		"purchase_requirement": { "skill": "mining", "level": 70 }
+		"purchase_requirement": { "skill": "mining", "level": 80 }
 	},
 	"runitepickaxe": {
 		"type": "tool", "wtype": "pickaxe", "tier": 6, "skin": "pickaxe", "name": "Runite Pickaxe", "g": 150000000,
 		"exclusive": true,
-		"purchase_requirement": { "skill": "mining", "level": 85 }
+		"purchase_requirement": { "skill": "mining", "level": 90 }
 	},
 	"miningcape": {
 		"type": "cape", "skin": "cape0", "name": "Mining Cape", "g": 99000000, "armor_weight": "medium", "mining_bonus": 0.05,
@@ -3779,40 +3779,40 @@ var items={
 		"purchase_requirement": { "skill": "mining", "level": 99 }
 	},
 	"copperore": {
-		"type": "material", "skin": "gemfragment", "name": "Copper Ore", "s": 9999, "g": 20, "exclusive": true
+		"type": "material", "skin": "gemfragment", "name": "Copper Ore", "s": 9999, "g": 1042, "exclusive": true
 	},
 	"ironore": {
-		"type": "material", "skin": "gemfragment", "name": "Iron Ore", "s": 9999, "g": 100, "exclusive": true
+		"type": "material", "skin": "gemfragment", "name": "Iron Ore", "s": 9999, "g": 1389, "exclusive": true
 	},
 	"goldore": {
-		"type": "material", "skin": "goldnugget", "name": "Gold Ore", "s": 9999, "g": 500, "exclusive": true
+		"type": "material", "skin": "goldnugget", "name": "Gold Ore", "s": 9999, "g": 2083, "exclusive": true
 	},
 	"mithrilore": {
-		"type": "material", "skin": "gemfragment", "name": "Mithril Ore", "s": 9999, "g": 2000, "exclusive": true
+		"type": "material", "skin": "gemfragment", "name": "Mithril Ore", "s": 9999, "g": 2778, "exclusive": true
 	},
 	"adamantiteore": {
-		"type": "material", "skin": "gemfragment", "name": "Adamantite Ore", "s": 9999, "g": 8000, "exclusive": true
+		"type": "material", "skin": "gemfragment", "name": "Adamantite Ore", "s": 9999, "g": 3472, "exclusive": true
 	},
 	"runiteore": {
-		"type": "material", "skin": "platinumnugget", "name": "Runite Ore", "s": 9999, "g": 32000, "exclusive": true
+		"type": "material", "skin": "platinumnugget", "name": "Runite Ore", "s": 9999, "g": 4630, "exclusive": true
 	},
 	"copperbar": {
-		"type": "material", "skin": "gemfragment", "name": "Copper Bar", "s": 9999, "g": 200, "exclusive": true
+		"type": "material", "skin": "gemfragment", "name": "Copper Bar", "s": 9999, "g": 2084, "exclusive": true
 	},
 	"ironbar": {
-		"type": "material", "skin": "gemfragment", "name": "Iron Bar", "s": 9999, "g": 1000, "exclusive": true
+		"type": "material", "skin": "gemfragment", "name": "Iron Bar", "s": 9999, "g": 2778, "exclusive": true
 	},
 	"goldbar": {
-		"type": "material", "skin": "goldnugget", "name": "Gold Bar", "s": 9999, "g": 5000, "exclusive": true
+		"type": "material", "skin": "goldnugget", "name": "Gold Bar", "s": 9999, "g": 4166, "exclusive": true
 	},
 	"mithrilbar": {
-		"type": "material", "skin": "gemfragment", "name": "Mithril Bar", "s": 9999, "g": 20000, "exclusive": true
+		"type": "material", "skin": "gemfragment", "name": "Mithril Bar", "s": 9999, "g": 5556, "exclusive": true
 	},
 	"adamantitebar": {
-		"type": "material", "skin": "gemfragment", "name": "Adamantite Bar", "s": 9999, "g": 80000, "exclusive": true
+		"type": "material", "skin": "gemfragment", "name": "Adamantite Bar", "s": 9999, "g": 6944, "exclusive": true
 	},
 	"runitebar": {
-		"type": "material", "skin": "platinumnugget", "name": "Runite Bar", "s": 9999, "g": 320000, "exclusive": true
+		"type": "material", "skin": "platinumnugget", "name": "Runite Bar", "s": 9999, "g": 9260, "exclusive": true
 	},
 	"bow": {
 		"type": "weapon",
@@ -12355,6 +12355,24 @@ items.mhwand={type:"weapon",wtype:"wand",tier:2,skin:"wand",placeholder_art:true
 items.mhbook={type:"weapon",wtype:"book",tier:2,skin:"wbook0",placeholder_art:true,placeholder_asset:"wbook0",hunter_only:true,name:"Hunter's Codex",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Book of Knowledge.",g:960000,grades:[0,2,10,12],damage_type:"magical",projectile:"pmagic",damage:524,attacks_per_second:.4,mp:240,upgrade:{damage:232,mp:20,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:209.6,anchor:false},requirements:[{skill:"priest",level:80}]};
 items.mhcrossbow={type:"weapon",wtype:"crossbow",tier:2,skin:"crossbow",placeholder_art:true,placeholder_asset:"crossbow",hunter_only:true,name:"Hunter's Crossbow",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Crossbow.",g:960000,grades:[0,2,10,12],range:36,damage_type:"physical",damage:200,attacks_per_second:1.28,upgrade:{range:4,damage:147,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:256,anchor:false},requirements:[{skill:"ranger",level:80}]};
 items.mhdagger={type:"weapon",wtype:"dagger",tier:2,skin:"dagger",placeholder_art:true,placeholder_asset:"dagger",hunter_only:true,name:"Hunter's Dagger",explanation:"A Monster Hunter sidegrade. Placeholder artwork reuses the Dagger.",g:960000,grades:[0,2,10,12],range:7,damage_type:"physical",damage:220,attacks_per_second:1.164,upgrade:{range:1,damage:168,attacks_per_second:0},progression:{historical_rank:null,shared_rank:5,role:"hunter_sidegrade",requirement:80,reference_level:56,target_dps:256.08,anchor:false},requirements:[{skill:"rogue",level:80}]};
+
+if(typeof smithing_weapon_chain==="undefined"&&typeof module!=="undefined") var smithing_weapon_chain=require("./smithing").smithing_weapon_chain;
+if(typeof smithing==="undefined"&&typeof module!=="undefined") var smithing=require("./smithing").smithing;
+if(typeof smithing_weapon_chain==="undefined"&&typeof smithing!=="undefined") var smithing_weapon_chain=smithing.weapons;
+for(var smithing_weapon_index=0;smithing_weapon_index<smithing_weapon_chain.length;smithing_weapon_index++){
+	var smithing_weapon=smithing_weapon_chain[smithing_weapon_index];
+	var smithing_anchor=items[smithing_weapon.anchor];
+	var smithing_tier=smithing.tiers.filter(function(tier){return tier.id===smithing_weapon.tier_id;})[0];
+	var smithing_upgrade={};
+	for(var smithing_upgrade_key in smithing_anchor.upgrade)
+		if(smithing_upgrade_key==="damage"||smithing_upgrade_key==="range"||smithing_upgrade_key==="attacks_per_second") smithing_upgrade[smithing_upgrade_key]=smithing_anchor.upgrade[smithing_upgrade_key];
+	items[smithing_weapon.output]={type:"weapon",wtype:smithing_weapon.class_id==="book"?"book":smithing_anchor.wtype,tier:smithing_anchor.tier,skin:smithing_anchor.skin,name:smithing_weapon.name,g:smithing_anchor.g,grades:smithing_anchor.grades,damage_type:smithing_anchor.damage_type,damage:smithing_anchor.damage,attacks_per_second:smithing_anchor.attacks_per_second,upgrade:smithing_upgrade,exclusive:true,progression:{historical_rank:null,shared_rank:smithing_tier.index+2,role:"smithing",requirement:smithing_weapon.requirement,reference_level:[15,30,45,60,75,90][smithing_tier.index],target_dps:smithing_anchor.damage*smithing_anchor.attacks_per_second,anchor:false,next_tier_hunt_eligible:false,next_tier_hunt_reason:"smithing_progression"}};
+	if(smithing_anchor.range!==undefined) items[smithing_weapon.output].range=smithing_anchor.range;
+}
+for(var smithing_scrap_tier_index=0;smithing_scrap_tier_index<smithing.tiers.length;smithing_scrap_tier_index++){
+	var smithing_scrap_tier=smithing.tiers[smithing_scrap_tier_index];
+	items[smithing_scrap_tier.scrap]={type:"material",skin:items[smithing_scrap_tier.ore].skin,name:smithing_scrap_tier.name+" Bar Scrap",s:9999,g:smithing_scrap_tier.scrap_g,exclusive:true};
+}
 
 if(typeof finalize_equipment_requirements=="function") finalize_equipment_requirements(items,item_requirements);
 

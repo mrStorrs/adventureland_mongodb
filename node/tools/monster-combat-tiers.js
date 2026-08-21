@@ -417,7 +417,7 @@ function buildEquipmentCombatMatrix(data = loadSourceData()) {
 	const calculators = loadPropertyCalculators(data);
 	const publishedSets = publishCumulativeSetThresholds(data.sets);
 	const sidegrade_unlocks = [];
-	for (const [weapon_id, weapon] of Object.entries(data.items).filter(([, item]) => item.type === "weapon" && item.progression && WEAPON_PROFILES[item.wtype] && item.progression.shared_rank < 6).sort(([left], [right]) => left.localeCompare(right))) {
+	for (const [weapon_id, weapon] of Object.entries(data.items).filter(([, item]) => item.type === "weapon" && item.progression && item.progression.role !== "smithing" && WEAPON_PROFILES[item.wtype] && item.progression.shared_rank < 6).sort(([left], [right]) => left.localeCompare(right))) {
 		const skill = WEAPON_PROFILES[weapon.wtype].skill;
 		const target_tier = weapon.progression.shared_rank + 1;
 		const declared_ineligible = weapon.progression.next_tier_hunt_eligible === false;

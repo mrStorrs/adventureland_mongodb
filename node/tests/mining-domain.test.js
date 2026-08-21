@@ -21,12 +21,12 @@ const {
 } = require("../game/mining");
 
 const expectedTiers = [
-	[0, "copper", "Copper", 1, "copperore", "pickaxe", 800, 5000, 20, 2000],
-	[1, "iron", "Iron", 15, "ironore", "ironpickaxe", 1200, 4400, 100, 100000],
-	[2, "gold", "Gold", 30, "goldore", "goldpickaxe", 1800, 3800, 500, 1000000],
-	[3, "mithril", "Mithril", 55, "mithrilore", "mithrilpickaxe", 2800, 3200, 2000, 8000000],
-	[4, "adamantite", "Adamantite", 70, "adamantiteore", "adamantitepickaxe", 4000, 2600, 8000, 35000000],
-	[5, "runite", "Runite", 85, "runiteore", "runitepickaxe", 6000, 2000, 32000, 150000000],
+	[0, "copper", "Copper", 1, "copperore", "pickaxe", 6611, 5000, 1042, 2000],
+	[1, "iron", "Iron", 20, "ironore", "ironpickaxe", 13330, 5000, 1389, 100000],
+	[2, "gold", "Gold", 40, "goldore", "goldpickaxe", 18148, 5000, 2083, 1000000],
+	[3, "mithril", "Mithril", 60, "mithrilore", "mithrilpickaxe", 60787, 5000, 2778, 8000000],
+	[4, "adamantite", "Adamantite", 80, "adamantiteore", "adamantitepickaxe", 63581, 5000, 3472, 35000000],
+	[5, "runite", "Runite", 90, "runiteore", "runitepickaxe", 69939, 5000, 4630, 150000000],
 ];
 
 function clone(value) {
@@ -51,7 +51,7 @@ function tunnelGeometry() {
 test("[AC-1] canonical Mining publication is exact, bounded, and fail-closed", () => {
 	assert.equal(validateMiningData(mining), mining);
 	assert.equal(validateMiningData(mining, { maps, sprites, geometry: { tunnel: tunnelGeometry() } }), mining);
-	assert.equal(mining.version, 1);
+	assert.equal(mining.version, 2);
 	assert.equal(mining.respawn_ms, 10000);
 	assert.deepEqual(
 		mining.tiers.map((tier) => [
@@ -68,7 +68,7 @@ test("[AC-1] canonical Mining publication is exact, bounded, and fail-closed", (
 		]),
 		expectedTiers,
 	);
-	assert.deepEqual(mining.success, { base: 0.45, level_step: 0.005, tool_step: 0.06, min: 0.05, max: 0.95 });
+	assert.deepEqual(mining.success, { chance: 0.125 });
 	assert.deepEqual(mining.cape, { item: "miningcape", level: 99, bonus: 0.05, price: 99000000 });
 	assert.deepEqual(mining.balance, { double_speed_multiplier: 2, rotation_speed: 50, sell_multiplier: 0.6, rocks_per_tier: 3 });
 	assert.equal(mining.rocks.length, 18);
@@ -101,17 +101,17 @@ test("[AC-1] canonical Mining publication is exact, bounded, and fail-closed", (
 	});
 });
 
-test("[AC-4] chance, unlocks, lower-tool legality, and duration use the exact formula", () => {
-	assert.equal(miningChance(mining, { level: 1, oreTier: 0, pickaxeTier: 0, hasCape: false }), 0.45);
-	assert.equal(miningChance(mining, { level: 99, oreTier: 5, pickaxeTier: 0, hasCape: false }), 0.22);
-	assert.equal(miningChance(mining, { level: 99, oreTier: 0, pickaxeTier: 5, hasCape: true }), 0.95);
-	assert.equal(miningChance(mining, { level: 99, oreTier: 5, pickaxeTier: 5, hasCape: true }), 0.57);
+test("[AC-4] chance, unlocks, lower-tool legality, and duration use the locked flat rate", () => {
+	assert.equal(miningChance(mining, { level: 1, oreTier: 0, pickaxeTier: 0, hasCape: false }), 0.125);
+	assert.throws(() => miningChance(mining, { level: 99, oreTier: 5, pickaxeTier: 0, hasCape: false }), { code: "mining_tool" });
+	assert.equal(miningChance(mining, { level: 99, oreTier: 0, pickaxeTier: 5, hasCape: true }), 0.125);
+	assert.equal(miningChance(mining, { level: 99, oreTier: 5, pickaxeTier: 5, hasCape: true }), 0.125);
 	assert.equal(miningDuration(mining, 0), 5000);
-	assert.equal(miningDuration(mining, 5), 2000);
+	assert.equal(miningDuration(mining, 5), 5000);
 	for (let tool = 0; tool < 6; tool += 1) {
 		for (let ore = 0; ore < 6; ore += 1) {
-			const chance = miningChance(mining, { level: 99, oreTier: ore, pickaxeTier: tool, hasCape: false });
-			assert.ok(chance >= 0.05 && chance <= 0.95);
+			if (tool < ore) assert.throws(() => miningChance(mining, { level: 99, oreTier: ore, pickaxeTier: tool, hasCape: false }), { code: "mining_tool" });
+			else assert.equal(miningChance(mining, { level: 99, oreTier: ore, pickaxeTier: tool, hasCape: false }), 0.125);
 		}
 	}
 	assert.throws(() => miningChance(mining, { level: 29, oreTier: 2, pickaxeTier: 5, hasCape: false }), {
@@ -168,11 +168,11 @@ test("[AC-6] selection preserves an explicit target and uses nearest only when o
 	);
 });
 
-test("[AC-14] Mining Cape adds exactly five points before the cap", () => {
+test("[AC-14] Mining Cape does not alter the fixed gathering rate", () => {
 	const withoutCape = miningChance(mining, { level: 99, oreTier: 5, pickaxeTier: 5, hasCape: false });
 	const withCape = miningChance(mining, { level: 99, oreTier: 5, pickaxeTier: 5, hasCape: true });
-	assert.ok(Math.abs(withCape - withoutCape - 0.05) < 1e-12);
-	assert.equal(miningChance(mining, { level: 99, oreTier: 0, pickaxeTier: 5, hasCape: true }), 0.95);
+	assert.equal(withCape, withoutCape);
+	assert.equal(withCape, 0.125);
 });
 
 test("[AC-16] legacy bonus opportunity is time-normalized without changing reward ratios", () => {
