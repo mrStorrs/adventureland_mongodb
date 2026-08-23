@@ -11,6 +11,7 @@ const { character: characterDefinition } = require("../../design/character");
 const { item_requirements: rawRequirements } = require("../../design/item_requirements");
 const { items } = require("../../design/items");
 const { mining } = require("../../design/mining");
+const { monsters } = require("../../design/monsters");
 const { npcs } = require("../../design/npcs");
 const { skills } = require("../../design/skills");
 const { skill_xp } = require("../../design/skill_xp");
@@ -66,6 +67,10 @@ test("[AC-2] fresh characters publish nine ordered skills and Mining uses the Wa
 	assert.equal(skills.smithing.kind, "noncombat");
 	assert.equal(skill_xp.merchant[99], 900000000);
 	assert.deepEqual(createCharacterState(), { skills: characterDefinition.skills, total_level: 9 });
+});
+
+test("Tunnel Moles stay passive while Mining is enabled", () => {
+	assert.equal(monsters.mole.aggro, 0);
 });
 
 test("[AC-3] predecessor shapes add Smithing and migrate the legacy Smelting key", () => {

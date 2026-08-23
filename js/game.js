@@ -253,6 +253,8 @@ function update_mining_rock(sprite, now) {
 	var current = now === undefined ? Date.now() : now,
 		loading = !mining_state_ready,
 		available = !loading && mining_rock_available(rock.id, current),
+		tier = G.mining.tiers[rock.tier],
+		rock_name = (tier ? tier.name : rock.id) + " Ore",
 		art = available ? rock.available_art : rock.depleted_art;
 	if (sprite.skin != art && typeof textures != "undefined") {
 		var replacement = new_sprite(art, "emblem");
@@ -263,7 +265,7 @@ function update_mining_rock(sprite, now) {
 	sprite.interactive = true;
 	sprite.buttonMode = available;
 	var remaining = Math.max(0, Math.ceil(((mining_state.rocks[rock.id] || current) - current) / 1000));
-	sprite.mining_label = loading ? rock.id + " — loading account state" : available ? rock.id + " — available" : rock.id + " — available in " + remaining + "s";
+	sprite.mining_label = loading ? rock_name + " — loading account state" : available ? rock_name + " — available" : rock_name + " — available in " + remaining + "s";
 	sprite.name = sprite.mining_label;
 	sprite.accessibleTitle = sprite.mining_label;
 	sprite.accessibleHint = loading ? "Mining unavailable while account state loads" : available ? "Activate to mine this account-private rock" : "Mining unavailable until this account-private rock respawns";

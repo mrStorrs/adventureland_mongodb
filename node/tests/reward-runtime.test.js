@@ -122,6 +122,7 @@ test("stat recalculation preserves the persistent character gold balance", () =>
 		calculate_item_properties: () => ({}),
 		merchantTax: () => 0.05,
 		calculate_common_stats: () => {},
+		xpm: 1,
 	});
 	const current = {
 		gold: 1234,

@@ -2,12 +2,12 @@ var smithing = {
 	version: 2,
 	success_cap_multiplier: 1.25,
 	tiers: [
-		{ index: 0, id: "copper", name: "Copper", level: 1, ore: "copperore", bar: "copperbar", scrap: "copperscrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 30000, xp: 4958, base_success: 0.076098, scrap_g: 639 },
-		{ index: 1, id: "iron", name: "Iron", level: 20, ore: "ironore", bar: "ironbar", scrap: "ironscrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 36000, xp: 11997, base_success: 0.049492, scrap_g: 1013 },
-		{ index: 2, id: "gold", name: "Gold", level: 40, ore: "goldore", bar: "goldbar", scrap: "goldscrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 42000, xp: 19055, base_success: 0.036459, scrap_g: 1766 },
-		{ index: 3, id: "mithril", name: "Mithril", level: 60, ore: "mithrilore", bar: "mithrilbar", scrap: "mithrilscrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 48000, xp: 72944, base_success: 0.032022, scrap_g: 2687 },
-		{ index: 4, id: "adamantite", name: "Adamantite", level: 80, ore: "adamantiteore", bar: "adamantitebar", scrap: "adamantitescrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 54000, xp: 85834, base_success: 0.02574, scrap_g: 3772 },
-		{ index: 5, id: "runite", name: "Runite", level: 90, ore: "runiteore", bar: "runitebar", scrap: "runitescrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 60000, xp: 104909, base_success: 0.015367, scrap_g: 5574 },
+		{ index: 0, id: "copper", name: "Copper", level: 1, ore: "copperore", bar: "copperbar", scrap: "copperscrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 30000, xp: 13222, base_success: 0.076098, scrap_g: 639 },
+		{ index: 1, id: "iron", name: "Iron", level: 20, ore: "ironore", bar: "ironbar", scrap: "ironscrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 36000, xp: 26660, base_success: 0.049492, scrap_g: 1013 },
+		{ index: 2, id: "gold", name: "Gold", level: 40, ore: "goldore", bar: "goldbar", scrap: "goldscrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 42000, xp: 36296, base_success: 0.036459, scrap_g: 1766 },
+		{ index: 3, id: "mithril", name: "Mithril", level: 60, ore: "mithrilore", bar: "mithrilbar", scrap: "mithrilscrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 48000, xp: 121574, base_success: 0.032022, scrap_g: 2687 },
+		{ index: 4, id: "adamantite", name: "Adamantite", level: 80, ore: "adamantiteore", bar: "adamantitebar", scrap: "adamantitescrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 54000, xp: 127162, base_success: 0.02574, scrap_g: 3772 },
+		{ index: 5, id: "runite", name: "Runite", level: 90, ore: "runiteore", bar: "runitebar", scrap: "runitescrap", ore_quantity: 2, bars_per_weapon: 5, duration_ms: 60000, xp: 139878, base_success: 0.015367, scrap_g: 5574 },
 	],
 };
 
