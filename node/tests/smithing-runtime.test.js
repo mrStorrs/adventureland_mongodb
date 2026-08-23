@@ -139,8 +139,10 @@ test("[AC-4] refining reserves two ore, rejects an early tick, and settles one a
 	assert.equal(success.commits.length, 0);
 	const result = success.runtime.settle(success.player, channel, channel.completes_at);
 	assert.equal(result.outcome, "success");
+	assert.equal(result.xp, 13222);
 	assert.deepEqual(success.commits[0].reward.outputs, [{ name: "copperbar", quantity: 1 }]);
-	assert.equal(success.player.skills.smithing.xp, 4958);
+	assert.equal(success.commits[0].reward.xp, 13222);
+	assert.equal(success.player.skills.smithing.xp, 13222);
 	assert.equal(success.player.c.smithing, undefined);
 	assert.equal(success.player.items[0]?.b, undefined);
 	assert.equal(success.runtime.settle(success.player), null);
@@ -173,6 +175,13 @@ test("[AC-5] all published weapon recipes enforce their exact tier, predecessor,
 });
 
 test("[AC-5] forge failure consumes only its five bars and returns five current-tier scraps", () => {
+	const success = runtimeHarness("copperblade", { random: () => 0 });
+	const successfulChannel = start(success, "copperblade");
+	const successfulResult = success.runtime.settle(success.player, successfulChannel, successfulChannel.completes_at);
+	assert.equal(successfulResult.xp, 13222);
+	assert.equal(success.commits[0].reward.xp, 13222);
+	assert.equal(success.player.skills.smithing.xp, 13222);
+
 	const harness = runtimeHarness("copperblade", { random: () => 1 });
 	const channel = start(harness, "copperblade");
 	assert.equal(harness.runtime.settle(harness.player, channel, channel.completes_at).outcome, "failure");
@@ -377,7 +386,7 @@ test("[AC-4, AC-5, AC-6, AC-9] Craftsman executes authoritative Smithing start, 
 	harness.setNow(completing.completes_at);
 	harness.tick(harness.player, completing.len - 1);
 	assert.equal(harness.player.c.smithing, undefined);
-	assert.equal(harness.player.skills.smithing.xp, 4_958);
+	assert.equal(harness.player.skills.smithing.xp, 13_222);
 	assert.equal(harness.player.p.skill_xp_sources.length, 1);
 	harness.handleCraft({ craft_id: "refinecomplete", items: [[0, 0]] });
 	assert.deepEqual(plain(harness.successes.at(-1)), { response: "craft", payload: { cevent: true, replayed: true } });

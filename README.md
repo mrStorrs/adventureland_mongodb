@@ -378,12 +378,12 @@ the same timer applies when forging a weapon:
 
 | Bar | Smithing unlock | Ore input | Action time | XP per completion | Bar value | Scrap value |
 |---|---:|---:|---:|---:|---:|---:|
-| Copper Bar | 1 | 2 Copper Ore | 30s | 4,958 | 2,084g | 639g |
-| Iron Bar | 20 | 2 Iron Ore | 36s | 11,997 | 2,778g | 1,013g |
-| Gold Bar | 40 | 2 Gold Ore | 42s | 19,055 | 4,166g | 1,766g |
-| Mithril Bar | 60 | 2 Mithril Ore | 48s | 72,944 | 5,556g | 2,687g |
-| Adamantite Bar | 80 | 2 Adamantite Ore | 54s | 85,834 | 6,944g | 3,772g |
-| Runite Bar | 90 | 2 Runite Ore | 60s | 104,909 | 9,260g | 5,574g |
+| Copper Bar | 1 | 2 Copper Ore | 30s | 13,222 | 2,084g | 639g |
+| Iron Bar | 20 | 2 Iron Ore | 36s | 26,660 | 2,778g | 1,013g |
+| Gold Bar | 40 | 2 Gold Ore | 42s | 36,296 | 4,166g | 1,766g |
+| Mithril Bar | 60 | 2 Mithril Ore | 48s | 121,574 | 5,556g | 2,687g |
+| Adamantite Bar | 80 | 2 Adamantite Ore | 54s | 127,162 | 6,944g | 3,772g |
+| Runite Bar | 90 | 2 Runite Ore | 60s | 139,878 | 9,260g | 5,574g |
 
 Forging follows a six-material, six-class chain. It consumes five current-tier
 bars plus the exact preceding weapon at `+0`, and produces the next weapon at
@@ -392,13 +392,17 @@ server owns the timer, level gate, inputs, outcome, and XP award. The client
 receives the authoritative duration and progress state and cannot choose the
 outcome or completion time.
 
-Smithing awards XP on every completed attempt. A successful refine yields one
-bar; a failed refine yields one same-material bar scrap. A successful forge
-yields the next weapon; a failed forge returns the preceding `+0` weapon and
-five same-material bar scraps. Cancelling, disconnecting, dying, or otherwise
-invalidating an active action releases its inputs without output or XP. The
-level-based success roll is intentionally low and is not exposed as a client
-input.
+Smithing awards XP on every completed attempt. Each tier awards the Mining XP
+of one matching ore multiplied by its two-ore refine input, so refining every
+ore a character mines gives Mining and Smithing the same total XP. Forging uses
+that same shared tier reward. A successful refine yields one bar; a failed
+refine yields one same-material bar scrap. A successful forge yields the next
+weapon; a failed forge returns the preceding `+0` weapon and five same-material
+bar scraps. Externally supplied ore can advance Smithing faster because it is
+not constrained by the Mining gathering rate. Cancelling, disconnecting,
+dying, or otherwise invalidating an active action releases its inputs without
+output or XP. The level-based success roll is intentionally low and is not
+exposed as a client input.
 
 Existing persisted Smelting state is accepted as a migration input and renamed
 to Smithing while preserving its level and within-level progress. New persisted
@@ -417,9 +421,10 @@ node --test node/tests/*.test.js
 The game server derives its reward multiplier from
 `options.default_server_key`. The server started with that key receives **2×**
 normal monster item-drop odds and chest gold (including extra gold); every other
-server key uses **1×**. The multiplier is applied by the normal monster drop
-path and does not change XP, Monster Hunt token quantities, or the dedicated
-Hardcore/PvP reward paths.
+server key uses **1×**. Separately, U.S. servers apply **2× combat XP** through
+the normal monster reward path, including U.S. Hardcore/PvP servers. That
+regional combat multiplier does not alter Mining or Smithing XP or Monster Hunt
+token quantities.
 
 ## Merchant enhancement progression
 

@@ -22,37 +22,63 @@ function publishedCraft() {
 	return context.craft;
 }
 
-test("[AC-3, AC-4, AC-5, AC-8] Smithing has the locked timed six-tier balance", () => {
+test("[AC-1, AC-4] Smithing has locked six-tier Mining-ore parity", () => {
 	assert.equal(validateSmithingData(smithing), smithing);
 	assert.deepEqual(
 		smithing.tiers.map((tier) => [tier.level, tier.ore_quantity, tier.bars_per_weapon, tier.duration_ms, tier.xp, tier.base_success, tier.scrap_g]),
 		[
-			[1, 2, 5, 30000, 4958, 0.076098, 639],
-			[20, 2, 5, 36000, 11997, 0.049492, 1013],
-			[40, 2, 5, 42000, 19055, 0.036459, 1766],
-			[60, 2, 5, 48000, 72944, 0.032022, 2687],
-			[80, 2, 5, 54000, 85834, 0.02574, 3772],
-			[90, 2, 5, 60000, 104909, 0.015367, 5574],
+			[1, 2, 5, 30000, 13222, 0.076098, 639],
+			[20, 2, 5, 36000, 26660, 0.049492, 1013],
+			[40, 2, 5, 42000, 36296, 0.036459, 1766],
+			[60, 2, 5, 48000, 121574, 0.032022, 2687],
+			[80, 2, 5, 54000, 127162, 0.02574, 3772],
+			[90, 2, 5, 60000, 139878, 0.015367, 5574],
 		],
 	);
+	for (const [index, tier] of smithing.tiers.entries()) {
+		const miningTier = mining.tiers[index];
+		assert.deepEqual([tier.id, tier.ore, tier.level], [miningTier.id, miningTier.ore, miningTier.level]);
+		assert.equal(tier.xp, miningTier.xp * tier.ore_quantity, tier.id);
+	}
 	assert.equal(smithingChance(smithing, smithing.tiers[0], 1), 0.076098);
 	assert.equal(smithingChance(smithing, smithing.tiers[0], 20), 0.0951225);
 	assert.doesNotThrow(() => validateSmithingData(smithing, { items, craft: publishedCraft(), item_requirements }));
 });
 
-test("[AC-3] Mining and Smithing each meet the approved Warrior-curve time bands", () => {
+test("[AC-1] self-mined ore keeps Mining and Smithing level pacing aligned", () => {
 	const expectedBands = [37.7, 138.3, 352.0, 619.1, 1147.1, 2085.7];
-	for (const [name, tiers, actionsPerHour] of [
-		["mining", mining.tiers, () => 90],
-		["smithing", smithing.tiers, (tier) => 3600000 / tier.duration_ms],
-	]) {
-		const hours = tiers.map((tier, index) => {
-			const nextLevel = tiers[index + 1]?.level || 99;
-			return (cumulativeXp(nextLevel, name) - cumulativeXp(tier.level, name)) / (actionsPerHour(tier) * tier.xp);
-		});
-		hours.forEach((value, index) => assert.ok(Math.abs(value - expectedBands[index]) <= 0.1, `${name}/${tiers[index].id}`));
-		assert.equal(Number(hours.reduce((sum, value) => sum + value, 0).toFixed(1)), 4380.0, name);
+	const selfMinedHours = [];
+	const unlimitedOreHours = [];
+	for (const [index, miningTier] of mining.tiers.entries()) {
+		const smithingTier = smithing.tiers[index];
+		const nextLevel = mining.tiers[index + 1]?.level || 99;
+		const xpNeeded = cumulativeXp(nextLevel, "mining") - cumulativeXp(miningTier.level, "mining");
+		const miningHours = xpNeeded / (90 * miningTier.xp);
+		const smithingHoursFromSelfMinedOre = xpNeeded / ((90 / smithingTier.ore_quantity) * smithingTier.xp);
+		const smithingHoursWithUnlimitedOre = xpNeeded / ((3600000 / smithingTier.duration_ms) * smithingTier.xp);
+		assert.ok(Math.abs(miningHours - expectedBands[index]) <= 0.1, `mining/${miningTier.id}`);
+		assert.ok(Math.abs(smithingHoursFromSelfMinedOre - miningHours) <= 0.000001, miningTier.id);
+		assert.ok(smithingHoursWithUnlimitedOre < smithingHoursFromSelfMinedOre, miningTier.id);
+		selfMinedHours.push(smithingHoursFromSelfMinedOre);
+		unlimitedOreHours.push(smithingHoursWithUnlimitedOre);
 	}
+	assert.equal(Number(selfMinedHours.reduce((sum, value) => sum + value, 0).toFixed(1)), 4380.0);
+	assert.equal(Number(unlimitedOreHours.reduce((sum, value) => sum + value, 0).toFixed(1)), 2971.3);
+});
+
+test("[AC-5] README documents the published parity table and U.S. combat policy", () => {
+	const readme = fs.readFileSync(path.resolve(__dirname, "../../README.md"), "utf8");
+	for (const [index, tier] of smithing.tiers.entries()) {
+		const miningTier = mining.tiers[index];
+		assert.ok(
+			readme.includes(`| ${tier.name} Bar | ${tier.level} | ${tier.ore_quantity} ${miningTier.name} Ore | ${tier.duration_ms / 1000}s | ${tier.xp.toLocaleString("en-US")} |`),
+			tier.id,
+		);
+	}
+	assert.match(readme, /Each tier awards the Mining XP\s+of one matching ore multiplied by its two-ore refine input/);
+	assert.match(readme, /refining every\s+ore a character mines gives Mining and Smithing the same total XP/);
+	assert.match(readme, /U\.S\. servers apply \*\*2× combat XP\*\* through\s+the normal monster reward path, including U\.S\. Hardcore\/PvP servers/);
+	assert.match(readme, /does not alter Mining or Smithing XP or Monster Hunt\s+token quantities/);
 });
 
 test("[AC-7] every Smithing weapon copies only its anchor's basic combat profile", () => {
