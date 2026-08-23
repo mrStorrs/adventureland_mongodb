@@ -91,7 +91,7 @@ test("[AC-1] canonical Mining publication is exact, bounded, and fail-closed", (
 	badReward.legacy_bonus.rewards.push([1, "wbook1"]);
 	assert.throws(() => validateMiningData(badReward), { code: "invalid_mining_bonus", reward: "wbook1" });
 	const missingArt = clone(sprites);
-	missingArt.mining_ores.matrix[0][0] = null;
+	missingArt.mining_ores.matrix[0][1] = null;
 	assert.throws(() => validateMiningData(mining, { sprites: missingArt }), { code: "invalid_mining_rock", rock: "copper-1" });
 	const unreachable = clone(mining);
 	unreachable.rocks[0].x = tunnelGeometry().max_x + 100;

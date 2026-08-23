@@ -3,12 +3,12 @@ var sprites = {
 		file: "/images/tiles/map/TOIMPORT_mining-ores-tf_1.png",
 		type: "emblem",
 		rows: 4,
-		columns: 8,
+		columns: 4,
 		matrix: [
-			["mining_rock_copper", "mining_rock_iron", "mining_rock_gold", "mining_rock_mithril", "mining_rock_adamantite", "mining_rock_runite", null, null],
-			["mining_rock_copper_depleted", "mining_rock_iron_depleted", "mining_rock_gold_depleted", "mining_rock_mithril_depleted", "mining_rock_adamantite_depleted", "mining_rock_runite_depleted", null, null],
-			[null, null, null, null, null, null, null, null],
-			[null, null, null, null, null, null, null, null],
+			[null, "mining_rock_copper", "mining_rock_iron", "mining_rock_gold"],
+			[null, "mining_rock_copper_depleted", "mining_rock_iron_depleted", "mining_rock_gold_depleted"],
+			["mining_rock_mithril", "mining_rock_adamantite", "mining_rock_runite", null],
+			["mining_rock_mithril_depleted", "mining_rock_adamantite_depleted", "mining_rock_runite_depleted", null],
 		],
 	},
 	test: {

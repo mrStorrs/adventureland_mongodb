@@ -390,7 +390,7 @@ app.all("/data.js", async (req, res, next) => {
 	res
 		.status(200)
 		.set("Content-Type", "application/javascript")
-		.set("Cache-Control", "public, max-age=2592000")
+		.set("Cache-Control", typeof Local != "undefined" && Local ? "no-store" : "public, max-age=2592000")
 		.send("var G=" + JSON.stringify(G) + ";\n" + additional);
 });
 

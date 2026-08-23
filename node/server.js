@@ -1779,6 +1779,7 @@ function calculate_gear_only_player_stats(player) {
 		)
 			player[key] = value;
 	}
+	player.xpm *= xpm;
 	player.active_skill = activeSkill;
 	player.damage_type = calculated.damage_type;
 	player.projectile = calculated.projectile;
