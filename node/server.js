@@ -55,6 +55,11 @@ const { validateSmithingData } = require("./game/smithing");
 const { createSmithingRuntime, recipeTier } = require("./game/smithing_runtime");
 const { createAtomicMiningRewardCommit, createMiningRuntime } = require("./game/mining_runtime");
 const {
+	isCharacterStartBlocked,
+	releaseCharacterStartReservation,
+	recoverTrappedCharacterPosition,
+} = require("./game/character_start");
+const {
 	initializePlayerProgression,
 	awardPlayerSkillXp,
 	awardPlayerSkillXpSplit,
@@ -123,6 +128,22 @@ var players = {};
 var dc_players = {};
 var mining_account_refresh = {};
 var smithing_runtime_data = null;
+
+function has_live_character_session(characterId) {
+	return Object.values(players).some((player) => player && player.real_id === characterId && player.socket && !player.dc);
+}
+
+async function release_failed_character_start(characterId, secret) {
+	return tx(
+		async () => {
+			var entity = await tx_get(A[0]);
+			if (!releaseCharacterStartReservation(entity, { serverId: server_id, secret: A[1] })) return false;
+			await tx_save(entity);
+			return true;
+		},
+		[characterId, secret],
+	);
+}
 
 function mining_tool_marker(item) {
 	if (!item) return null;
@@ -10786,7 +10807,13 @@ function init_io() {
 				if (!R.entity) ex("no_character");
 				if (!R.owner || !R.owner.info.auths.includes(A[0].auth)) ex("password_issue");
 				if (R.entity.owner !== get_id(R.owner)) ex("no_character");
-				if (R.entity.server && msince(R.entity.last_sync) < 120) ex("ingame");
+			if (
+				isCharacterStartBlocked(R.entity, {
+					serverId: server_id,
+					locallyActive: has_live_character_session(A[0].character),
+				})
+			)
+				ex("ingame");
 				R.entity.server = A[1];
 				R.entity.online = true;
 				R.entity.last_sync = new Date();
@@ -10802,6 +10829,7 @@ function init_io() {
 			if (observers[socket.id]) observers[socket.id].auth_engaged = false;
 			if (R.failed) {
 				socket.emit("game_error", "Failed: " + R.reason);
+				socket.disconnect();
 				return;
 			}
 
@@ -10885,8 +10913,20 @@ function init_io() {
 			try {
 				initializePlayerProgression(player);
 			} catch (error) {
+				try {
+					await release_failed_character_start(data.character, socket.observer_secret);
+				} catch (cleanupError) {
+					log_trace("#X failed character start cleanup", cleanupError);
+				}
 				socket.emit("game_error", error.code || "invalid_character_skill_state");
+				socket.disconnect();
 				return;
+			}
+			player.base = dbase;
+			var recoveredPosition = recoverTrappedCharacterPosition(player, { maps: G.maps, canMove: can_move });
+			if (recoveredPosition) {
+				player.x = player.going_x = recoveredPosition.x;
+				player.y = player.going_y = recoveredPosition.y;
 			}
 			if (guild) player.guild = guild_to_info(guild);
 			if (ip_info && ip_info.exception) player.ipx = ip_info.info.limit;
@@ -10965,7 +11005,6 @@ function init_io() {
 			player.hitchhikers = []; // socket events to be registered after a resend
 			player.last = { attack: future_ms(-1200), attacked: really_old };
 			player.bets = {};
-			player.base = dbase;
 			player.age = parseInt(ceil(hsince(new Date(player.created)) / 24.0));
 			// player.vision=[round((data.width/2)/data.scale)+B.ext_vision,round((data.height/2)/data.scale)+B.ext_vision];
 			// player.vision[0]=min(1000,player.vision[0]);
@@ -15108,9 +15147,15 @@ function sync_entity(entity, data) {
 	entity.info.q = data.q || {};
 	entity.info.map = data["map"];
 	entity.info.in = data.in;
-	const syncedSkillState = loadCharacterState({ info: { skills: data.info && data.info.skills } });
+	const syncedSkillState = loadCharacterState({
+		info: {
+			skills: data.info && data.info.skills,
+			skill_curve_version: data.info && data.info.skill_curve_version,
+		},
+	});
 	entity.info.skills = syncedSkillState.skills;
 	entity.total_level = syncedSkillState.total_level;
+	entity.info.skill_curve_version = syncedSkillState.skill_curve_version;
 	entity.info.merchant_accrual = data.info && data.info.merchant_accrual;
 	entity.info.death_sickness_until = data.death_sickness_until || (data.info && data.info.death_sickness_until) || null;
 	entity.info.hp = data["hp"];
