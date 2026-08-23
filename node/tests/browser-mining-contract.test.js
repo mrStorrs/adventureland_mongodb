@@ -12,6 +12,7 @@ const { sprites } = require("../../design/sprites");
 const root = path.resolve(__dirname, "../..");
 const game = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
 const functions = fs.readFileSync(path.join(root, "js/functions.js"), "utf8");
+const init = fs.readFileSync(path.join(root, "common/init.js"), "utf8");
 
 function functionSource(source, name, nextName) {
 	const start = source.indexOf(`function ${name}(`);
@@ -45,6 +46,13 @@ test("[AC-6] browser ability wire carries explicit Mining IDs and preserves omit
 
 test("[AC-11] Tunnel rock helpers render all rocks, enforce private depletion, click IDs, and clean up", () => {
 	assert.equal(sprites.mining_ores.type, "emblem");
+	assert.equal(sprites.mining_ores.columns, 4);
+	assert.deepEqual(sprites.mining_ores.matrix, [
+		[null, "mining_rock_copper", "mining_rock_iron", "mining_rock_gold"],
+		[null, "mining_rock_copper_depleted", "mining_rock_iron_depleted", "mining_rock_gold_depleted"],
+		["mining_rock_mithril", "mining_rock_adamantite", "mining_rock_runite", null],
+		["mining_rock_mithril_depleted", "mining_rock_adamantite_depleted", "mining_rock_runite_depleted", null],
+	]);
 	const source = functionSource(game, "reset_mining_state", "report_progression_protocol_issue");
 	const events = [];
 	const destroyed = [];
@@ -110,17 +118,19 @@ test("[AC-11] Tunnel rock helpers render all rocks, enforce private depletion, c
 	assert.equal(children.length, 18);
 	assert.equal(context.mining_rock_sprites["copper-1"].interactive, true);
 	assert.equal(context.mining_rock_sprites["copper-1"].buttonMode, false);
-	assert.match(context.mining_rock_sprites["copper-1"].mining_label, /loading account state/);
+	assert.equal(context.mining_rock_sprites["copper-1"].mining_label, "Copper Ore — loading account state");
+	assert.equal(context.mining_rock_sprites["copper-1"].accessibleTitle, "Copper Ore — loading account state");
 	assert.equal(context.mining_rock_sprites["copper-1"].accessible, true);
 	assert.match(context.mining_rock_sprites["copper-1"].accessibleHint, /unavailable while account state loads/);
 	assert.equal(typeof context.mining_rock_sprites["copper-1"].handlers.mouseover, "function");
 	context.mining_rock_sprites["copper-1"].emit("mouseover");
 	assert.equal(context.hovered, "copper-1");
 	assert.equal(context.mining_rock_sprites["copper-1"].mining_hover_label.visible, true);
-	assert.match(context.mining_rock_sprites["copper-1"].mining_hover_label.text, /loading account state/);
+	assert.equal(context.mining_rock_sprites["copper-1"].mining_hover_label.text, "Copper Ore — loading account state");
 	context.mining_rock_sprites["copper-1"].emit("mouseout");
 	assert.equal(context.hovered, null);
 	context.set_mining_state({ rocks: {} }, 1000);
+	assert.match(context.mining_rock_sprites["copper-1"].mining_label, /^Copper Ore — available$/);
 	context.mining_rock_sprites["copper-1"].click();
 	assert.deepEqual(events, [["mining", "copper-1"]]);
 
@@ -129,15 +139,15 @@ test("[AC-11] Tunnel rock helpers render all rocks, enforce private depletion, c
 	assert.equal(context.mining_rock_sprites["copper-1"].buttonMode, false);
 	context.mining_rock_sprites["copper-1"].click();
 	assert.equal(events.length, 1);
-	assert.match(context.mining_rock_sprites["copper-1"].mining_label, /available in 8/);
-	assert.match(context.mining_rock_sprites["copper-1"].accessibleTitle, /available in 8/);
+	assert.equal(context.mining_rock_sprites["copper-1"].mining_label, "Copper Ore — available in 8s");
+	assert.equal(context.mining_rock_sprites["copper-1"].accessibleTitle, "Copper Ore — available in 8s");
 	context.mining_rock_sprites["copper-1"].emit("mouseover");
-	assert.match(context.mining_rock_sprites["copper-1"].mining_hover_label.text, /available in 8/);
+	assert.equal(context.mining_rock_sprites["copper-1"].mining_hover_label.text, "Copper Ore — available in 8s");
 
 	context.reset_mining_state(1000);
 	assert.equal(context.mining_state_ready, false);
 	assert.deepEqual(JSON.parse(JSON.stringify(context.mining_state)), { rocks: {} });
-	assert.match(context.mining_rock_sprites["copper-1"].mining_label, /loading account state/);
+	assert.equal(context.mining_rock_sprites["copper-1"].mining_label, "Copper Ore — loading account state");
 	context.mining_rock_sprites["copper-1"].click();
 	assert.equal(events.length, 1);
 	assert.equal(context.set_mining_state({ rocks: { madeup: 9000 } }, 1000), false);
@@ -175,4 +185,10 @@ test("[AC-11] Mining state is private wire data rather than a public map timesta
 	assert.match(game, /create_mining_rocks\(\)/);
 	assert.match(game, /destroy_mining_rocks\(\)/);
 	assert.ok((game.match(/reset_mining_state\(\)/g) || []).length >= 3, "start, map, and off-map events reset private state");
+});
+
+test("[AC-11] local clients do not cache stale Mining renderer assets", () => {
+	assert.match(init, /const staticAssetCacheAge = Local \? 0 : "30d";/);
+	assert.match(init, /express\.static\("\.\/js", \{ maxAge: staticAssetCacheAge \}\)/);
+	assert.match(init, /express\.static\("\.\/images", \{ maxAge: staticAssetCacheAge \}\)/);
 });

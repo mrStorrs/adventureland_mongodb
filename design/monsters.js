@@ -124,7 +124,7 @@ var monsters={
 		]
 	},
 	"mole":{
-		"name":"Mole","speed":18,"charge":60,"hp":12400,"xp":8000,"attack":480,"damage_type":"physical","respawn":6,"gold":120,"range":15,"frequency":0.8,"aggro":1,"rage":1,"apiercing":320,
+		"name":"Mole","speed":18,"charge":60,"hp":12400,"xp":8000,"attack":480,"damage_type":"physical","respawn":6,"gold":120,"range":15,"frequency":0.8,"aggro":0,"rage":1,"apiercing":320,
 			"difficulty":1.2,
 		"achievements":[
 			[10,"stat","hp",10],

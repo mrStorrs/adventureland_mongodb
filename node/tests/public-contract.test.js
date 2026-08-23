@@ -41,15 +41,17 @@ function packageDataRoute(context) {
 	return vm.runInNewContext(`(${main.slice(functionStart, routeEnd + 2).trim()})`, context);
 }
 
-function runPackageDataRoute({ smithing = loadRawProgression().smithing } = {}) {
+function runPackageDataRoute({ smithing = loadRawProgression().smithing, local = false } = {}) {
 	const raw = loadRawProgression();
 	vm.runInContext(read("design/recipes.js"), raw, { filename: "recipes.js" });
 	const progression_data = buildProgressionData(raw);
 	const response = {
+		headers: {},
 		status() {
 			return this;
 		},
-		set() {
+		set(name, value) {
+			this.headers[name] = value;
 			return this;
 		},
 		send(body) {
@@ -95,6 +97,7 @@ function runPackageDataRoute({ smithing = loadRawProgression().smithing } = {}) 
 		docs: {},
 		drops: {},
 		progression: {},
+		Local: local,
 	});
 	return route({ query: {}, body: {} }, response).then(() => response);
 }
@@ -142,6 +145,7 @@ test("the package backend loads and validates canonical Smithing data", () => {
 
 test("the package /data.js route publishes Smithing and rejects malformed data before delivery", async () => {
 	const response = await runPackageDataRoute();
+	assert.equal(response.headers["Cache-Control"], "public, max-age=2592000");
 	const publication = JSON.parse(response.body.slice("var G=".length, -2));
 	assert.deepEqual(Object.keys(publication.skills), [
 		"warrior",
@@ -159,6 +163,9 @@ test("the package /data.js route publishes Smithing and rejects malformed data b
 	const malformed = structuredClone(loadRawProgression().smithing);
 	malformed.tiers[0].ore = "ironore";
 	await assert.rejects(() => runPackageDataRoute({ smithing: malformed }), /Invalid Smithing tier copper/);
+
+	const localResponse = await runPackageDataRoute({ local: true });
+	assert.equal(localResponse.headers["Cache-Control"], "no-store");
 });
 
 test("browser skill-XP table validation rejects malformed per-skill publications", () => {
