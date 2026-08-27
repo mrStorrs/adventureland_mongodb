@@ -261,11 +261,13 @@ function craftsmanHarness() {
 	const failures = [];
 	const successes = [];
 	const logs = [];
+	const nearby = [];
 	const resends = [];
 	let now = 1_000;
 	const socket = { id: "craftsman-socket", emit: (name, payload) => emitted.push({ name, payload }) };
 	const player = {
 		id: "craftsman-character",
+		name: "Crafter",
 		socket,
 		user: false,
 		computer: true,
@@ -309,6 +311,7 @@ function craftsmanHarness() {
 		success_response: (response, payload) => successes.push({ response, payload }),
 		resend: (_current, event) => resends.push(event),
 		log_smithing_event: (_current, event) => logs.push(event),
+		xy_emit: (current, event, payload) => nearby.push({ current: current.name, event, payload }),
 		smithing_character_view: (current) => ({ rip: current.rip, connected: Boolean(current.socket && !current.dc && context.players[current.socket.id] === current), skills: current.skills }),
 		smithing_terminal_cancel: (current, channel, reason) => current.socket.emit("game_response", { response: "data", place: "smithing", outcome: "cancelled", output: channel.output, reason }),
 	};
@@ -347,6 +350,7 @@ function craftsmanHarness() {
 		failures,
 		successes,
 		logs,
+		nearby,
 		resends,
 		handleCraft,
 		tick,
@@ -365,6 +369,8 @@ test("[AC-4, AC-5, AC-6, AC-9] Craftsman executes authoritative Smithing start, 
 	assert.equal(channel.source_id, "test-server:smithing:craftsman-character:refinea");
 	assert.match(channel.action_id, /^smithing-x{24}$/);
 	assert.equal(harness.player.items[0].b, true);
+	assert.deepEqual(plain(harness.nearby.at(-1)), { current: "Crafter", event: "ui", payload: { type: "smithing_start", name: "Crafter" } });
+	const firstStartEventCount = harness.nearby.length;
 	assert.deepEqual(plain(harness.emitted.at(-1)), {
 		name: "game_response",
 		payload: { response: "data", place: "smithing", success: false, in_progress: true, duration: 30_000, output: "copperbar" },
@@ -372,6 +378,7 @@ test("[AC-4, AC-5, AC-6, AC-9] Craftsman executes authoritative Smithing start, 
 
 	harness.handleCraft({ craft_id: "refineb", items: [[0, 0]] });
 	assert.equal(harness.failures.at(-1), "item_locked");
+	assert.equal(harness.nearby.length, firstStartEventCount);
 	assert.equal(harness.player.c.smithing, channel);
 	harness.cancel("stopped");
 	assert.equal(harness.player.c.smithing, undefined);
@@ -388,8 +395,10 @@ test("[AC-4, AC-5, AC-6, AC-9] Craftsman executes authoritative Smithing start, 
 	assert.equal(harness.player.c.smithing, undefined);
 	assert.equal(harness.player.skills.smithing.xp, 13_222);
 	assert.equal(harness.player.p.skill_xp_sources.length, 1);
+	const completedStartEventCount = harness.nearby.length;
 	harness.handleCraft({ craft_id: "refinecomplete", items: [[0, 0]] });
 	assert.deepEqual(plain(harness.successes.at(-1)), { response: "craft", payload: { cevent: true, replayed: true } });
+	assert.equal(harness.nearby.length, completedStartEventCount);
 	assert.equal(harness.player.c.smithing, undefined);
 
 	harness.player.items[1] = harness.player.citems[1] = { name: "blade", level: 1 };

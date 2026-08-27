@@ -20,6 +20,22 @@ test("[AC-4, AC-5, AC-9] the browser receives Smithing as a timed authoritative 
 	assert.match(game, /response == "smithing_busy"/);
 });
 
+test("[AC-visual] starting Smithing broadcasts the Mining-style visual effect", () => {
+	const game = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+	const server = fs.readFileSync(path.join(root, "node/server.js"), "utf8");
+	const successStart = server.indexOf('log_smithing_event(player, { action_id: smithing_channel.action_id');
+	const responseStart = server.indexOf('player.socket.emit("game_response", {', successStart);
+	assert.ok(successStart >= 0 && responseStart > successStart);
+	assert.match(server.slice(successStart, responseStart), /xy_emit\(player, "ui", \{ type: "smithing_start", name: player\.name \}\);/);
+
+	const visualStart = game.indexOf('data.type == "smithing_start"');
+	const visualEnd = game.indexOf('data.type == "poisoned_resist"', visualStart);
+	assert.ok(visualStart >= 0 && visualEnd > visualStart);
+	const visualEffect = game.slice(visualStart, visualEnd);
+	assert.match(visualEffect, /var sender = get_player\(data\.name\);/);
+	assert.match(visualEffect, /if \(sender\) v_shake_minor\(sender\);/);
+});
+
 test("[AC-9] normal crafting keeps its existing immediate response path", () => {
 	const server = fs.readFileSync(path.join(root, "node/server.js"), "utf8");
 	const smithingStart = server.indexOf("var smithing_details = recipeTier");

@@ -2738,7 +2738,7 @@ function init_socket(args) {
 					v_shake_minor(sender);
 					sender.a_direction = sender.direction = data.direction;
 				}
-			} else if (data.type == "mining_start") {
+			} else if (data.type == "mining_start" || data.type == "smithing_start") {
 				var sender = get_player(data.name);
 				if (sender) v_shake_minor(sender);
 			} else if (data.type == "poisoned_resist") {

@@ -6342,6 +6342,7 @@ function init_io() {
 					return fail_response(error.code == "smithing_level" ? "smithing_level" : error.code == "smithing_inventory" ? "inventory_full" : error.code == "smithing_busy" ? "smithing_busy" : "craft_cant", error);
 				}
 				log_smithing_event(player, { action_id: smithing_channel.action_id, tier_id: smithing_channel.tier_id, output: name, kind: smithing_channel.kind, outcome: "started" });
+				xy_emit(player, "ui", { type: "smithing_start", name: player.name });
 				player.socket.emit("game_response", {
 					response: "data",
 					place: "smithing",
