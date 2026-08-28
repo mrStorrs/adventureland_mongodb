@@ -4520,6 +4520,7 @@ function effects_logic(sprite) {
 	if (sprite.c && sprite.c.pickpocket && !sprite.fx.attack) sprite.fx.attack = [new Date(), 0];
 	if (sprite.c && sprite.c.fishing && !sprite.fx.attack) sprite.fx.attack = [new Date(), 0];
 	if (sprite.c && sprite.c.mining && !sprite.fx.attack) sprite.fx.attack = [new Date(), 0];
+	if (sprite.c && sprite.c.smithing && !sprite.fx.attack) sprite.fx.attack = [new Date(), 0];
 }
 
 // .cx={head:"",hair:"",hat:"",body:"",face:"",upper:"", special:"",back:"",tail:"", stone:""}
@@ -5005,7 +5006,7 @@ function cosmetics_logic(sprite) {
 			c.scale.set(((mirror && -1) || 1) * scale, scale);
 			c.x = xx + x_disp;
 			c.y = -4 + yy;
-			if (pickaxe && sprite.fx && sprite.fx.attack && sprite.fx.attack[1] == 8) assassin_smoke(get_x(sprite) + ((sprite.j == 1 && -10) || (sprite.j == 2 && 10) || 0), get_y(sprite) - 8);
+			if ((pickaxe || (sprite.c && sprite.c.smithing && mainh == 1)) && sprite.fx && sprite.fx.attack && sprite.fx.attack[1] == 8) assassin_smoke(get_x(sprite) + ((sprite.j == 1 && -10) || (sprite.j == 2 && 10) || 0), get_y(sprite) - 8);
 		}
 		if ((last_cx_d[0] || last_cx_d[1]) && !c.moved && c.skin == last_cx_name) (c.moved = true), (c.x += last_cx_d[0]), (c.y += last_cx_d[1]);
 	});

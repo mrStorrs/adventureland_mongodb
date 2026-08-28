@@ -36,6 +36,19 @@ test("[AC-visual] starting Smithing broadcasts the Mining-style visual effect", 
 	assert.match(visualEffect, /if \(sender\) v_shake_minor\(sender\);/);
 });
 
+test("[AC-visual] Smithing drives Mining-style action smoke from public state, including Comm", () => {
+	const game = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+	const comm = fs.readFileSync(path.join(root, "htmls/comm.html"), "utf8");
+	const server = fs.readFileSync(path.join(root, "node/server.js"), "utf8");
+	const actionStart = game.indexOf("if (sprite.c && sprite.c.pickpocket");
+	const actionEnd = game.indexOf("// .cx=", actionStart);
+	assert.ok(actionStart >= 0 && actionEnd > actionStart);
+	assert.match(game.slice(actionStart, actionEnd), /if \(sprite\.c && sprite\.c\.smithing && !sprite\.fx\.attack\) sprite\.fx\.attack = \[new Date\(\), 0\];/);
+	assert.match(game, /if \(\(pickaxe \|\| \(sprite\.c && sprite\.c\.smithing && mainh == 1\)\) && sprite\.fx && sprite\.fx\.attack && sprite\.fx\.attack\[1\] == 8\) assassin_smoke\(/);
+	assert.match(comm, /src="\/js\/game\.js\?v=\{\{domain\.v\}\}"/);
+	assert.match(server, /if \(data\.c\.smithing\) \{\s*data\.c\.smithing = \{\s*ms: Number\(data\.c\.smithing\.ms\) \|\| 0,\s*len: Number\(data\.c\.smithing\.len\) \|\| 0,/);
+});
+
 test("[AC-9] normal crafting keeps its existing immediate response path", () => {
 	const server = fs.readFileSync(path.join(root, "node/server.js"), "utf8");
 	const smithingStart = server.indexOf("var smithing_details = recipeTier");
