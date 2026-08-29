@@ -3779,40 +3779,40 @@ var items={
 		"purchase_requirement": { "skill": "mining", "level": 99 }
 	},
 	"copperore": {
-		"type": "material", "skin": "gemfragment", "name": "Copper Ore", "s": 9999, "g": 1042, "exclusive": true
+		"type": "material", "skin": "smithing_copper_ore", "name": "Copper Ore", "s": 9999, "g": 1042, "exclusive": true
 	},
 	"ironore": {
-		"type": "material", "skin": "gemfragment", "name": "Iron Ore", "s": 9999, "g": 1389, "exclusive": true
+		"type": "material", "skin": "smithing_iron_ore", "name": "Iron Ore", "s": 9999, "g": 1389, "exclusive": true
 	},
 	"goldore": {
-		"type": "material", "skin": "goldnugget", "name": "Gold Ore", "s": 9999, "g": 2083, "exclusive": true
+		"type": "material", "skin": "smithing_gold_ore", "name": "Gold Ore", "s": 9999, "g": 2083, "exclusive": true
 	},
 	"mithrilore": {
-		"type": "material", "skin": "gemfragment", "name": "Mithril Ore", "s": 9999, "g": 2778, "exclusive": true
+		"type": "material", "skin": "smithing_mithril_ore", "name": "Mithril Ore", "s": 9999, "g": 2778, "exclusive": true
 	},
 	"adamantiteore": {
-		"type": "material", "skin": "gemfragment", "name": "Adamantite Ore", "s": 9999, "g": 3472, "exclusive": true
+		"type": "material", "skin": "smithing_adamantite_ore", "name": "Adamantite Ore", "s": 9999, "g": 3472, "exclusive": true
 	},
 	"runiteore": {
-		"type": "material", "skin": "platinumnugget", "name": "Runite Ore", "s": 9999, "g": 4630, "exclusive": true
+		"type": "material", "skin": "smithing_runite_ore", "name": "Runite Ore", "s": 9999, "g": 4630, "exclusive": true
 	},
 	"copperbar": {
-		"type": "material", "skin": "gemfragment", "name": "Copper Bar", "s": 9999, "g": 2084, "exclusive": true
+		"type": "material", "skin": "smithing_copper_bar", "name": "Copper Bar", "s": 9999, "g": 2084, "exclusive": true
 	},
 	"ironbar": {
-		"type": "material", "skin": "gemfragment", "name": "Iron Bar", "s": 9999, "g": 2778, "exclusive": true
+		"type": "material", "skin": "smithing_iron_bar", "name": "Iron Bar", "s": 9999, "g": 2778, "exclusive": true
 	},
 	"goldbar": {
-		"type": "material", "skin": "goldnugget", "name": "Gold Bar", "s": 9999, "g": 4166, "exclusive": true
+		"type": "material", "skin": "smithing_gold_bar", "name": "Gold Bar", "s": 9999, "g": 4166, "exclusive": true
 	},
 	"mithrilbar": {
-		"type": "material", "skin": "gemfragment", "name": "Mithril Bar", "s": 9999, "g": 5556, "exclusive": true
+		"type": "material", "skin": "smithing_mithril_bar", "name": "Mithril Bar", "s": 9999, "g": 5556, "exclusive": true
 	},
 	"adamantitebar": {
-		"type": "material", "skin": "gemfragment", "name": "Adamantite Bar", "s": 9999, "g": 6944, "exclusive": true
+		"type": "material", "skin": "smithing_adamantite_bar", "name": "Adamantite Bar", "s": 9999, "g": 6944, "exclusive": true
 	},
 	"runitebar": {
-		"type": "material", "skin": "platinumnugget", "name": "Runite Bar", "s": 9999, "g": 9260, "exclusive": true
+		"type": "material", "skin": "smithing_runite_bar", "name": "Runite Bar", "s": 9999, "g": 9260, "exclusive": true
 	},
 	"bow": {
 		"type": "weapon",
@@ -12366,12 +12366,12 @@ for(var smithing_weapon_index=0;smithing_weapon_index<smithing_weapon_chain.leng
 	var smithing_upgrade={};
 	for(var smithing_upgrade_key in smithing_anchor.upgrade)
 		if(smithing_upgrade_key==="damage"||smithing_upgrade_key==="range"||smithing_upgrade_key==="attacks_per_second") smithing_upgrade[smithing_upgrade_key]=smithing_anchor.upgrade[smithing_upgrade_key];
-	items[smithing_weapon.output]={type:"weapon",wtype:smithing_weapon.class_id==="book"?"book":smithing_anchor.wtype,tier:smithing_anchor.tier,skin:smithing_anchor.skin,name:smithing_weapon.name,g:smithing_anchor.g,grades:smithing_anchor.grades,damage_type:smithing_anchor.damage_type,damage:smithing_anchor.damage,attacks_per_second:smithing_anchor.attacks_per_second,upgrade:smithing_upgrade,exclusive:true,progression:{historical_rank:null,shared_rank:smithing_tier.index+2,role:"smithing",requirement:smithing_weapon.requirement,reference_level:[15,30,45,60,75,90][smithing_tier.index],target_dps:smithing_anchor.damage*smithing_anchor.attacks_per_second,anchor:false,next_tier_hunt_eligible:false,next_tier_hunt_reason:"smithing_progression"}};
+	items[smithing_weapon.output]={type:"weapon",wtype:smithing_weapon.class_id==="book"?"book":smithing_anchor.wtype,tier:smithing_anchor.tier,skin:"smithing_"+smithing_weapon.tier_id+"_"+smithing_weapon.class_id,name:smithing_weapon.name,g:smithing_anchor.g,grades:smithing_anchor.grades,damage_type:smithing_anchor.damage_type,damage:smithing_anchor.damage,attacks_per_second:smithing_anchor.attacks_per_second,upgrade:smithing_upgrade,exclusive:true,progression:{historical_rank:null,shared_rank:smithing_tier.index+2,role:"smithing",requirement:smithing_weapon.requirement,reference_level:[15,30,45,60,75,90][smithing_tier.index],target_dps:smithing_anchor.damage*smithing_anchor.attacks_per_second,anchor:false,next_tier_hunt_eligible:false,next_tier_hunt_reason:"smithing_progression"}};
 	if(smithing_anchor.range!==undefined) items[smithing_weapon.output].range=smithing_anchor.range;
 }
 for(var smithing_scrap_tier_index=0;smithing_scrap_tier_index<smithing.tiers.length;smithing_scrap_tier_index++){
 	var smithing_scrap_tier=smithing.tiers[smithing_scrap_tier_index];
-	items[smithing_scrap_tier.scrap]={type:"material",skin:items[smithing_scrap_tier.ore].skin,name:smithing_scrap_tier.name+" Bar Scrap",s:9999,g:smithing_scrap_tier.scrap_g,exclusive:true};
+	items[smithing_scrap_tier.scrap]={type:"material",skin:"smithing_"+smithing_scrap_tier.id+"_scrap",name:smithing_scrap_tier.name+" Bar Scrap",s:9999,g:smithing_scrap_tier.scrap_g,exclusive:true};
 }
 
 if(typeof finalize_equipment_requirements=="function") finalize_equipment_requirements(items,item_requirements);

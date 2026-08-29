@@ -16,6 +16,7 @@ const {
 } = require("../game/smithing_runtime");
 
 const root = path.resolve(__dirname, "../..");
+const smithingWeaponStarters = Object.freeze({ blade: "blade", mace: "mace", staff: "staff", book: "wbook0", bow: "bow", claw: "claw" });
 
 function publishedCraft() {
 	const context = { smithing: structuredClone(smithing), smithing_weapon_chain: structuredClone(smithing.weapons) };
@@ -153,7 +154,7 @@ test("[AC-4] refining reserves two ore, rejects an early tick, and settles one a
 	assert.deepEqual(failure.commits[0].reward.outputs, [{ name: "copperscrap", quantity: 1 }]);
 });
 
-test("[AC-5] all published weapon recipes enforce their exact tier, predecessor, +0 state, and chance boundaries", () => {
+test("[AC-1, AC-2] all published weapon recipes enforce their exact tier, fixed starter, +0 state, and chance boundaries", () => {
 	for (const weapon of smithing.weapons) {
 		const tier = smithing.tiers.find((candidate) => candidate.id === weapon.tier_id);
 		const recipe = craft[weapon.output];
@@ -161,7 +162,8 @@ test("[AC-5] all published weapon recipes enforce their exact tier, predecessor,
 		const attempt = prepare(recipe, weapon.output, inputs, { level: tier.level });
 		assert.equal(attempt.tierId, tier.id, weapon.output);
 		assert.equal(attempt.forge, true, weapon.output);
-		assert.deepEqual(attempt.recipeInputs, [{ name: tier.bar, quantity: 5 }, { name: weapon.predecessor, quantity: 1 }], weapon.output);
+		assert.equal(weapon.predecessor, smithingWeaponStarters[weapon.class_id], weapon.output);
+		assert.deepEqual(attempt.recipeInputs, [{ name: tier.bar, quantity: 5 }, { name: smithingWeaponStarters[weapon.class_id], quantity: 1 }], weapon.output);
 		assert.throws(() => prepare({ ...recipe, items: [[5, smithing.tiers[(tier.index + 1) % smithing.tiers.length].bar], [1, weapon.predecessor]] }, weapon.output, inputs, { level: tier.level }), { code: "smithing_recipe" });
 		assert.throws(() => prepare({ ...recipe, items: [[5, tier.bar], [1, weapon.output]] }, weapon.output, inputs, { level: tier.level }), { code: "smithing_recipe" });
 		assert.throws(() => prepare({ ...recipe, items: [[5, tier.bar], [1, weapon.predecessor, 1]] }, weapon.output, inputs, { level: tier.level }), { code: "smithing_recipe" });
@@ -188,6 +190,35 @@ test("[AC-5] forge failure consumes only its five bars and returns five current-
 	assert.deepEqual(harness.commits[0].reward.outputs, [{ name: "copperscrap", quantity: 5 }]);
 	assert.equal(harness.player.items[1].name, "blade");
 	assert.equal(harness.player.items[0], null);
+});
+
+test("[AC-2, AC-3] high-tier forging starts from its base weapon, rejects chained inputs, and retains its base weapon on failure", () => {
+	const iron = runtimeHarness("ironblade", { random: () => 0 });
+	assert.deepEqual(plain(iron.inputs), [{ slot: 0, name: "ironbar", quantity: 5 }, { slot: 1, name: "blade", quantity: 1 }]);
+	const ironChannel = start(iron, "ironblade");
+	assert.equal(ironChannel.kind, "forge");
+	assert.equal(iron.runtime.settle(iron.player, ironChannel, ironChannel.completes_at).outcome, "success");
+	assert.deepEqual(plain(iron.player.items), [null, null, { name: "ironblade", q: 1 }]);
+	const wrongBars = runtimeHarness("ironblade");
+	wrongBars.inputs[0] = { slot: 0, name: "goldbar", quantity: 5 };
+	wrongBars.player.items[0] = wrongBars.player.citems[0] = { name: "goldbar", q: 5 };
+	assert.throws(() => start(wrongBars, "ironblade"), { code: "smithing_items" });
+	assert.equal(wrongBars.player.c.smithing, undefined);
+	assert.equal(wrongBars.player.items[0].b, undefined);
+	assert.equal(wrongBars.player.items[1].b, undefined);
+	assert.equal(wrongBars.commits.length, 0);
+	assert.deepEqual(plain(wrongBars.player.items), [{ name: "goldbar", q: 5 }, { name: "blade", q: 1 }]);
+	assert.throws(() => prepare({ ...craft.ironblade, items: [[5, "goldbar"], [1, "blade"]] }, "ironblade", iron.inputs, { level: 20 }), { code: "smithing_recipe" });
+	assert.throws(() => prepare({ ...craft.ironblade, items: [[5, "ironbar"], [1, "copperblade"]] }, "ironblade", iron.inputs, { level: 20 }), { code: "smithing_recipe" });
+	assert.throws(() => prepare({ ...craft.ironblade, items: [[5, "ironbar"], [1, "mace"]] }, "ironblade", iron.inputs, { level: 20 }), { code: "smithing_recipe" });
+
+	const failed = runtimeHarness("runitebow", { random: () => 1 });
+	assert.deepEqual(plain(failed.inputs), [{ slot: 0, name: "runitebar", quantity: 5 }, { slot: 1, name: "bow", quantity: 1 }]);
+	const failedChannel = start(failed, "runitebow");
+	assert.equal(failed.runtime.settle(failed.player, failedChannel, failedChannel.completes_at).outcome, "failure");
+	assert.equal(failed.player.items[0], null);
+	assert.deepEqual(plain(failed.player.items[1]), { name: "bow", q: 1 });
+	assert.deepEqual(plain(failed.player.items[2]), { name: "runitescrap", q: 5 });
 });
 
 test("[AC-6] duplicate starts, cancellation, settlement failure, and hydrated completion leave one safe terminal result", () => {
@@ -280,7 +311,7 @@ function craftsmanHarness() {
 	};
 	const context = {
 		B: { sell_dist: 400 },
-		D: { craftmap: { copperore: "copperbar", "blade,copperbar": "copperblade", "blade,carrot": "carrotsword" } },
+		D: { craftmap: { copperore: "copperbar", "blade,copperbar": "copperblade", "blade,ironbar": "ironblade", "blade,carrot": "carrotsword" } },
 		Date: { now: () => now },
 		G: { craft, titles: {} },
 		Math,
@@ -410,4 +441,30 @@ test("[AC-4, AC-5, AC-6, AC-9] Craftsman executes authoritative Smithing start, 
 	harness.handleCraft({ items: [[0, 1], [0, 2]] });
 	assert.equal(harness.player.items.some((item) => item?.name === "carrotsword"), true);
 	assert.deepEqual(plain(harness.successes.at(-1)), { response: "craft", payload: { num: harness.player.items.length - 1, name: "carrotsword", cevent: true } });
+});
+
+test("[AC-2] Craftsman starts direct high-tier base recipes and rejects chained, wrong-class, and upgraded inputs", () => {
+	const harness = craftsmanHarness();
+	function setItems(entries) {
+		harness.player.items = structuredClone(entries);
+		harness.player.citems = structuredClone(entries);
+	}
+
+	setItems([{ name: "ironbar", q: 5 }, { name: "blade" }]);
+	harness.handleCraft({ craft_id: "ironbase", items: [[0, 0], [0, 1]] });
+	assert.equal(harness.player.c.smithing?.output, "ironblade");
+	harness.cancel("test");
+
+	setItems([{ name: "ironbar", q: 5 }, { name: "copperblade" }]);
+	harness.handleCraft({ craft_id: "ironchain", items: [[0, 0], [0, 1]] });
+	assert.equal(harness.failures.at(-1), "craft_cant");
+	assert.equal(harness.player.c.smithing, undefined);
+
+	setItems([{ name: "ironbar", q: 5 }, { name: "mace" }]);
+	harness.handleCraft({ craft_id: "ironwrongclass", items: [[0, 0], [0, 1]] });
+	assert.equal(harness.failures.at(-1), "craft_cant");
+
+	setItems([{ name: "ironbar", q: 5 }, { name: "blade", level: 1 }]);
+	harness.handleCraft({ craft_id: "ironupgraded", items: [[0, 0], [0, 1]] });
+	assert.equal(harness.failures.at(-1), "craft_cant");
 });

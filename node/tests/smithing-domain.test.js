@@ -6,10 +6,12 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
+const { positions } = require("../../design/dimensions");
 const { item_requirements } = require("../../design/item_requirements");
 const { items } = require("../../design/items");
 const { mining } = require("../../design/mining");
 const { smithing } = require("../../design/smithing");
+const { imagesets } = require("../../design/sprites");
 const { cumulativeXp } = require("../game/skill_domain");
 const { smithingChance, validateSmithingData } = require("../game/smithing");
 const { loadBenchmarkData } = require("../tools/progression-benchmark");
@@ -21,6 +23,22 @@ function publishedCraft() {
 	vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../../design/recipes.js"), "utf8"), context, { filename: "recipes.js" });
 	return context.craft;
 }
+
+function publishedImages() {
+	const context = {};
+	vm.createContext(context);
+	vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../../design/precomputed_images.js"), "utf8"), context, { filename: "precomputed_images.js" });
+	return context.precomputed.images;
+}
+
+const smithingWeaponClasses = [
+	["blade", "blade"],
+	["mace", "mace"],
+	["staff", "staff"],
+	["book", "wbook0"],
+	["bow", "bow"],
+	["claw", "claw"],
+];
 
 test("[AC-1, AC-4] Smithing has locked six-tier Mining-ore parity", () => {
 	assert.equal(validateSmithingData(smithing), smithing);
@@ -66,6 +84,21 @@ test("[AC-1] self-mined ore keeps Mining and Smithing level pacing aligned", () 
 	assert.equal(Number(unlimitedOreHours.reduce((sum, value) => sum + value, 0).toFixed(1)), 2971.3);
 });
 
+test("[AC-1] every Smithing weapon recipe always uses its class's unupgraded starter", () => {
+	const craft = publishedCraft();
+	for (const tier of smithing.tiers) {
+		for (const [classId, starter] of smithingWeaponClasses) {
+			const output = tier.id + classId;
+			const weapon = smithing.weapons.find((candidate) => candidate.output === output);
+			assert.equal(weapon.predecessor, starter, output);
+			assert.deepEqual(JSON.parse(JSON.stringify(craft[output].items)), [[tier.bars_per_weapon, tier.bar], [1, starter]], output);
+		}
+	}
+	const chained = structuredClone(smithing);
+	chained.weapons.find((weapon) => weapon.output === "ironblade").predecessor = "copperblade";
+	assert.throws(() => validateSmithingData(chained), { code: "invalid_smithing_weapon" });
+});
+
 test("[AC-5] README documents the published parity table and U.S. combat policy", () => {
 	const readme = fs.readFileSync(path.resolve(__dirname, "../../README.md"), "utf8");
 	for (const [index, tier] of smithing.tiers.entries()) {
@@ -79,6 +112,8 @@ test("[AC-5] README documents the published parity table and U.S. combat policy"
 	assert.match(readme, /refining every\s+ore a character mines gives Mining and Smithing the same total XP/);
 	assert.match(readme, /U\.S\. servers apply \*\*2× combat XP\*\* through\s+the normal monster reward path, including U\.S\. Hardcore\/PvP servers/);
 	assert.match(readme, /does not alter Mining or Smithing XP or Monster Hunt\s+token quantities/);
+	assert.match(readme, /Every weapon recipe is\s+independent: five bars of its target material plus the matching base `\+0` weapon/);
+	assert.match(readme, /a failed forge retains that base `\+0` weapon and yields five\s+same-material bar scraps/);
 });
 
 test("[AC-7] every Smithing weapon copies only its anchor's basic combat profile", () => {
@@ -107,6 +142,41 @@ test("[AC-7] every Smithing weapon copies only its anchor's basic combat profile
 			}
 		}
 	}
+});
+
+test("[AC-5, AC-6] Smithing art has a complete, isolated six-by-nine sprite publication", () => {
+	const expectedImageSet = {
+		size: 20,
+		rows: 9,
+		columns: 6,
+		file: "/images/tiles/items/smithing_tiers.png",
+		load: true,
+	};
+	assert.deepEqual(imagesets.smithing_tiers, expectedImageSet);
+	const seenCells = new Set();
+	for (const [classRow, [classId]] of smithingWeaponClasses.entries()) {
+		for (const [materialColumn, tier] of smithing.tiers.entries()) {
+			const skin = `smithing_${tier.id}_${classId}`;
+			assert.equal(items[tier.id + classId].skin, skin, tier.id + classId);
+			assert.deepEqual(positions[skin], ["smithing_tiers", materialColumn, classRow], skin);
+			seenCells.add(positions[skin].slice(1).join(","));
+		}
+	}
+	for (const [materialColumn, tier] of smithing.tiers.entries()) {
+		for (const [kind, row] of [["ore", 6], ["bar", 7], ["scrap", 8]]) {
+			const skin = `smithing_${tier.id}_${kind}`;
+			assert.equal(items[tier[kind]].skin, skin, tier[kind]);
+			assert.deepEqual(positions[skin], ["smithing_tiers", materialColumn, row], skin);
+			seenCells.add(positions[skin].slice(1).join(","));
+		}
+	}
+	assert.equal(seenCells.size, 54);
+	const asset = fs.readFileSync(path.resolve(__dirname, "../../images/tiles/items/smithing_tiers.png"));
+	assert.deepEqual(asset.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+	assert.equal(asset.toString("ascii", 12, 16), "IHDR");
+	assert.equal(asset.readUInt32BE(16), 120);
+	assert.equal(asset.readUInt32BE(20), 180);
+	assert.deepEqual(JSON.parse(JSON.stringify(publishedImages()["/images/tiles/items/smithing_tiers.png"])), { height: 180, width: 120, type: "png" });
 });
 
 test("[AC-8] the complete refinement and forging failure loop returns the locked combat-relative scrap gold rate", () => {

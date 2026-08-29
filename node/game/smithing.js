@@ -67,7 +67,7 @@ function validateWeaponChain(data) {
 				skill,
 				requirement: EXPECTED_WEAPON_REQUIREMENTS[tierIndex],
 				anchor: EXPECTED_ANCHORS[tierIndex][classIndex],
-				predecessor: tierIndex === 0 ? starter : data.tiers[tierIndex - 1].id + classId,
+				predecessor: starter,
 			};
 			if (!weapon || Object.keys(expected).some((key) => weapon[key] !== expected[key])) {
 				throw fail("invalid_smithing_weapon", `Invalid Smithing weapon ${expected.output}`, { output: expected.output });
