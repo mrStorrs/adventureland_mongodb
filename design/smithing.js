@@ -41,10 +41,7 @@ for (var smithing_weapon_tier_index = 0; smithing_weapon_tier_index < smithing.t
 			skill: smithing_weapon_class.skill,
 			requirement: smithing_weapon_requirements[smithing_weapon_tier_index],
 			anchor: smithing_weapon_anchors[smithing_weapon_tier_index][smithing_weapon_class_index],
-			predecessor:
-				smithing_weapon_tier_index === 0
-					? smithing_weapon_class.starter
-					: smithing.tiers[smithing_weapon_tier_index - 1].id + smithing_weapon_class.id,
+			predecessor: smithing_weapon_class.starter,
 		});
 	}
 }

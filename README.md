@@ -385,24 +385,25 @@ the same timer applies when forging a weapon:
 | Adamantite Bar | 80 | 2 Adamantite Ore | 54s | 127,162 | 6,944g | 3,772g |
 | Runite Bar | 90 | 2 Runite Ore | 60s | 139,878 | 9,260g | 5,574g |
 
-Forging follows a six-material, six-class chain. It consumes five current-tier
-bars plus the exact preceding weapon at `+0`, and produces the next weapon at
-`+0`; crafted weapons can then use the normal upgrade path through `+4`. The
-server owns the timer, level gate, inputs, outcome, and XP award. The client
-receives the authoritative duration and progress state and cannot choose the
-outcome or completion time.
+Forging follows six materials across six weapon classes. Every weapon recipe is
+independent: five bars of its target material plus the matching base `+0` weapon
+produce that tier's `+0` weapon; no recipe requires a previously forged tier.
+Crafted weapons can then use the normal upgrade path through `+4`. The server
+owns the timer, level gate, inputs, outcome, and XP award. The client receives
+the authoritative duration and progress state and cannot choose the outcome or
+completion time.
 
 Smithing awards XP on every completed attempt. Each tier awards the Mining XP
 of one matching ore multiplied by its two-ore refine input, so refining every
 ore a character mines gives Mining and Smithing the same total XP. Forging uses
 that same shared tier reward. A successful refine yields one bar; a failed
-refine yields one same-material bar scrap. A successful forge yields the next
-weapon; a failed forge returns the preceding `+0` weapon and five same-material
-bar scraps. Externally supplied ore can advance Smithing faster because it is
-not constrained by the Mining gathering rate. Cancelling, disconnecting,
-dying, or otherwise invalidating an active action releases its inputs without
-output or XP. The level-based success roll is intentionally low and is not
-exposed as a client input.
+refine yields one same-material bar scrap. A successful forge yields the target
+weapon; a failed forge retains that base `+0` weapon and yields five
+same-material bar scraps. Externally supplied ore can advance Smithing faster
+because it is not constrained by the Mining gathering rate. Cancelling,
+disconnecting, dying, or otherwise invalidating an active action releases its
+inputs without output or XP. The level-based success roll is intentionally low
+and is not exposed as a client input.
 
 Existing persisted Smelting state is accepted as a migration input and renamed
 to Smithing while preserving its level and within-level progress. New persisted

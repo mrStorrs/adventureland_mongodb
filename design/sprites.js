@@ -1171,6 +1171,13 @@ var imagesets = {
 		file: "/images/tiles/items/pack_20vt8.png",
 		load: true,
 	},
+	smithing_tiers: {
+		size: 20,
+		rows: 9,
+		columns: 6,
+		file: "/images/tiles/items/smithing_tiers.png",
+		load: true,
+	},
 	skills: {
 		size: 20,
 		rows: 13,
