@@ -45,12 +45,12 @@ test("[AC-1, AC-4] Smithing has locked six-tier Mining-ore parity", () => {
 	assert.deepEqual(
 		smithing.tiers.map((tier) => [tier.level, tier.ore_quantity, tier.bars_per_weapon, tier.duration_ms, tier.xp, tier.base_success, tier.scrap_g]),
 		[
-			[1, 2, 5, 30000, 13222, 0.076098, 639],
-			[20, 2, 5, 36000, 26660, 0.049492, 1013],
-			[40, 2, 5, 42000, 36296, 0.036459, 1766],
-			[60, 2, 5, 48000, 121574, 0.032022, 2687],
-			[80, 2, 5, 54000, 127162, 0.02574, 3772],
-			[90, 2, 5, 60000, 139878, 0.015367, 5574],
+			[1, 2, 5, 30000, 13222, 0.2168793, 639],
+			[20, 2, 5, 36000, 26660, 0.1410522, 1013],
+			[40, 2, 5, 42000, 36296, 0.10390815, 1766],
+			[60, 2, 5, 48000, 121574, 0.0912627, 2687],
+			[80, 2, 5, 54000, 127162, 0.073359, 3772],
+			[90, 2, 5, 60000, 139878, 0.04379595, 5574],
 		],
 	);
 	for (const [index, tier] of smithing.tiers.entries()) {
@@ -58,8 +58,8 @@ test("[AC-1, AC-4] Smithing has locked six-tier Mining-ore parity", () => {
 		assert.deepEqual([tier.id, tier.ore, tier.level], [miningTier.id, miningTier.ore, miningTier.level]);
 		assert.equal(tier.xp, miningTier.xp * tier.ore_quantity, tier.id);
 	}
-	assert.equal(smithingChance(smithing, smithing.tiers[0], 1), 0.076098);
-	assert.equal(smithingChance(smithing, smithing.tiers[0], 20), 0.0951225);
+	assert.equal(smithingChance(smithing, smithing.tiers[0], 1), 0.2168793);
+	assert.equal(smithingChance(smithing, smithing.tiers[0], 20), 0.271099125);
 	assert.doesNotThrow(() => validateSmithingData(smithing, { items, craft: publishedCraft(), item_requirements }));
 });
 
@@ -179,8 +179,9 @@ test("[AC-5, AC-6] Smithing art has a complete, isolated six-by-nine sprite publ
 	assert.deepEqual(JSON.parse(JSON.stringify(publishedImages()["/images/tiles/items/smithing_tiers.png"])), { height: 180, width: 120, type: "png" });
 });
 
-test("[AC-8] the complete refinement and forging failure loop returns the locked combat-relative scrap gold rate", () => {
-	const targets = [45000, 60000, 90000, 120000, 150000, 200000];
+test("[AC-8] the complete refinement and forging failure loop returns the revised scrap gold rate", () => {
+	const targets = [42021, 57936, 88013, 117759, 147898, 198540];
+	const rawOreTargets = [56268, 75006, 112482, 150012, 187488, 250020];
 	for (const [index, tier] of smithing.tiers.entries()) {
 		const chance = tier.base_success;
 		const actionsPerHour = 3600000 / tier.duration_ms;
@@ -190,6 +191,6 @@ test("[AC-8] the complete refinement and forging failure loop returns the locked
 		const failuresPerHourGold = (refiningScrap + forgingScrap) * tier.scrap_g * mining.balance.sell_multiplier;
 		const rawOreSalePerHour = 90 * mining.tiers[index].ore_g * mining.balance.sell_multiplier;
 		assert.ok(Math.abs(failuresPerHourGold - targets[index]) <= 100, `${tier.id} scrap gold/h`);
-		assert.ok(Math.abs(rawOreSalePerHour - targets[index] * 1.25) <= 30, `${tier.id} raw-ore premium`);
+		assert.ok(Math.abs(rawOreSalePerHour - rawOreTargets[index]) <= 30, `${tier.id} raw-ore sale/h`);
 	}
 });

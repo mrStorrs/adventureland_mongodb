@@ -1,12 +1,12 @@
 "use strict";
 
 const EXPECTED_TIERS = Object.freeze([
-	[0, "copper", "Copper", 1, "copperore", "copperbar", "copperscrap", 2, 5, 30000, 13222, 0.076098, 639],
-	[1, "iron", "Iron", 20, "ironore", "ironbar", "ironscrap", 2, 5, 36000, 26660, 0.049492, 1013],
-	[2, "gold", "Gold", 40, "goldore", "goldbar", "goldscrap", 2, 5, 42000, 36296, 0.036459, 1766],
-	[3, "mithril", "Mithril", 60, "mithrilore", "mithrilbar", "mithrilscrap", 2, 5, 48000, 121574, 0.032022, 2687],
-	[4, "adamantite", "Adamantite", 80, "adamantiteore", "adamantitebar", "adamantitescrap", 2, 5, 54000, 127162, 0.02574, 3772],
-	[5, "runite", "Runite", 90, "runiteore", "runitebar", "runitescrap", 2, 5, 60000, 139878, 0.015367, 5574],
+	[0, "copper", "Copper", 1, "copperore", "copperbar", "copperscrap", 2, 5, 30000, 13222, 0.2168793, 639],
+	[1, "iron", "Iron", 20, "ironore", "ironbar", "ironscrap", 2, 5, 36000, 26660, 0.1410522, 1013],
+	[2, "gold", "Gold", 40, "goldore", "goldbar", "goldscrap", 2, 5, 42000, 36296, 0.10390815, 1766],
+	[3, "mithril", "Mithril", 60, "mithrilore", "mithrilbar", "mithrilscrap", 2, 5, 48000, 121574, 0.0912627, 2687],
+	[4, "adamantite", "Adamantite", 80, "adamantiteore", "adamantitebar", "adamantitescrap", 2, 5, 54000, 127162, 0.073359, 3772],
+	[5, "runite", "Runite", 90, "runiteore", "runitebar", "runitescrap", 2, 5, 60000, 139878, 0.04379595, 5574],
 ]);
 const EXPECTED_CLASSES = Object.freeze([
 	["blade", "Blade", "warrior", "blade"],
