@@ -385,6 +385,23 @@ the same timer applies when forging a weapon:
 | Adamantite Bar | 80 | 2 Adamantite Ore | 54s | 127,162 | 6,944g | 3,772g |
 | Runite Bar | 90 | 2 Runite Ore | 60s | 139,878 | 9,260g | 5,574g |
 
+### Smithing outcome estimates
+
+The chance applies to both refining and forging. The estimates below start at a
+tier's Smithing unlock with no stored materials, account for the level-based
+chance increase, and assume continuous self-mining at 90 ore per hour. They are
+expected serial times, so travel, inventory management, and random variance can
+make an individual weapon take longer or shorter.
+
+| Material | Chance at unlock | Chance cap | Expected ore | Smithing time | Mining time | Serial time |
+|---|---:|---:|---:|---:|---:|---:|
+| Copper | 21.69% | 27.11% | 209 | 0.91h | 2.32h | 3.23h |
+| Iron | 14.11% | 17.63% | 498 | 2.56h | 5.53h | 8.09h |
+| Gold | 10.39% | 12.99% | 921 | 5.49h | 10.24h | 15.72h |
+| Mithril | 9.13% | 11.41% | 1,198 | 8.13h | 13.31h | 21.44h |
+| Adamantite | 7.34% | 9.17% | 1,858 | 14.14h | 20.64h | 34.78h |
+| Runite | 4.38% | 5.47% | 5,209 | 43.78h | 57.87h | 101.66h |
+
 Forging follows six materials across six weapon classes. Every weapon recipe is
 independent: five bars of its target material plus the matching base `+0` weapon
 produce that tier's `+0` weapon; no recipe requires a previously forged tier.
